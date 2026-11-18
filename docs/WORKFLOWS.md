@@ -2,7 +2,7 @@
 
 Every workflow is manual. None of them has a `schedule:`. None of them runs because someone opened a pull request, except CI.
 
-CI (`.github/workflows/ci.yml`) runs on a pull request. It installs from the lockfile with scripts off, lints, runs the tests, audits dependencies, and builds the five contracts. It cannot write to the repository.
+CI (`.github/workflows/ci.yml`) runs on a pull request. It installs from the lockfile with scripts off, lints, runs the tests (`npm test`) and audits dependencies. It does not build the five contracts yet: `npm run test:contracts` is not in CI (HANDOFF.md item 2). It cannot write to the repository.
 
 ## Turning the website on
 
