@@ -168,7 +168,8 @@ export function renderKitFile({ host, hostName, group, block }) {
 name: ${q(`${hostName} (kit games)`)}
 
 on:
-  # No schedule until the owner turns hourly runs on (docs/WORKFLOWS.md). KIT_CRON stays "${KIT_CRON}" for that day.
+  schedule:
+    - cron: "${KIT_CRON}"     # every hour, ten minutes after ${host} (:47); waits for it if it is still running
   workflow_dispatch: {}
 
 concurrency:

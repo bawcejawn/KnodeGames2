@@ -6,7 +6,8 @@
 name: "KnodeGames recorders (kit games)"
 
 on:
-  # No schedule until the owner turns hourly runs on (docs/WORKFLOWS.md). KIT_CRON stays "57 * * * *" for that day.
+  schedule:
+    - cron: "57 * * * *"     # every hour, ten minutes after games.yml (:47); waits for it if it is still running
   workflow_dispatch: {}
 
 concurrency:

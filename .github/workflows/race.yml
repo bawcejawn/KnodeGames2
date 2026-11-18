@@ -16,6 +16,8 @@
 name: Producer race
 
 on:
+  schedule:
+    - cron: "37 * * * *"     # every hour at minute 37 (a card is taken by the last run before each 1-hour leg)
   workflow_dispatch: {}
 
 concurrency:

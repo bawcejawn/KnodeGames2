@@ -6,6 +6,12 @@ import path from "node:path";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
 const problems = [];
+const TIMERS = {
+  "bot.yml": ["7 * * * *", "48 11 * * 1-6", "48 23 * * 0-5"],
+  "race.yml": ["37 * * * *"], "games.yml": ["47 * * * *"], "combo.yml": ["52 * * * *"], "golf.yml": ["57 * * * *"],
+  "kit-games.yml": ["57 * * * *"], "vhp-ruler.yml": ["12 * * * *"], "names.yml": ["4 * * * *"], "stats.yml": ["17 */2 * * *"],
+  "race-samples.yml": ["*/15 * * * *"], "watch.yml": ["*/30 * * * *"], "capacity.yml": ["23 13 * * *"],
+};
 const say = (m) => problems.push(m);
 
 if (fs.existsSync(path.join(root, ".ai"))) say(".ai/ must not be in this repository");
@@ -14,7 +20,11 @@ if (fs.existsSync(path.join(root, "site"))) say("site/ redirects were removed; t
 const wf = path.join(root, ".github/workflows");
 for (const f of fs.readdirSync(wf).filter((n) => n.endsWith(".yml") || n.endsWith(".yaml"))) {
   const text = fs.readFileSync(path.join(wf, f), "utf8");
-  if (/^ {2}schedule:/m.test(text)) say(`${f} has a schedule. Timers stay off until docs/WORKFLOWS.md says to turn one on.`);
+  // Timers (D-240, cutover Sun 22 Nov): only these files, only these times, exactly the old repository's. Any other
+  // schedule, or a changed time, fails here. docs/WORKFLOWS.md lists them.
+  const crons = [...text.matchAll(/^\s+- cron: "([^"]+)"/gm)].map((m) => m[1]);
+  const want = TIMERS[f] ?? [];
+  if (/^ {2}schedule:/m.test(text) !== want.length > 0 || crons.join("|") !== want.join("|")) say(`${f}: timers ${JSON.stringify(crons)}; allowed ${JSON.stringify(want)} (tools/ci/lint.mjs TIMERS)`);
   if (/pull_request_target|workflow_run/.test(text)) say(`${f} uses a privileged trigger`);
   if (/permissions:\s*(?:[>|][+-]?\s*)?["']?write-all/i.test(text)) say(`${f} asks for every permission`);
 }

@@ -13,6 +13,8 @@
 name: Block Golf recorder
 
 on:
+  schedule:
+    - cron: "57 * * * *"     # every hour at minute 57 (after the race recorder at :37 and the games recorder at :47)
   workflow_dispatch: {}
 
 concurrency:

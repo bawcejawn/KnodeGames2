@@ -23,7 +23,7 @@ Knode Games is a set of prediction games on the Koinos blockchain. Players stake
 - Public fairness page: `web/fairness.html`.
 - Question files are not on `main`. `bot.yml` publish is aimed at branch `game-data`. That branch does not exist yet.
 - A future desk deploy refuses a treasury that is missing or equal to the owner. The live desk was not touched.
-- No workflow has a `schedule:`. Only CI runs on a pull request. Website publish stays off until Carl sets `KG_ENABLE_PAGES` to `true`.
+- The hourly workflows have the old repository's timers (cutover, D-240; list in `docs/WORKFLOWS.md`), each behind its `*_ENABLED` switch. Only CI and the full test suite run on a pull request. Website publish stays off until Carl sets `KG_ENABLE_PAGES` to `true`.
 - `.ai/` is not in this repo. `/site/` redirects are gone. One-off fund scripts and finished v6 rehearsals are gone. See [docs/DROPPED.md](docs/DROPPED.md).
 - Contract builds: CI rebuilds all five (`npm run test:hashes`) against `contracts/hashes.json`. Vault, desk, race and sponsor match the live code. Picks builds `92d555d0…`, the planned Picks v2; live v1 is `700c296a…`.
 - `npm test` passes **51** tests: question scorer, early-view, desk treasury rule, workflow guard, no timers, VHP-swing wording, Inter font, static page checks. `npm run lint` passes. `npm audit --audit-level=high` is clean (moderate findings remain).
