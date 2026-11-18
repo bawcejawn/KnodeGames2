@@ -14,14 +14,12 @@ rehearsal-data/
 testnet-data/
 **/kpred.pb
 verify-results.log
-ops/node/heal.log
+ops/node/*.log
 ops/node/heal-state.json
 ops/node/heal-task.json
 ops/node/repair.lock
 ops/node/repair-*.log
-ops/node/release-kick.log
 ops/node/release-kick-state.json
-ops/node/live-uploader.log
 ops/node/diag*.txt
 node/heal.log
 node/heal-state.json
@@ -40,3 +38,4 @@ testnet-v61-d8/
 __pycache__/
 *.tsbuildinfo
 .DS_Store
+contracts/*/build/
