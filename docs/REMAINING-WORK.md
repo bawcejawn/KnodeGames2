@@ -18,7 +18,7 @@ The single source of truth for the next builder is [../HANDOFF.md](../HANDOFF.md
 ## Not done yet
 
 1. **The old test suite is not the CI gate.** Hundreds of tests still look for files at the old paths, or expect a timer in a workflow. `npm test` here runs only the checks that match this layout: the question scorer, the early-view tag, the desk treasury rule, the workflow guard, the capacity timer check, the VHP-swing wording, the font check, and the static page check. The rest stay in `tests/` for the next pass.
-2. **Contract builds are not in CI.** The five contract sources are in `contracts/`. Nobody has rebuilt them here and compared the wasm fingerprint to the live chain. Do that before any upgrade. Do not upload.
+2. **Contract builds are in CI** (`npm run test:hashes`, `contracts/hashes.json`). Four match the chain. Picks source is v2, not yet live: after its upload, set `picks.live` to `source`. Any contract change updates `source` in the same PR.
 3. **The bot is still one large file** (`bot/bot.ts`). It is not split into commands yet.
 4. **Games are not on the shared kit yet**, except Fantasy, which already was. Golf, Bracket, Combo, Block X, Race, and Questions still use their old recorders.
 5. **The two new games are not built.** The shape is in [NEXT-GAMES.md](NEXT-GAMES.md): Over/Under, and Knode Games VS.

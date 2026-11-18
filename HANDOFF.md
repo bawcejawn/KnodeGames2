@@ -25,12 +25,12 @@ Knode Games is a set of prediction games on the Koinos blockchain. Players stake
 - A future desk deploy refuses a treasury that is missing or equal to the owner. The live desk was not touched.
 - No workflow has a `schedule:`. Only CI runs on a pull request. Website publish stays off until Carl sets `KG_ENABLE_PAGES` to `true`.
 - `.ai/` is not in this repo. `/site/` redirects are gone. One-off fund scripts and finished v6 rehearsals are gone. See [docs/DROPPED.md](docs/DROPPED.md).
-- `npm test` passes **45** tests: question scorer, early-view, desk treasury rule, workflow guard, no timers, VHP-swing wording, Inter font, static page checks. `npm run lint` passes. `npm audit --audit-level=high` is clean (moderate findings remain).
+- Contract builds: CI rebuilds all five (`npm run test:hashes`) against `contracts/hashes.json`. Vault, desk, race and sponsor match the live code. Picks builds `92d555d0…`, the planned Picks v2; live v1 is `700c296a…`.
+- `npm test` passes **51** tests: question scorer, early-view, desk treasury rule, workflow guard, no timers, VHP-swing wording, Inter font, static page checks. `npm run lint` passes. `npm audit --audit-level=high` is clean (moderate findings remain).
 
 **Copied, not verified**
 
 - The rest of `tests/` (the old audit suite). Many still expect old paths or a timer. They are not the CI gate.
-- Contract wasm builds. Sources are in `contracts/`. Nobody rebuilt them here or compared fingerprints to chain.
 - Game recorders other than Fantasy. Fantasy already used `kit/`. The others still use `bot/games/` and `bot/race.ts`.
 
 **Not started**
@@ -72,13 +72,13 @@ npm audit --audit-level=high
 node tools/ci/assemble-site.mjs
 ```
 
-`npm test` is the CI set (45 tests). The full old suite is `npm run test:audit`. It is not green. Do not make CI run it until the path fixes in the checklist are done.
+`npm test` is the CI set (51 tests). The full old suite is `npm run test:audit`. It is not green. Do not make CI run it until the path fixes in the checklist are done.
 
 `assemble-site` writes `dist-site/` (gitignored): `web/` plus the ABIs the pages still request at `game/abi/…`. That folder is the only thing Pages may upload.
 
 CI is `.github/workflows/ci.yml`. It runs on `pull_request` and `workflow_dispatch` only. One job. **The status check name Carl should require is `ci`.** Workflow name is also `CI`.
 
-`npm run test:contracts` builds the five contracts. It is not in CI yet. Do not run it against a live chain.
+`npm run test:hashes` builds the five contracts, each from its own folder and `package-lock.json` (they are not workspaces: the contract builder needs its tools inside the contract folder), and checks each wasm sha256 against `contracts/hashes.json`. CI runs it. `npm run test:contracts` also runs each contract's own unit tests; it is not in CI. Neither touches a chain.
 
 ## Remaining work
 
