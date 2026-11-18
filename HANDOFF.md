@@ -90,7 +90,7 @@ Do these in order. Each item is done only when its acceptance line is true. Do n
 4. **Split `bot/bot.ts` into `bot/cli.ts`, `bot/commands/`, `bot/lib/` without changing what a dry run would send.** Acceptance: existing bot tests that still apply pass, and a dry-run tick on the simulated chain matches the pre-split planned calls.
 5. **Move Golf, Bracket, Combo, Block X, Race, then Questions onto `kit/`, one at a time.** Old recorders: `bot/games/golf.ts`, `bracket.ts`, `combo.ts`, `blockx.ts`, `bot/race.ts`. Acceptance for each: replay of past weeks matches the published board, then Carl runs two shadow weeks with zero differences, then the workflow switches. Keep the old recorder until that switch.
 6. **Split page scripts into `web/js/lib` and `web/js/pages` without changing what the browser does.** Acceptance: `node tools/ci/assemble-site.mjs` still serves the same URLs (`app.js` may move only if every page and the assembler agree).
-7. **Build the two new games** (specs below) only after 1–5. Acceptance: each has `games/<slug>/game.json`, `math.js`, `recorder.ts`, tests, a page in `web/`, and a manual workflow rendered by `npm run kit:render`. No schedule until Carl asks.
+7. **Build the two new games** (specs below) after 1–4 are green, in parallel with item 5 (owner decision D-217, 18 Nov 2026). Acceptance: each has `games/<slug>/game.json`, `math.js`, `recorder.ts`, tests, a page in `web/`, and a manual workflow rendered by `npm run kit:render`. No schedule until Carl asks.
 
 ## Two new games
 
