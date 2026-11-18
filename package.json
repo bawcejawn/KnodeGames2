@@ -11,10 +11,11 @@
     "export-blocks": "tsx questions/export-blocks.ts",
     "bot": "tsx bot/bot.ts",
     "test:resolver": "node --max-old-space-size=4096 --import tsx --test questions/resolver.test.ts",
-    "test": "node --import tsx --test questions/resolver.test.ts tests/audit/site.early-view.test.mjs tests/audit/desk-treasury.test.ts tests/audit/site.ci-deps.test.mjs tests/audit/capacity-limits.test.mjs tests/audit/docs.vhp-void-disclosure.sab.test.ts tests/audit/site.font-inter.test.mjs tests/audit/site.static.test.mjs",
+    "test": "node --import tsx --test questions/resolver.test.ts tests/audit/site.early-view.test.mjs tests/audit/desk-treasury.test.ts tests/audit/site.ci-deps.test.mjs tests/audit/capacity-limits.test.mjs tests/audit/docs.vhp-void-disclosure.sab.test.ts tests/audit/site.font-inter.test.mjs tests/audit/site.static.test.mjs tests/audit/contracts.hashes-doc.test.mjs",
     "lint": "node tools/ci/lint.mjs",
     "site": "node tools/ci/assemble-site.mjs",
-    "test:contracts": "npm test -w knode-games-vault && npm test -w knode-games-desk && npm test -w kpred-sponsor && npm test -w kpred-picks && npm test -w kpred-race",
+    "test:contracts": "npm --prefix contracts/vault test && npm --prefix contracts/desk test && npm --prefix contracts/sponsor test && npm --prefix contracts/picks test && npm --prefix contracts/race test",
+    "test:hashes": "node tools/ci/contract-hashes.mjs",
     "test:audit": "node --max-old-space-size=4096 --import tsx --test tests/audit/*.test.ts tests/audit/*.test.mjs tests/audit/repolens-r4-publish/*.test.mjs tests/audit/repolens-r5-publish/*.test.mjs tests/audit/repolens-r6-publish/*.test.mjs games/*/tests/*.test.mjs games/*/tests/*.test.ts games/*/tests/*.test.mts tests/merge/*.test.mjs tests/audit/repolens-fc-combo/*.test.mjs tests/audit/repolens-fc-combo/*.test.cjs",
     "test:audit:serial": "node --import tsx --test --test-concurrency=1 tests/audit/*.test.ts tests/audit/*.test.mjs tests/audit/repolens-r4-publish/*.test.mjs tests/audit/repolens-r5-publish/*.test.mjs tests/audit/repolens-r6-publish/*.test.mjs games/*/tests/*.test.mjs games/*/tests/*.test.ts games/*/tests/*.test.mts tests/merge/*.test.mjs tests/audit/repolens-fc-combo/*.test.mjs tests/audit/repolens-fc-combo/*.test.cjs",
     "desk": "tsx bot/desk.ts",
@@ -39,13 +40,6 @@
     "kit": "tsx kit/recorder/cli.ts",
     "kit:render": "node --import tsx tools/kit-render-workflows.mjs"
   },
-  "workspaces": [
-    "contracts/vault",
-    "contracts/desk",
-    "contracts/sponsor",
-    "contracts/picks",
-    "contracts/race"
-  ],
   "dependencies": {
     "koilib": "9.4.1"
   },
