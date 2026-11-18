@@ -2,6 +2,8 @@
 
 This pull request is the first slice. The live games are copied into the new folders. They are not all re-tested here. Do not point knodegames.com at this repository until [GO-LIVE.md](GO-LIVE.md) is done.
 
+The single source of truth for the next builder is [../HANDOFF.md](../HANDOFF.md).
+
 ## In this pull request
 
 - The folders: `web/`, `contracts/`, `bot/`, `kit/`, `games/`, `questions/`, `ruler/`, `ops/`, `tools/`, `tests/`, `docs/`.

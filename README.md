@@ -4,6 +4,8 @@ Prediction games on the Koinos blockchain. People stake VHP, pick block producer
 
 Nothing here deploys, spends, or starts a timer by itself.
 
+The handoff for the next builder, and for Carl, is [HANDOFF.md](HANDOFF.md).
+
 ## What is where
 
 | Folder | What it is |
