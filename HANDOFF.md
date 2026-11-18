@@ -78,7 +78,7 @@ node tools/ci/assemble-site.mjs
 
 CI is `.github/workflows/ci.yml`. It runs on `pull_request` and `workflow_dispatch` only. One job. **The status check name Carl should require is `ci`.** Workflow name is also `CI`.
 
-`npm run test:hashes` builds the five contracts, each from its own folder and `package-lock.json` (they are not workspaces: the contract builder needs its tools inside the contract folder), and checks each wasm sha256 against `contracts/hashes.json`. CI runs it. `npm run test:contracts` also runs each contract's own unit tests; it is not in CI. Neither touches a chain.
+`npm run test:hashes` builds the five contracts, each from its own folder and `package-lock.json` (they are not workspaces: the contract builder needs its tools inside the contract folder), and checks each wasm sha256 against `contracts/hashes.json`. CI runs it. `npm run test:contracts` runs each contract's own unit tests (as-pect). They stop at start-up today (a `binaryen` RuntimeError, on Node 20 and 22), and the old repo's CI never ran them either. Get them running before the v6.2 vault change. Neither command touches a chain.
 
 ## Remaining work
 
