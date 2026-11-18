@@ -259,7 +259,7 @@ test("guests make KnodeGames picks only on the pinned Picks contract (the mainne
 
 test("every page with the wallet button offers guest play: guest.js before wallet.js, koilib allowed and loaded", () => {
   for (const p of fs.readdirSync(`${APP}/web`).filter((f) => f.endsWith(".html"))) {
-    const h = fs.readFileSync(`${APP}/${p}`, "utf8");
+    const h = fs.readFileSync(`${APP}/web/${p}`, "utf8");
     if (!/<script src="header-wallet\.js"><\/script>/.test(h)) continue;
     const g = h.indexOf('<script src="guest.js"></script>'), wlt = h.indexOf('<script src="wallet.js"></script>');
     assert.ok(g > 0 && g < wlt, `${p}: guest.js before wallet.js`);

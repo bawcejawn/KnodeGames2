@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
-const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const app = fs.readFileSync(path.join(root, "web", "app.js"), "utf8");
 function fnSrc(src, name) {
   const i = src.indexOf(`function ${name}(`);
   assert.ok(i >= 0, `app.js has ${name}`);

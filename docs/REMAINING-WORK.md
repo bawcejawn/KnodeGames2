@@ -17,7 +17,16 @@ The single source of truth for the next builder is [../HANDOFF.md](../HANDOFF.md
 
 ## Not done yet
 
-1. **The old test suite is not the CI gate.** Hundreds of tests still look for files at the old paths, or expect a timer in a workflow. `npm test` here runs only the checks that match this layout: the question scorer, the early-view tag, the desk treasury rule, the workflow guard, the capacity timer check, the VHP-swing wording, the font check, and the static page check. The rest stay in `tests/` for the next pass.
+1. **Done (HANDOFF item 1): the old test suite passes.** `npm run test:audit` exits 0. No test was skipped or retired. The failing files only looked for the old paths and were pointed at `web/`, `ruler/`, `ops/node/`, `ops/testnet/` and `contracts/`. Three checks moved on purpose:
+   - `guard-runs.N-C-3`: `workflow-guard.yml` is manual here, so the test now checks that CI (every pull request, no path filter) runs the trigger guard.
+   - `open-network` (docs): the full "Open network" section moved from the old README to `docs/QUESTIONS.md`, unchanged.
+   - The CSP checks (`site.extras`, `site.games`) accept the one new host, `raw.githubusercontent.com/bawcejawn/KnodeGames2/`, which `web/data-source.js` uses for the `game-data` branch.
+
+   The suite found real bugs, fixed in the same pull request: the built site was missing the Picks, Race and Desk ABIs and their `deployment.json` files, so picks and swaps would have failed after cutover (`tools/ci/assemble-site.mjs`; guarded by the new `site.assembled-urls` test in `npm test`). `tools/vhp-ruler-shadow-compare.mjs` and `tools/testnet-site.mjs` still read the old root layout.
+
+   How it runs: CI (`ci`) runs the fast set (`npm test`) on every pull request. The full suite takes 30–50 minutes, so it is a manual workflow, **Full test suite** (`test-audit.yml`). Run it on the pull request's branch; it must pass on the current head before any bot, kit or payout PR merges.
+
+   Still outside both: the bot's own tests in `bot/*.test.ts`. Two in `bot/workflow.test.ts` expect the old hourly timers. HANDOFF item 4 (the bot split) handles them.
 2. **Contract builds are in CI** (`npm run test:hashes`, `contracts/hashes.json`). Four match the chain. Picks source is v2, not yet live: after its upload, set `picks.live` to `source`. Any contract change updates `source` in the same PR. The contracts' own unit tests (`npm run test:contracts`) stop at start-up (`binaryen` RuntimeError, Node 20 and 22): fix that before v6.2.
 3. **The bot is still one large file** (`bot/bot.ts`). It is not split into commands yet.
 4. **Games are not on the shared kit yet**, except Fantasy, which already was. Golf, Bracket, Combo, Block X, Race, and Questions still use their old recorders.

@@ -153,3 +153,72 @@ released with `hashRule: 2` (from October 2026) also cover their wording: title,
 range, so an option cannot be relabelled after release. Earlier questions keep the rule they were posted with.
 `dataHash` is the SHA-256 of the window's blocks (`height,signer,timestamp,txCount` per line), so anyone
 can check a resolution against the chain.
+
+<!-- Moved from the old repository's README (KnodeGames 7a93c92d), unchanged. tests/audit/open-network.test.ts checks it. -->
+
+## Open network: anyone can influence the results
+
+Koinos is an open network. Anyone can stake VHP, run a block producer or send transactions, and each of those changes
+what the blocks show. So players, producers and anyone else can influence the results of the questions. That is
+allowed: every way of influencing a result counts as part of the game.
+
+The project takes part too. It runs the Knode Swap desk (`1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR`, which produces blocks)
+and a block-producer node of its own. Both can appear in questions like any other producer. Only the game's own pool
+(the Kpred contract) is never a subject.
+
+A question is **voided** (it counts for nobody) when:
+
+1. a producer it names goes offline during its window (the longest silence is longer than chance allows; the rule and
+   its numbers are saved with the question), or
+2. **VHP swing:** a producer it is about (its subjects), the combined VHP of a group question's members, or the whole
+   network's VHP for network-wide questions (M4–M7: block gaps, block interval, empty blocks, transactions), gained or
+   lost **more than `voidVhpSwing`** compared with its release, in a reading taken during the question's window before
+   its blocks decided the answer. `voidVhpSwing` is a setting in `game-data/game.json` (`model.voidVhpSwing`, 0.10 = 10%).
+
+How the VHP-swing rule is applied, exactly:
+
+- **At release** the generator reads the VHP balance of each producer the question is about (or the VHP token's total
+  supply, saved under the key `network`) at the newest block, and saves it in the question as `model.vhp`, with that
+  block height (`model.vhpHeight`) and the limit (`model.voidVhpSwing`). All three are part of the `paramsHash` posted
+  on chain, so they cannot be changed afterwards.
+- **During the window** the bot reads the same balances again on every run (it runs every hour, at minute 7) and adds
+  each reading to the question file's `vhpReadings` (block height, time, values and the bot's seal). The height is read
+  after the balances, so the balances are from that block or earlier. A reading whose height is after the window's
+  last block is not kept. The readings are hourly samples: a swing that starts and is undone between two readings is
+  not seen.
+- **Only readings taken before the answer was decided count.** The answer is decided at the first block from which
+  the chance that the window's remaining blocks change the option is below `decidedChance` (a setting in
+  `game-data/game.json`, `model.decidedChance`, default 1e-9; saved with each question at release, so it is part of
+  its `paramsHash`), or from which no remaining block could change it at all (`vhpCheck.decidedHeight` in the result).
+  The chance is a conservative bound: each producer that could move the answer is assumed to produce each remaining
+  block at an upper bound of its own rate so far in this window (k blocks out of n give at most
+  (k + L + √(L² + 2kL)) / n, L = ln(8 / decidedChance), which is wrong with a chance of at most decidedChance / 8),
+  the share of empty blocks likewise; the chance of reaching another option is the Chernoff bound of a binomial count
+  (e^−μ (eμ / m)^m for m more blocks with mean μ), summed over every way the option could change and added to the
+  chance that a rate bound is wrong. Over/under counts, head-to-head and combined differences and the empty-block
+  share are decided this way. The network's transactions and the longest gap are decided only once they passed the
+  top threshold, and the average block interval only at the window's last block. A reading taken after the decided
+  block never voids, whatever it shows. Without this, the last hourly reading of a window would often come when the
+  answer is already public, and a loser could buy a void. With `decidedChance` 0, only certainty counts.
+- The question is void if, in any counted reading (`windowStart ≤ height ≤ decidedHeight`), for any of those producers
+  (or the network, or the group's combined VHP), `|reading − release| > voidVhpSwing × release` (exact integer
+  arithmetic).
+  - A reading taken after the window's last block never voids, whatever it shows.
+  - A group question (M10) is checked on its members' combined VHP, so a gift to its smallest member does not void it
+    unless it moves the whole group by more than the limit.
+  - If no reading was taken before the answer was decided, the rule is skipped and the question resolves on its
+    blocks alone. The result's `vhpCheck.skipped` says why and the site shows it. The bot emails you when no reading
+    was taken during the window at all (the bot was down, or every VHP read failed); when its readings all came after
+    an early decision, it only logs it.
+  - The offline rule (1. above) also stops at the decided block for these questions: a producer that goes silent once
+    the answer is public no longer voids it.
+  - A producer with no VHP at release is not checked (any amount would be an infinite change).
+- The result's `vhpCheck` lists the heights of the readings used and, for each producer (or the group), the reading
+  with the largest change, so anyone can check it.
+- **Anyone can trigger a VHP-swing void, not only the producer.** A producer can move its own VHP (it costs only
+  Mana). Anyone else can do it too, by sending or burning VHP to a producer the question is about, or by swapping VHP
+  into the Knode Swap desk (a producer like any other). It costs the VHP they move: more than 10% of the producer's VHP
+  (of the group's combined VHP for a group question). This is part of "anyone can influence the results", and the
+  reason readings stop counting once the blocks have decided the answer.
+- Questions released before this rule existed have no `model.vhp`; they keep the rules they were released with.
+

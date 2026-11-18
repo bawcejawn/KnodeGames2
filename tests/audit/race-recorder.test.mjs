@@ -671,7 +671,7 @@ test("vault (B1-1 / V4 / B1-5): on a chain without get_game_player (v5) the stak
   assert.ok(JSON.parse(abiText).methods.get_game_player, "race.ts reads stakes with the v6 ABI");
   assert.equal(abiText, fs.readFileSync(path.resolve(APP, "contracts/vault/abi/kpred-v6.koilib.json"), "utf8"), "the same ABI as Block X reads");
   const src = fs.readFileSync(path.resolve(APP, "bot/race.ts"), "utf8");
-  assert.match(src, /game\/abi\/kpred\.koilib\.json/);
+  assert.match(src, /contracts\/vault\/abi\/kpred\.koilib\.json/); // KnodeGames2 path (was game/abi/)
   assert.doesNotMatch(src, /return \{ staked: false, earning: false \};\s*\/\/ the contract on chain isn't v6/, "no early 'not v6 yet' answer (V4)");
   const { dir } = await weekTwoDone();
   const out = tmp();

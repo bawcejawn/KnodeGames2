@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 const APP = path.resolve(process.env.APP || ".");
-const page = ["combo.html", "site/combo.html"].map((p) => path.join(APP, p)).find((p) => fs.existsSync(p));
+const page = ["web/combo.html", "combo.html", "site/combo.html"].map((p) => path.join(APP, p)).find((p) => fs.existsSync(p));
 test("C-W-1: every local <script src> of the Combo page exists beside it", () => {
   assert.ok(page, "combo.html not found");
   const html = fs.readFileSync(page, "utf8");

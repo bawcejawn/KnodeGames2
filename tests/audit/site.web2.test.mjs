@@ -33,7 +33,7 @@ function framed({ topNavigable }) {
 // S1: README says hashRule 2 makes relabelling impossible, but the page shows the file's wording/options and answers q.chainId without checking params_hash.
 test("S1 the game page checks a question file against the on-chain params_hash before offering its answer buttons", () => {
   const app = read("web/app.js");
-  assert.match(read("README.md"), /hashRule: 2[\s\S]{0,200}cannot be relabelled/, "precondition: README makes the wording claim");
+  assert.match(read("docs/QUESTIONS.md"), /hashRule: 2[\s\S]{0,200}cannot be relabelled/, "precondition: docs/QUESTIONS.md makes the wording claim (was the old README)");
   const checks = /params_hash/.test(app) && /crypto\.subtle\.digest|sha256/i.test(app);
   assert.ok(checks, "S1: site/app.js renders title/text/options from game-data/questions/*.json and sends answer(chainId, option) without comparing the file to get_question().params_hash: a tampered or swapped file (option labels reversed, chainId of another question) is shown to players as genuine");
 });
@@ -41,7 +41,7 @@ test("S1 the game page checks a question file against the on-chain params_hash b
 // S2: GitHub Pages without a custom domain = origin shared with every other bawcejawn.github.io site (scripts, storage, Kondor's per-origin grant).
 // Closed 2026-10-28: the site is served from its own domain, knodegames.com (CNAME at the repository root).
 test("S2 the wallet pages are served from an origin of their own (CNAME), not the shared <user>.github.io origin", () => {
-  const cname = exists("CNAME") || exists("site/CNAME");
+  const cname = exists("web/CNAME") || exists("CNAME"); // KnodeGames2: the CNAME ships inside web/
   assert.ok(cname, "S2: no CNAME: any other Pages site of bawcejawn (same origin) can window.open a Knode page, read/patch its JS (fetch hook -> KOIN Vault secret, swapped ops) and reuse the Kondor site permission; the frame-buster does not stop same-origin windows");
 });
 
@@ -74,15 +74,15 @@ test("(guard) wallet.js inside a frame navigates the top window to itself", () =
 test("(guard) wallet pages load wallet.js before their page script", () => {
   const bad = [];
   for (const p of pages) {
-    const html = read(`${p}`);
+    const html = read(`web/${p}`);
     const own = [...html.matchAll(/<script\b[^>]*\bsrc="([^":]+\.js)"/g)].map((m) => m[1]);
-    const signs = own.some((f) => /KWallet|kondor/.test(read(`${f}`)) && f !== "wallet.js");
+    const signs = own.some((f) => /KWallet|kondor/.test(read(`web/${f}`)) && f !== "wallet.js");
     if (!signs) continue;
     // Testnet pages sign with their own testnet wallet (testnet-wallet.js for Block X, stake-testnet-wallet.js for
     // staking), each with its own frame-buster, never the mainnet wallet.
     const wi = /<meta name="kg-network" content="testnet">/.test(html) ? own.findIndex((f) => /^(stake-)?testnet-wallet\.js$/.test(f)) : own.indexOf("wallet.js");
     if (wi < 0) { bad.push(`${p}: signs without wallet.js`); continue; }
-    for (const f of own.slice(0, wi)) if (/addEventListener|onclick|KWallet|kondor|fetch\(/.test(read(`${f}`))) bad.push(`${p}: ${f} runs before the frame-buster`);
+    for (const f of own.slice(0, wi)) if (/addEventListener|onclick|KWallet|kondor|fetch\(/.test(read(`web/${f}`))) bad.push(`${p}: ${f} runs before the frame-buster`);
   }
   assert.deepEqual(bad, []);
 });
@@ -92,7 +92,7 @@ test("(guard) script-src CDN entries are exact versioned files, each loaded with
   const bad = [];
   const wallet = read("web/wallet.js");
   for (const p of pages) {
-    const html = read(`${p}`), s = cspOf(html)["script-src"] || [];
+    const html = read(`web/${p}`), s = cspOf(html)["script-src"] || [];
     for (const v of s.filter((x) => /^https:/.test(x))) {
       if (v.endsWith("/") || !/@\d+\.\d+\.\d+\/|\/\d+\.\d+\.\d+\//.test(v) || /%|\.\.|\?|#/.test(v)) bad.push(`${p}: ${v}`);
       const inPage = new RegExp(`<script\\b[^>]*src="${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*integrity=`).test(html);

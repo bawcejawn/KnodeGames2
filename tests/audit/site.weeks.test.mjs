@@ -37,7 +37,7 @@ test("board.js uses the same rule when a page doesn't load weeks.js", () => {
 test("the pages that show weeks use the shared labels", () => {
   const idx = fs.readFileSync(`${APP}/web/index.html`, "utf8");
   assert.ok(idx.indexOf('src="weeks.js"') > -1 && idx.indexOf('src="weeks.js"') < idx.indexOf('src="app.js"'), "index.html loads weeks.js before app.js");
-  for (const f of ["app.js", "results.js", "board.js"]) assert.doesNotMatch(fs.readFileSync(`${APP}/${f}`, "utf8"), /`Week \$\{[A-Za-z_.]+ \+ 1\}/, `${f}: no raw "Week n+1"`);
+  for (const f of ["app.js", "results.js", "board.js"]) assert.doesNotMatch(fs.readFileSync(`${APP}/web/${f}`, "utf8"), /`Week \$\{[A-Za-z_.]+ \+ 1\}/, `${f}: no raw "Week n+1"`);
   assert.doesNotMatch(idx, /once the Knode Games vault is live/);
 });
 

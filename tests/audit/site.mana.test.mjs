@@ -62,6 +62,6 @@ test("the address from a link is checked (base58 + checksum) before any chain re
 
 test("every page's header links to Mana levels", () => {
   const pages = fs.readdirSync(`${APP}/web`).filter((f) => f.endsWith(".html"));
-  const missing = pages.filter((p) => /class="tabs"/.test(fs.readFileSync(`${APP}/${p}`, "utf8")) && !/<a href="mana\.html"/.test(fs.readFileSync(`${APP}/${p}`, "utf8")));
+  const missing = pages.filter((p) => /class="tabs"/.test(fs.readFileSync(`${APP}/web/${p}`, "utf8")) && !/<a href="mana\.html"/.test(fs.readFileSync(`${APP}/web/${p}`, "utf8")));
   assert.deepEqual(missing, []);
 });
