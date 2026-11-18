@@ -7,7 +7,7 @@ const { execSync } = require("child_process");
 const MODE = "assembly/Mode.ts";
 const normal = fs.readFileSync(MODE, "utf8");
 // The live declaration itself, not a comment (fix-check 3, V3-10; fix-check 4, C4-1: one shared parser).
-const { isNormal, isSafe, toSafe } = require("../../tools/mode-switch.cjs");
+const { isNormal, isSafe, toSafe } = require("../../../tools/mode-switch.cjs");
 if (!isNormal(normal)) throw new Error(`${MODE} must say SAFE_MODE = false before building`);
 // The contract builder sometimes stops with EAGAIN on a busy machine: try again a few times.
 const build = () => {
