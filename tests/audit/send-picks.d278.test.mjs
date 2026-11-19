@@ -9,7 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as SP from "../../web/js/lib/send-picks.js";
-import { sendPicksProblems, checkSendPicks, SEND_PICKS } from "../../tools/game-check.mjs";
+import { sendPicksProblems, checkSendPicks, SEND_PICKS, SEND_PICKS_ALLOW } from "../../tools/game-check.mjs";
 
 const op = (n) => ({ call_contract: { contract_id: "1LmgqBGctL9F2YkyjTXgieTXwnYHh8Y6Pm", entry_point: 1, args: `a${n}` } });
 
@@ -208,6 +208,41 @@ test("D-256 game:check: Fantasy passes, and a copy that sends a pick itself fail
   const res = checkSendPicks(m, tmp);
   assert.ok(res.some((r) => !r.pass && r.required && /calls the wallet directly/.test(r.msg)));
   fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("D-256 allowance: only web/survivor.js, shown as a note (not a failure), and only that file", () => {
+  assert.deepEqual(Object.keys(SEND_PICKS_ALLOW), ["web/survivor.js"]);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sendpicks-"));
+  fs.mkdirSync(path.join(tmp, "web"));
+  const page = "picksContract.functions.pick({});\nawait W.send(label, [operation]);\n";
+  fs.writeFileSync(path.join(tmp, "web", "survivor.js"), page);
+  fs.writeFileSync(path.join(tmp, "web", "other.js"), page);
+  const s = checkSendPicks({ page: "survivor.html" }, tmp);
+  assert.equal(s.length, 1);
+  assert.equal(s[0].required, false, "Survivor: a note until its follow-up PR");
+  assert.match(s[0].msg, /allowed for now/);
+  const o = checkSendPicks({ page: "other.html" }, tmp);
+  assert.ok(o.every((r) => !r.pass && r.required), "any other page still fails");
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("Vault page fallback (D-294 §2): the sponsor turns a sponsored send down -> one retry with the player's own Mana; a cancel is never retried", async () => {
+  const mk = (first) => {
+    const env = { with: [] };
+    const make = new Function("env", `const { W, ANSWER, PICK } = env; const sponsorFor = () => ({ address: "1Sponsor", covers: ["v"], picks: "1LmgqBGctL9F2YkyjTXgieTXwnYHh8Y6Pm" });
+      const hasOwnMana = async () => false, rcFor = (s, o, d) => d, gamesOfOps = () => [], sponsorAnswer = async () => ({ ok: true });
+      const sendKondorWith = async (label, ops, opts) => { env.with.push(opts); if (env.with.length === 1) throw env.first; return "id"; };
+      ${fnSrc("sendKondor")}; return sendKondor;`);
+    env.W = { address: "1Player", provider: { getAccountRc: async () => "500000000" } }; env.ANSWER = 0; env.PICK = 1; env.first = first;
+    return { env, sendKondor: make(env) };
+  };
+  const refused = Object.assign(new Error("payer refused: sponsor says this wallet pays its own"), { sponsorSend: true });
+  const a = mk(refused);
+  assert.equal(await a.sendKondor("pick", [op(1)], {}), "id");
+  assert.deepEqual(a.env.with.map((o) => [o.sponsor || null, !!o.ownMana]), [["1Sponsor", false], [null, true]], "sponsor once, then own Mana once");
+  const b = mk(new Error("Cancelled in Kondor"));
+  await assert.rejects(b.sendKondor("pick", [op(1)], {}), /Cancelled/);
+  assert.equal(b.env.with.length, 1, "a cancel is not retried");
 });
 
 test("Fantasy: both sends go through the card and read the pick on chain first", () => {
