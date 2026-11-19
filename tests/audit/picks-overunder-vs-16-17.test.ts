@@ -1,32 +1,34 @@
-// Picks games 16 (Over Under) and 17 (Knode Games VS), owner D-290 / D-302: the exact config `npm run picks -- announce 16`
-// and `announce 17` send. A registered shape can never change, so every field is pinned. number_max is 2^64 − 1, above
-// JavaScript's safe integers: it must travel as an exact decimal string, never through a Number.
+// Picks games 16 (Over Under, rolling) and 17 (Knode Games VS), owner D-325 to D-351: the exact config
+// `npm run picks -- announce 16` and `announce 17` send. A registered shape can never change, so every field is pinned.
+// VS's number_max is 2^64 − 1, above JavaScript's safe integers: it must travel as an exact decimal string.
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as T from "../../bot/picks.ts";
 
-const want = (id: number, name: string, round_size: string) => ({
-  id, name, kind: 3, list_size: 0, number_min: "0", number_max: "18446744073709551615", lock_mode: 2,
-  round_size, round_offset: "0", lead: "300000", ahead: "172800000",
-  max_picks_per_day: 20, max_changes: 2, enabled: true,
+const HALF_HOUR = 1800000;
+
+test("game 16 sends exactly rolling Over Under's values (30-min starts, 2 h window, 1 = Over, 2 = Under, no changes)", () => {
+  assert.deepEqual(T.buildGameConfig(T.OVERUNDER_GAME), {
+    id: 16, name: "Over Under", kind: 3, list_size: 0, number_min: "1", number_max: "2", lock_mode: 2,
+    round_size: "1800000", round_offset: "0", lead: "300000", ahead: "7200000",
+    max_picks_per_day: 50, max_changes: 0, enabled: true,
+  });
 });
 
-test("game 16 sends exactly Over Under's values (D-290; D-296: 12-hour rounds, two numbers a day)", () => {
-  assert.deepEqual(T.buildGameConfig(T.OVERUNDER_GAME), want(16, "Over Under", "43200000"));
+test("game 17 sends exactly VS's values (one 24 h round from 00:00 UTC, u64, no changes)", () => {
+  assert.deepEqual(T.buildGameConfig(T.VS_GAME), {
+    id: 17, name: "Knode Games VS", kind: 3, list_size: 0, number_min: "0", number_max: "18446744073709551615", lock_mode: 2,
+    round_size: "86400000", round_offset: "0", lead: "300000", ahead: "172800000",
+    max_picks_per_day: 20, max_changes: 0, enabled: true,
+  });
 });
 
-test("game 17 sends exactly Knode Games VS's D-290 values", () => {
-  assert.deepEqual(T.buildGameConfig(T.VS_GAME), want(17, "Knode Games VS", "86400000"));
-});
-
-test("number_max is exactly 2^64 − 1, as a string, with nothing rounded", () => {
-  for (const g of [T.OVERUNDER_GAME, T.VS_GAME]) {
-    const c: any = T.buildGameConfig(g);
-    assert.equal(typeof c.number_max, "string");
-    assert.equal(BigInt(c.number_max), 2n ** 64n - 1n);
-    assert.equal(T.U64_MAX, ((1n << 64n) - 1n).toString());
-    assert.notEqual(c.number_max, String(Number(c.number_max)), "a Number would round it to 18446744073709552000");
-  }
+test("VS's number_max is exactly 2^64 − 1, as a string, with nothing rounded", () => {
+  const c: any = T.buildGameConfig(T.VS_GAME);
+  assert.equal(typeof c.number_max, "string");
+  assert.equal(BigInt(c.number_max), 2n ** 64n - 1n);
+  assert.equal(T.U64_MAX, ((1n << 64n) - 1n).toString());
+  assert.notEqual(c.number_max, String(Number(c.number_max)), "a Number would round it to 18446744073709552000");
 });
 
 test("both are ones the mainnet tool registers, each once", () => {
@@ -35,19 +37,21 @@ test("both are ones the mainnet tool registers, each once", () => {
   assert.equal(new Set(ids).size, ids.length, "no game id twice");
 });
 
-test("Over Under: day N's number A is round 2N (target 00:00 UTC), number B round 2N − 1 (12 hours earlier)", () => {
-  const rs = T.timeRounds(T.OVERUNDER_GAME, Date.parse("2026-11-24T00:00:00Z"), 3);
-  const day = 20782;                                   // Wed 25 Nov 2026
-  const B = rs.find((x) => x.round === 2 * day - 1)!, A = rs.find((x) => x.round === 2 * day)!;
-  assert.equal(B.target, "2026-11-24T12:00:00.000Z");
-  assert.equal(B.locks, "2026-11-24T11:55:00.000Z");
-  assert.equal(B.opens, "2026-11-22T12:00:00.000Z");
-  assert.equal(A.target, "2026-11-25T00:00:00.000Z");
-  assert.equal(A.locks, "2026-11-24T23:55:00.000Z");
-  assert.equal(A.opens, "2026-11-23T00:00:00.000Z");
-  assert.ok(Date.parse(B.locks) < Date.parse("2026-11-25T00:00:00Z") && Date.parse(A.locks) < Date.parse("2026-11-25T00:00:00Z"), "both lock before the day starts");
-  // the worst case per wallet per day: 3 open days × 2 numbers × (1 pick + 2 changes) = 18 ≤ 20
-  assert.ok(3 * 2 * (1 + T.OVERUNDER_GAME.maxChanges) <= T.OVERUNDER_GAME.picksPerDay);
+test("Over Under: a game starts every 30 min UTC; picks open 2 h before and lock 5 min before; 4 open at once", () => {
+  const now = Date.parse("2026-11-23T16:30:00Z");
+  const rs = T.timeRounds(T.OVERUNDER_GAME, now, 6);
+  assert.equal(rs[0].target, "2026-11-23T17:00:00.000Z");
+  assert.equal(rs[0].round, Date.parse("2026-11-23T17:00:00Z") / HALF_HOUR);
+  assert.equal(rs[0].locks, "2026-11-23T16:55:00.000Z");
+  assert.equal(rs[0].opens, "2026-11-23T15:00:00.000Z");
+  for (let i = 1; i < rs.length; i++) assert.equal(Date.parse(rs[i].target) - Date.parse(rs[i - 1].target), HALF_HOUR);
+  const open = rs.filter((x) => Date.parse(x.opens) <= now && now < Date.parse(x.locks));
+  assert.equal(open.length, 4, "4 games open for picks at any moment");
+});
+
+test("Over Under: 48 starts a day fit under 50 picks a day (one pick each, no changes)", () => {
+  assert.equal(86400000 / T.OVERUNDER_GAME.round, 48);
+  assert.ok(48 * (1 + T.OVERUNDER_GAME.maxChanges) <= T.OVERUNDER_GAME.picksPerDay);
 });
 
 test("VS: one round a UTC day, locking 5 minutes before 00:00 UTC, open 2 days ahead", () => {
@@ -58,24 +62,26 @@ test("VS: one round a UTC day, locking 5 minutes before 00:00 UTC, open 2 days a
   assert.equal(r.opens, "2026-11-23T00:00:00.000Z");
 });
 
-test("an out-of-range or unsafe number range is refused", () => {
+test("an out-of-range or unsafe setting is refused", () => {
   const bad = [
-    { numberMax: "18446744073709551616" },          // 2^64
-    { numberMax: 18446744073709551615 },            // a Number, not a string
-    { numberMax: "-1" }, { numberMax: "1e19" }, { numberMax: "007" }, { numberMax: "" },
-    { numberMin: "5", numberMax: "4" },
+    { numberMax: "18446744073709551616" }, { numberMax: 18446744073709551615 }, { numberMax: "-1" }, { numberMax: "1e19" },
+    { numberMax: "007" }, { numberMax: "" }, { numberMin: "3", numberMax: "2" },
     { lockMode: 1 }, { lead: 299999 }, { ahead: 300000 }, { ahead: 36 * 86400000 },
     { picksPerDay: 51 }, { maxChanges: 51 }, { id: 128 }, { name: "x".repeat(41) },
   ];
-  for (const b of bad) assert.throws(() => T.buildGameConfig({ ...T.OVERUNDER_GAME, ...b }), undefined, JSON.stringify(b));
+  for (const g of [T.OVERUNDER_GAME, T.VS_GAME])
+    for (const b of [...bad, { offset: g.round }]) assert.throws(() => T.buildGameConfig({ ...g, ...b }), undefined, `${g.id} ${JSON.stringify(b)}`);
 });
 
 test("an announcement with any other value is refused at apply", () => {
+  const other: Record<number, [string, any][]> = {
+    16: [["round_size", "43200000"], ["ahead", "172800000"], ["number_min", "0"], ["number_max", "3"], ["max_changes", 2], ["max_picks_per_day", 20]],
+    17: [["round_size", "43200000"], ["number_max", "18446744073709551614"], ["number_max", "18446744073709552000"], ["max_changes", 2], ["max_picks_per_day", 50]],
+  };
   for (const g of [T.OVERUNDER_GAME, T.VS_GAME]) {
     const ok: any = T.buildGameConfig(g);
     assert.equal(T.pendingProblem(ok, g), null);
-    for (const [k, v] of [["number_max", "18446744073709551614"], ["number_max", "18446744073709552000"], ["max_changes", 3],
-      ["lead", "600000"], ["ahead", "604800000"], ["max_picks_per_day", 10], ["round_size", g.id === 16 ? "86400000" : "43200000"], ["list_size", 1], ["kind", 1]] as const)
+    for (const [k, v] of [...other[g.id], ["lead", "600000"], ["round_offset", "1"], ["list_size", 1], ["kind", 1]] as [string, any][])
       assert.ok(T.pendingProblem({ ...ok, [k]: v }, g), `${g.id}: ${k} = ${v} must be refused`);
   }
 });

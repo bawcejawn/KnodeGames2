@@ -121,22 +121,19 @@ export const FANTASY_RIVAL_GAME = Object.freeze({ id: 5, name: "Weekly Rival", k
  *  except the id and the limits. The SHAPE (id, kind, list_size, lock_mode, round_size, round_offset) never changes. */
 export const SURVIVOR_GAME = Object.freeze({ id: 3, name: "Survivor", kind: 1, listSize: 1, lockMode: 2, round: DAY_MS, offset: 0,
   lead: 5 * 60000, ahead: 7 * DAY_MS, picksPerDay: 20, maxChanges: 5 });
-/** Over Under (Picks game 16) and Knode Games VS (Picks game 17), New Games' D-284 design with the owner's D-290 settings
- *  (claude/newgames/DESIGN-OVERUNDER-VS-2026-11-19.md §2): a NUMBER game whose pick is one packed 64-bit number a UTC day
- *  (Over Under: 2 bits a producer row; VS: 1 bit a matchup), so the range is the whole u64, 0 … 2^64 − 1. That is above
- *  JavaScript's safe integers, so number_max is kept as a decimal STRING and checked with BigInt, never as a Number.
- *  TIME-locked (Over Under: 12-hour rounds, two numbers a day; VS: one round a UTC day), locking 5 minutes before each
- *  target and opening 2 days ahead; 20 picks a day, 2 changes per pick. The SHAPE (id, kind, list_size, number range, lock_mode, round_size, round_offset) never changes. */
+/** Over Under (Picks game 16) and Knode Games VS (Picks game 17): NUMBER games (kind 3), TIME-locked, with NO pick changes
+ *  (owner D-342 to D-351). The SHAPE (id, kind, list_size, number range, lock_mode, round_size, round_offset) never changes.
+ *  - Over Under ROLLS (D-326, D-329, D-333): a new 12-hour game starts every 30 minutes (Picks round r starts at
+ *    r × 30 min UTC), one producer per game; the pick is 1 = Over or 2 = Under. Picks open 2 hours before the start and lock
+ *    5 minutes before it (D-325), so 4 rounds are open at once; at most 48 games start a day, under the 50 picks a day.
+ *  - VS (D-327): one 24-hour round from 00:00 UTC, the pool node against every producer on the day's roster; the pick is
+ *    one packed number, 1 bit a matchup (up to 64), so the range is the whole u64, 0 … 2^64 − 1. That is above
+ *    JavaScript's safe integers, so the range is kept as decimal STRINGS and checked with BigInt, never as a Number. */
 export const U64_MAX = "18446744073709551615";
-const packedGame = (id: number, name: string, round: number) => Object.freeze({ id, name, kind: 3, packed: true, lockMode: 2, round, offset: 0,
-  lead: 5 * 60000, ahead: 2 * DAY_MS, numberMin: "0", numberMax: U64_MAX, picksPerDay: 20, maxChanges: 2 });
-/** Over Under: TWO numbers a UTC day (D-296, 64 rows; New Games' TO-VAULT-PICKS-16-17-SHAPE-2026-11-19.md), so 12-hour
- *  Picks rounds. Day N's number A is round 2N (target = the day's start), number B is round 2N − 1 (target 12 hours
- *  earlier), so B opens and locks 12 hours before A; both lock before the day starts. 20 picks a day covers the worst
- *  case (3 open days × 2 numbers × (1 pick + 2 changes) = 18). */
-export const OVERUNDER_GAME = packedGame(16, "Over Under", DAY_MS / 2);
-/** Knode Games VS: ONE number a UTC day (one bit a matchup, up to 64), day N = round N. */
-export const VS_GAME = packedGame(17, "Knode Games VS", DAY_MS);
+export const OVERUNDER_GAME = Object.freeze({ id: 16, name: "Over Under", kind: 3, packed: true, lockMode: 2, round: 30 * 60000, offset: 0,
+  lead: 5 * 60000, ahead: 2 * 3600000, numberMin: "1", numberMax: "2", picksPerDay: 50, maxChanges: 0 });
+export const VS_GAME = Object.freeze({ id: 17, name: "Knode Games VS", kind: 3, packed: true, lockMode: 2, round: DAY_MS, offset: 0,
+  lead: 5 * 60000, ahead: 2 * DAY_MS, numberMin: "0", numberMax: U64_MAX, picksPerDay: 20, maxChanges: 0 });
 const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME, OVERUNDER_GAME, VS_GAME];
 /** The picks per wallet per day and changes per pick the Picks contract allows at most. */
 const MAX_PICKS_PER_DAY = 50, MAX_CHANGES = 50;
@@ -559,7 +556,7 @@ async function announce(id: number, send: boolean) {
     log(`  SHAPE (never changes): kind 4 (card), up to ${g.listSize} legs ever (${g.maxLegs} now), lock by TIME, ${g.slotsPerDay} cards a UTC day (one per slot), offset 0`);
     for (const t of g.legTypes) log(`    leg type ${t.code}: ${t.lock_mode === 1 ? `every ${t.round_size} blocks, locks ${t.lead} blocks before, opens ${t.ahead} blocks ahead` : `every ${Number(t.round_size) / 3600000} h, locks ${Number(t.lead) / 60000} min before, opens ${Number(t.ahead) / 3600000} h ahead`}`);
   } else if (g.kind === 3 || g.lockMode === 2) {
-    log(g.kind === 3 ? `  SHAPE (never changes): kind 3 (number), list_size 0, numbers 0 … ${g.numberMax}, lock by TIME, round ${g.round} ms (${g.round / DAY_MS} days), offset ${g.offset} ms`
+    log(g.kind === 3 ? `  SHAPE (never changes): kind 3 (number), list_size 0, numbers ${g.numberMin ?? 0} … ${g.numberMax}, lock by TIME, round ${g.round} ms (${g.round / DAY_MS} days), offset ${g.offset} ms`
       : `  SHAPE (never changes): kind ${g.kind} (${g.kind === 1 ? "one pick" : "a list"}), list_size ${g.listSize}, lock by TIME, round ${g.round} ms (${g.round / DAY_MS} days), offset ${g.offset} ms`);
     log(`  lead ${g.lead} ms (${g.lead / 60000} min), ahead ${g.ahead} ms (${g.ahead / 3600000} h)`);
     for (const x of timeRounds(g, Date.now())) log(`    round ${x.round}: opens ${x.opens}, locks ${x.locks}, target ${x.target}`);
