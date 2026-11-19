@@ -1,0 +1,32 @@
+// Repo Lens #R4-2 (I-1, ratchet), written by Architecture from the reply (#R4-2b compares Repo Lens 4's own file).
+// Every page that builds pick operations sends them through the shared card (web/js/lib/send-picks.js), except the
+// pages listed in PENDING, which still send picks themselves until they convert. A new page outside the card fails here.
+// When a page converts, remove it from PENDING in the same PR (this test fails until you do).
+// Run: node --test tests/audit/send-picks.pages-ratchet.repolens-r4.test.mjs
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+export const PENDING = ["blockx.js", "bracket.js", "combo.js", "race.js", "survivor.js", "overunder.js"];
+const BUILDS_PICKS = /functions\s*(?:\.\s*pick\b|\[\s*["'`]pick["'`]\s*\])|\{\s*[^}]*\bpick\b[^}]*\}\s*=\s*\w+\.functions/;
+const USES_CARD = /from\s+["']\.\/js\/lib\/send-picks\.js["']/;
+
+const pages = fs.readdirSync("web").filter((f) => f.endsWith(".js")).map((f) => ({ f, src: fs.readFileSync(path.join("web", f), "utf8") }));
+
+test("every page that builds picks uses the card, or is listed in PENDING", () => {
+  const outside = pages.filter((p) => BUILDS_PICKS.test(p.src) && !USES_CARD.test(p.src)).map((p) => p.f);
+  const extra = outside.filter((f) => !PENDING.includes(f));
+  assert.deepEqual(extra, [], `send picks through web/js/lib/send-picks.js: ${extra.join(", ")}`);
+});
+
+test("a page in PENDING that now uses the card is taken off the list (the list only shrinks)", () => {
+  const converted = pages.filter((p) => PENDING.includes(p.f) && USES_CARD.test(p.src)).map((p) => p.f);
+  assert.deepEqual(converted, [], `remove from PENDING: ${converted.join(", ")}`);
+  assert.equal(PENDING.length, 6, "nothing is added to PENDING");
+});
+
+test("Fantasy uses the card, and the pattern catches the ways around a plain text rule", () => {
+  assert.ok(USES_CARD.test(fs.readFileSync("web/fantasy.js", "utf8")));
+  for (const s of ["c.functions.pick({})", "c.functions['pick']({})", "c.functions[\"pick\"]({})", "const { pick } = c.functions;"]) assert.match(s, BUILDS_PICKS, s);
+});

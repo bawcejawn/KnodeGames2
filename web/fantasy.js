@@ -150,6 +150,31 @@ function start() {
     if (!who || !picks) return null;
     try { const x = await picks.functions.get_pick({ game, round: String(round), player: who }); const l = x.result && x.result.pick && x.result.pick.producers; return Array.isArray(l) && l.length ? l : null; } catch { return null; }
   }
+  /** Repo Lens #R4-2 R4-2.1: the read before a send is strict. A failed read stops the send (it never makes a change look
+   *  like a first pick, which the sponsor would pay for: D-278). Display reads (getPick) stay lenient. Returns the pick
+   *  on chain (null for none) and how many times it has been changed (get_pick "changes"). */
+  const READ_FAILED = "couldn't check your current pick";
+  async function readPick(game, round) {
+    const who = me();
+    if (!who || !picks) throw new Error(READ_FAILED);
+    let x;
+    try { x = await picks.functions.get_pick({ game, round: String(round), player: who }); } catch { throw new Error(READ_FAILED); }
+    if (!x || typeof x !== "object") throw new Error(READ_FAILED);
+    const pk = x.result && x.result.pick, l = pk && pk.producers;
+    return { existing: Array.isArray(l) && l.length ? l : null, changes: pk ? Number(pk.changes || 0) : 0 };
+  }
+  /** R4-2.3: the game's change limit, read from the Picks contract (get_game max_changes), never a copied number. If the
+   *  read fails the card shows no count; the contract still refuses a change past the limit. */
+  const limits = new Map();
+  async function maxChangesOf(game) {
+    if (limits.has(game)) return limits.get(game);
+    try {
+      const r = await picks.functions.get_game({ game });
+      const n = Number(r && r.result && r.result.game && r.result.game.max_changes);
+      if (Number.isInteger(n) && n >= 0) { limits.set(game, n); return n; }
+    } catch { /* no count shown */ }
+    return undefined;
+  }
   /** The next day you can still pick for (its lock at least a minute away). */
   function targetDay(now = Date.now()) { let d = dayNo(now); while (!isPlayDay(d) || lockOfDay(d) - now < 60000) d++; return d; }
   /** The days you can plan now: up to 7 days ahead, play days only, in weeks whose price list is out. */
@@ -430,25 +455,38 @@ function start() {
   }
   /** One pick through the shared card: reads the pick on chain for that round first. Returns the send result, or null
    *  when the player kept the pick they had (or nothing changed). */
+  /** R4-2.6: who pays the Mana, said by wallet kind. Knode's sponsor never pays for a KOIN Vault user (D-301: KOIN Vault
+   *  decides) and never for a change (D-278). */
+  function manaLine(kind, change) {
+    if (change) return "A change: paid with your own Mana.";
+    if (kind === "vault") return "KOIN Vault decides how the Mana is paid (Knode's Mana sponsor isn't used).";
+    if (kind === "guest") return "Free: Knode's Mana sponsor pays the Mana.";
+    return "A first pick is free: Knode's Mana sponsor pays, unless your wallet has enough Mana of its own (then it uses yours).";
+  }
   async function sendOne(game, round, wanted, label, title, lockAt) {
-    const existing = await getPick(game, round);
+    const cur = await readPick(game, round);
+    const maxChanges = await maxChangesOf(game);
     const { operation } = await picks.functions.pick({ player: me(), game, round: String(round), producers: wanted, number: "0" }, { onlyOperation: true });
     const open = () => lockAt - Date.now() >= 60000;
-    const p = SP.plan([{ key: `${game}:${round}`, label, op: operation, existing, wanted, open: open() }]);
+    const key = `${game}:${round}`;
+    const p = SP.plan([{ key, label, op: operation, existing: cur.existing, wanted, open: open() }], { maxChanges, changesUsed: { [key]: cur.changes } });
+    if (p.refused.some((r) => r.why === "no changes left")) throw new Error("changed again");
     if (p.refused.length) throw new Error("locked");
     if (p.same.length) throw new Error("already your pick");
     const cannot = (lines) => new Promise((done) => { pop("info", title, lines, [okBtn("OK")]); asking = done; });
     if (!(await SP.confirm(p, ask(title), nameOf, { guest: W.kind === "guest", cannot }))) return null;
-    pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [p.changes.length ? "A change: paid with your own Mana." : "A first pick is free: Knode's Mana sponsor pays, unless your wallet has enough Mana of its own (then it uses yours)."]);
+    pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [manaLine(W.kind, p.changes.length > 0)]);
     return SP.send(W, p, { label, stillOpen: open });
   }
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal && !modal.hidden && !modal.querySelector(".fx-spin")) closePop(); });
   function why(e) {
     const m = String((e && e.message) || e);
-    return /locked/i.test(m) ? "That one has locked: picks close 5 minutes before the day."
+    return m.includes(READ_FAILED) ? "Couldn't check your current pick, so nothing was sent. Try again in a moment."
+      : /locked/i.test(m) ? "That one has locked: picks close 5 minutes before the day."
       : /not open yet/i.test(m) ? "That isn't open yet."
       : /used up/i.test(m) ? "Today's picks are used up. More after 00:00 UTC."
       : /already your pick/i.test(m) ? "That is already your pick."
+      : /changed again/i.test(m) ? "You've used every change for this one, so nothing was sent."
       : /closed|switched off/i.test(m) ? "This game is switched off right now."
       : /pending account resources|insufficient.*(rc|mana|resources)/i.test(m) ? "Your Mana is still held by your last transaction. Try again in a minute."
       : /reject|denied|cancel/i.test(m) ? "Cancelled in your wallet. Nothing was sent."

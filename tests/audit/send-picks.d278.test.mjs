@@ -185,6 +185,30 @@ test("D-294: one copy of selfPayMin: the wallet reads the sponsor's (game-data/d
   }
 });
 
+test("#R5-1: a pick above 2^53 is refused unless the Long library is loaded; small picks never need it", async () => {
+  const big = SP.plan([{ key: "16:1", op: op(1), existing: null, wanted: "9007199254740993" }]);
+  assert.equal(SP.needsLong(big), true);
+  const W = fakeWallet();
+  await assert.rejects(SP.send(W, big, { Long: undefined }), /Long library isn't loaded/);
+  assert.equal(W.calls.length, 0);
+  await SP.send(W, big, { Long: function Long() {} });
+  assert.equal(W.calls.length, 1);
+  assert.equal(SP.needsLong(SP.plan([{ key: "9:1", op: op(1), existing: null, wanted: "2147483647" }])), false, "Bracket's range is safe");
+  assert.equal(SP.needsLong(SP.plan([{ key: "4:1", op: op(1), existing: null, wanted: ["1Abc"] }])), false);
+});
+
+test("#R5-1: pages that send picks above 2^53 load long@5.3.2 before koilib; Bracket stays under 2^53", () => {
+  const BIG = ["overunder.html", "vs.html"];   // Picks kind 3, number_max 2^64-1 (D-284)
+  for (const f of BIG) {
+    const p = path.join("web", f);
+    if (!fs.existsSync(p)) continue;   // added by its own PR (#22 for Over/Under)
+    const h = fs.readFileSync(p, "utf8"), l = h.search(/<script[^>]+npm\/long@5\.3\.2\//), k = h.search(/<script[^>]+npm\/koilib@/);
+    assert.ok(l >= 0 && k > l, `${f}: long@5.3.2 before koilib`);
+  }
+  const bm = fs.readFileSync("web/bracket-math.js", "utf8");
+  assert.match(bm, /MAX_SIZE = 32, NUMBER_MAX = 2 \*\* \(MAX_SIZE - 1\) - 1;/, "Bracket's number stays at most 2^31 - 1, so it needs no Long");
+});
+
 // ── game:check (D-256) ──
 test("D-256 game:check: a page that builds picks must use the shared card, not the wallet directly", () => {
   const imp = `import * as SP from "${SEND_PICKS}";\n`;
@@ -249,6 +273,6 @@ test("Fantasy: both sends go through the card and read the pick on chain first",
   const f = fs.readFileSync("web/fantasy.js", "utf8");
   assert.match(f, /import \* as SP from "\.\/js\/lib\/send-picks\.js";/);
   assert.equal((f.match(/sendOne\(/g) || []).length, 3, "defined once, used by saveTeam and sendRival");
-  assert.match(f, /const existing = await getPick\(game, round\);/);
+  assert.match(f, /const cur = await readPick\(game, round\);/, "R4-2.1: the read before a send is strict");
   assert.doesNotMatch(f, /\bW\.send\(/);
 });
