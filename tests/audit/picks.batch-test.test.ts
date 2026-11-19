@@ -66,6 +66,12 @@ test("batch-test can only measure: pinned sponsor, one key, mainnet guard, no se
   assert.ok(!/log\([^)]*WIF/.test(body), "never prints a key");
 });
 
+test("batch-test sends only NEW picks: a target the wallet already picked is skipped, never changed (D-278)", () => {
+  assert.ok(body.includes("if (cur && cur.producers && cur.producers.length) continue;"), "skips a target that already has a pick");
+  assert.ok(!body.includes("net.picks : net.owner"), "no producer swap that would turn a repeat into a change");
+  assert.ok(body.includes("hasn't picked yet"), "stops, sends nothing, when there are too few new targets");
+});
+
 test("the Picks tool help lists batch-test and the key it uses", () => {
   assert.ok(src.includes("batch-test <game> --n N"));
   assert.ok(src.includes("BATCH_TEST_WIF  batch-test only"));

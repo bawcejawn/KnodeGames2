@@ -1168,15 +1168,19 @@ async function batchTest(a: string[], send: boolean) {
     if (Number(g.lock_mode) === 2 || Number(g.kind) !== 1) throw new Error(`Game ${id} is not a block-target game. batch-test is for Who Signs Block X (games 2 and 12).`);
     const G = X.forGame({ id, round: Number(g.round_size), offset: Number(g.round_offset), lead: Number(g.lead), ahead: Number(g.ahead), picksPerDay: g.max_picks_per_day, maxChanges: g.max_changes });
     const rounds = G.offerRounds(head, 60);
-    if (rounds.length < n) throw new Error(`Game ${id} has only ${rounds.length} open targets far enough from their lock; try again in a few minutes.`);
     if (n > G.PICKS_PER_DAY) throw new Error(`Game ${id} allows ${G.PICKS_PER_DAY} picks a day, fewer than ${n}.`);
-    for (let j = 0; j < n; j++) {
-      const r = rounds[j];
+    // Only targets this wallet has no pick on yet: every pick in the test is a NEW pick. A change is never sponsored (D-278),
+    // and a change would not measure what a new pick costs.
+    let got = 0;
+    for (const r of rounds) {
+      if (got === n) break;
       const cur = (await read(p, net.picks, "get_pick", { game: id, round: String(r), player: me })).pick;
-      const producer = cur?.producers?.[0] === net.owner ? net.picks : net.owner;   // always a new pick or a change, never "already your pick"
-      ops.push(await pickOp(p, net.picks, me, id, r, producer));
+      if (cur && cur.producers && cur.producers.length) continue;
+      ops.push(await pickOp(p, net.picks, me, id, r, net.owner));
       picked.push({ game: id, round: r, target: G.target(r) });
+      got++;
     }
+    if (got < n) throw new Error(`Game ${id} has only ${got} open targets this wallet hasn't picked yet (needs ${n}). Try again in a few minutes. Nothing was sent.`);
   }
   const gameIds = [...new Set(games.map(([id]) => id))];
   const ask = await p.readContract({ contract_id: BATCH_SPONSOR, entry_point: WOULD_PAY_ENTRY, args: utils.encodeBase64url(wouldPayArgs(me, rcLimit, gameIds)) } as any).catch(() => null) as any;
