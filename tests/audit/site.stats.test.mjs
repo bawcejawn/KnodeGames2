@@ -73,7 +73,7 @@ test("the panel stays hidden with no file, and says so when the numbers are old"
 test("stats.js never writes HTML or stores anything, and both pages load it with the stats-data host allowed", () => {
   assert.doesNotMatch(src, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|localStorage|sessionStorage|eval\(/);
   for (const f of ["index.html", "games.html"]) {
-    const h = fs.readFileSync(`${APP}/${f}`, "utf8");
+    const h = fs.readFileSync(`${APP}/web/${f}`, "utf8");
     assert.match(h, /<script src="stats\.js"><\/script>/, f);
     assert.match(h.match(/connect-src [^;]*/)[0], /https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/stats-data\//, f);
   }

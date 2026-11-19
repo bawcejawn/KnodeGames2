@@ -9,7 +9,7 @@ const csp = (h) => (h.match(/connect-src([^;"]*)/) || [])[1] || "";
 
 test("race, mana, pulse and the home page give the provider both nodes, in a random order", () => {
   for (const f of ["race.js", "mana.js", "pulse.js", "app.js"]) {
-    const js = read(f);
+    const js = read(`web/${f}`);
     assert.match(js, /const RPCS = \["https:\/\/koinos\.armana\.io", "https:\/\/api\.koinosblocks\.com"\];/, f);
     assert.match(js, /Math\.random\(\) < 0\.5\) RPCS\.reverse\(\)/, f);
     assert.match(js, /new lib\.Provider\((dep\.rpc && dep\.rpc !== RPC \? \[dep\.rpc\] : )?RPCS\)/, f);
@@ -24,7 +24,7 @@ test("bracket and Block X (mainnet) also start on either node", () => {
 
 test("every page that reads the chain lets both nodes through its CSP", () => {
   for (const f of ["index.html", "race.html", "mana.html", "pulse.html", "bracket.html", "blockx.html"]) {
-    const c = csp(read(f));
+    const c = csp(read(`web/${f}`));
     assert.ok(c.includes("https://koinos.armana.io") && c.includes("https://api.koinosblocks.com"), f);
   }
 });

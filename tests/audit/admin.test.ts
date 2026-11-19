@@ -111,7 +111,7 @@ test("Block Golf: live, its controls in order with game 6 fixed, status read-onl
   // The switches can't be set from the page: a guided card with a button to GitHub's variables page.
   const g = area.guides!;
   assert.equal(g.length, 1); assert.equal(g[0].steps.length, 4);
-  assert.equal(g[0].link.url, "https://github.com/bawcejawn/KnodeGames/settings/variables/actions");
+  assert.equal(g[0].link.url, "https://github.com/bawcejawn/KnodeGames2/settings/variables/actions");
   for (const [i, v] of [[0, /GOLF_ENABLED = true/], [1, /GOLF_STAKED_FROM_WEEK.*Monday 00:57 UTC.*Never change it/], [2, /GOLF_HOLD_WEEKS.*Thursday 00:00 UTC/], [3, /GOLF_ENABLED to false/]] as const) assert.match(g[0].steps[i], v);
   const server = fs.readFileSync("ops/admin/server.ts", "utf8");
   assert.match(server, /tool === "golf" \? "bot\/games\/golf\.ts"/);
@@ -119,8 +119,8 @@ test("Block Golf: live, its controls in order with game 6 fixed, status read-onl
 test("guided cards: text only, and the button opens only this repository's GitHub pages", () => {
   const page = fs.readFileSync("ops/admin/index.html", "utf8");
   const re = new RegExp(page.match(/const GUIDE_URL = \/(.+)\/;/)![1]);
-  assert.ok(re.test("https://github.com/bawcejawn/KnodeGames/settings/variables/actions"));
-  for (const bad of ["https://evil.example/", "https://github.com/someone/else", "javascript:alert(1)", "https://github.com/bawcejawn/KnodeGames.evil.com/x", "https://github.com/bawcejawn/KnodeGames/x?y=\"z"]) assert.ok(!re.test(bad), bad);
+  assert.ok(re.test("https://github.com/bawcejawn/KnodeGames2/settings/variables/actions"));
+  for (const bad of ["https://evil.example/", "https://github.com/someone/else", "javascript:alert(1)", "https://github.com/bawcejawn/KnodeGames.evil.com/x", "https://github.com/bawcejawn/KnodeGames2/x?y=\"z"]) assert.ok(!re.test(bad), bad);
   assert.match(page, /ok \? el\("a", \{ class: "btn guide-link", href: g\.link\.url, target: "_blank", rel: "noopener noreferrer" \}/);
   for (const a of AREAS) for (const gd of a.guides ?? []) assert.ok(re.test(gd.link.url), `${a.id}: ${gd.link.url}`);
 });

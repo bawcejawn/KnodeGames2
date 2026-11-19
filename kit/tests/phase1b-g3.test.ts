@@ -31,7 +31,7 @@ function fixture() {
 function glue(dataDir: string, files: Record<string, unknown>, pub: Record<string, unknown> = {}) {
   const w = fs.mkdtempSync(path.join(os.tmpdir(), "kit-g3-"));
   for (const d of ["code", "in/inputs", "pub/inputs"]) fs.mkdirSync(path.join(w, d), { recursive: true });
-  fs.copyFileSync(path.join(ROOT, "vhp_ruler.py"), path.join(w, "code", "vhp_ruler.py"));
+  fs.copyFileSync(path.join(ROOT, "ruler", "vhp_ruler.py"), path.join(w, "code", "vhp_ruler.py"));
   fs.writeFileSync(path.join(w, "code", "kit_cards.py"), KIT_CARDS_PY);
   for (const [k, v] of Object.entries(files)) fs.writeFileSync(path.join(w, "in", k), JSON.stringify(v));
   for (const [k, v] of Object.entries(pub)) fs.writeFileSync(path.join(w, "pub", k), JSON.stringify(v));

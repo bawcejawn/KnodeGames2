@@ -283,7 +283,10 @@ test("workflow: the recorder holds no secret and no write token; only the publis
   // The VHP ruler: vhp_ruler.py is embedded in the publish job as data (tests/audit/race-ruler.test.mjs keeps it the
   // repository's file byte for byte); its own text is left out of the checks here.
   const rec = job("record"), pub = job("publish").replace(/# BEGIN vhp_ruler\.py\n[\s\S]*?# END vhp_ruler\.py\n/, "");
-  assert.doesNotMatch(yml, /secrets\./);
+  // Audit AB-058: the one secret is the results seal key, once, in the publish job (tests/audit/site.ci-deps.test.mjs).
+  assert.deepEqual([...yml.matchAll(/secrets\.[A-Za-z_]+/g)].map((m) => m[0]), ["secrets.RESULTS_SEAL_KEY"]);
+  assert.doesNotMatch(rec, /secrets\./, "the recorder holds no secret");
+  assert.match(pub, /\n          RESULTS_SEAL_KEY: \$\{\{ secrets\.RESULTS_SEAL_KEY \}\}\n/);
   assert.doesNotMatch(yml, /\n\s*(pull_request|push):/);
   assert.match(rec, /permissions:\s*\n\s*contents:\s*read/); assert.match(rec, /persist-credentials:\s*false/); assert.match(rec, /npm ci\b[^\n]*--ignore-scripts/);
   assert.match(pub, /permissions:\s*\n\s*contents:\s*write/);
@@ -671,7 +674,7 @@ test("vault (B1-1 / V4 / B1-5): on a chain without get_game_player (v5) the stak
   assert.ok(JSON.parse(abiText).methods.get_game_player, "race.ts reads stakes with the v6 ABI");
   assert.equal(abiText, fs.readFileSync(path.resolve(APP, "contracts/vault/abi/kpred-v6.koilib.json"), "utf8"), "the same ABI as Block X reads");
   const src = fs.readFileSync(path.resolve(APP, "bot/race.ts"), "utf8");
-  assert.match(src, /game\/abi\/kpred\.koilib\.json/);
+  assert.match(src, /contracts\/vault\/abi\/kpred\.koilib\.json/); // KnodeGames2 path (was game/abi/)
   assert.doesNotMatch(src, /return \{ staked: false, earning: false \};\s*\/\/ the contract on chain isn't v6/, "no early 'not v6 yet' answer (V4)");
   const { dir } = await weekTwoDone();
   const out = tmp();

@@ -202,7 +202,7 @@ test("KOIN Vault, remembered: the same account approved again → the action goe
 // at the top (no Info menu: Get VHP is in Tools); the footer has Quick tour · Trust · Terms & risks · Install app · Source code.
 test("every page with a header loads the shared wallet button after wallet.js, and has the same top menu and footer", () => {
   for (const p of fs.readdirSync(`${APP}/web`).filter((f) => f.endsWith(".html"))) {
-    const h = fs.readFileSync(`${APP}/${p}`, "utf8");
+    const h = fs.readFileSync(`${APP}/web/${p}`, "utf8");
     if (!/top-row/.test(h)) continue;
     // names.js may sit between them, so the button shows the wallet's name at once (names audit PN-21).
     assert.match(h, /<script src="wallet\.js"><\/script>\s*(?:<script src="names\.js"><\/script>\s*)?<script src="header-wallet\.js"><\/script>/, `${p}: header wallet`);

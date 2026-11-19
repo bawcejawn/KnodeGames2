@@ -220,7 +220,7 @@ test("the repair script runs unattended and returns an exit code (0 repaired, 1 
   assert.match(ps, /if \(\$copied\) \{ exit 0 \} else \{ exit 1 \}\s*$/);
   assert.doesNotMatch(ps, /Read-Host|-Confirm:\$true|Pause\b/i, "no prompts");
   assert.match(ps, /\[ValidateSet\("game", "desk", "personal"\)\]\[string\]\$Broken/);
-  const inst = fs.readFileSync(path.join(ROOT, "node", "install-heal.ps1"), "utf8");
+  const inst = fs.readFileSync(path.join(ROOT, "ops", "node", "install-heal.ps1"), "utf8");
   assert.match(inst, /ExecutionTimeLimit \(New-TimeSpan -Hours 2\)/);
   assert.match(inst, /heal-task\.json/);
 });

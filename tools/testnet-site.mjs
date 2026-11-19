@@ -12,7 +12,7 @@
 // only to the page on this computer (Origin and Host must be this server; a custom header blocks other sites).
 //
 // Safety: it listens on 127.0.0.1 only (not your network), answers GET/HEAD (and that one POST), and serves only an allowlist:
-// the site's own page files at the repository root (html, js, css; media/ images), testnet/blockx.json, the Picks ABI (contracts/picks/abi/picks.koilib.json) and the recorder's testnet-data/blockx-<id>/*.json. Never .env.testnet, keys,
+// the site's own page files (web/ and ops/testnet/: html, js, css; media/ images), testnet/blockx.json (ops/testnet/config/), the Picks ABI (contracts/picks/abi/picks.koilib.json) and the recorder's testnet-data/blockx-<id>/*.json. Never .env.testnet, keys,
 // or any other file of the project.
 import http from "node:http";
 import fs from "node:fs";
@@ -23,6 +23,7 @@ import koilib from "koilib";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.PORT || 8350);
+const TESTNET_CFG = "ops/testnet/config/blockx.json";  // was testnet/blockx.json at the old repository's root
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json", ".woff2": "font/woff2" };
 
@@ -37,7 +38,13 @@ export function allowed(urlPath) {
   // dotfiles or folders), media/ images, and the few data files below.
   const ok = /^[A-Za-z0-9_-][A-Za-z0-9._-]*\.(html|js|css)$/.test(rel) || /^media\/[A-Za-z0-9_-][A-Za-z0-9._-]*\.(png|svg|ico)$/.test(rel) || rel === "manifest.webmanifest" || rel === "testnet/blockx.json" || rel === "contracts/picks/abi/picks.koilib.json" || /^testnet-data\/blockx-\d{1,3}\/(index|board|cards|W\d{3})\.json$/.test(rel);
   if (!ok) return null;
-  const abs = path.join(ROOT, rel);
+  // KnodeGames2 layout: the site's files are in web/, the testnet pages and their settings in ops/testnet/. The URLs the
+  // page asks for stay the same; only where each file sits on disk changed.
+  let disk = rel;
+  if (rel === "testnet/blockx.json") disk = TESTNET_CFG;
+  else if (/^[^/]+\.(html|js|css)$/.test(rel) && fs.existsSync(path.join(ROOT, "ops/testnet", rel))) disk = `ops/testnet/${rel}`;
+  else if (/^[^/]+\.(html|js|css)$/.test(rel) || rel.startsWith("media/") || rel === "manifest.webmanifest") disk = `web/${rel}`;
+  const abs = path.join(ROOT, disk);
   if (!abs.startsWith(ROOT + path.sep)) return null;
   return abs;
 }
@@ -72,7 +79,7 @@ export async function fund(address, key, send = fundNow) {
   try { return await send(address, key); } finally { sending.delete(address); }
 }
 async function fundNow(address, key) {
-  const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, "testnet/blockx.json"), "utf8"));
+  const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, TESTNET_CFG), "utf8"));
   const p = new koilib.Provider([cfg.rpc]);
   const chainId = await p.getChainId();
   if (chainId === MAINNET_CHAIN_ID || (cfg.chainId && chainId !== cfg.chainId)) return [500, { error: "The node isn't the testnet. Nothing was sent." }];
@@ -137,7 +144,7 @@ function start(port, tries = 20) {
 }
 
 function recordAll() {
-  const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, "testnet/blockx.json"), "utf8"));
+  const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, TESTNET_CFG), "utf8"));
   const ids = cfg.games.map((g) => g.id).filter((id) => Number.isInteger(id) && id > 0 && id < 128);
   const one = (i) => {
     if (i >= ids.length) return;
