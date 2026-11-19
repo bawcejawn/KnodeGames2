@@ -11,7 +11,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const S = await import(pathToFileURL(path.join(here, "../../games/survivor/math.js")).href);
+const S = await import(pathToFileURL(path.join(here, "../math.js")).href);
 const cards = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 const RUNS = Number(process.argv[3] || 400);
 

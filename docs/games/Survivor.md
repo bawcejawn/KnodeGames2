@@ -1,6 +1,6 @@
 # Survivor (game 3)
 
-> **Sources:** owner decisions D-020, D-051, D-062, D-068, D-081, D-082, D-095, 12 Nov 2026 (Season 1 option C, Sundays rest, void pick) and 14 Nov 2026 (Season 1 on Mon 7 Dec, moved to Mon 30 Nov by D-246 on 18 Nov; the no-card rule, old recorder and testnet kit removed, no testnet season; D-new, numbered by the Library); the repo (`games/survivor/`). **Last updated:** 14 Nov 2026; previous version `../archive/2026-11-04b/games/Survivor.md` and git history.
+> **Sources:** owner decisions D-020, D-051, D-062, D-068, D-081, D-082, D-095, 12 Nov 2026 (Season 1 option C, Sundays rest, void pick) and 14 Nov 2026 (Season 1 on Mon 7 Dec, moved to Mon 30 Nov by D-246 on 18 Nov; the no-card rule, old recorder and testnet kit removed, no testnet season; D-new, numbered by the Library); the repo (`games/survivor/`). **Last updated:** 19 Nov 2026; previous version `../archive/2026-11-04b/games/Survivor.md` and git history.
 > **Legend:** ✅ verified · 💬 from a chat · 👤 owner · ❓ unknown
 
 ## Purpose

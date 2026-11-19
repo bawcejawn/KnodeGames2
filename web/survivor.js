@@ -123,6 +123,9 @@ export function seasonView(weeks) {
   return { players: [...P.values()], decided, days: dayList };
 }
 
+/** The Picks contract's limits for game 3 (bot/picks.ts SURVIVOR_GAME maxChanges, picksPerDay; pinned by picks-pin.test.ts). */
+export const MAX_CHANGES = 5, PICKS_PER_DAY = 20;
+
 /** The play days a pick can be offered for at time `t` (ms): only season play days (so nothing before Season 1's day 1,
  *  Mon 30 Nov 2026, even while the contract already takes picks for earlier days), open on the contract (7 days ahead,
  *  locking 5 minutes before the day) and more than `margin` ms before the lock. The page's own list (openDays). */
@@ -148,7 +151,6 @@ function start() {
   const EXPLORER = "https://koinosscan.com/address/";
   const PRIZES_URL = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/prize-settings/free-prizes.json";
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Swap" };
-  const MAX_CHANGES = 5, PICKS_PER_DAY = 20;
   const MARGIN = 2 * 60000;                     // the page offers a day only while its lock is more than 2 minutes away
   const provider = new lib.Provider([RPC]);
   const W = window.KWallet;

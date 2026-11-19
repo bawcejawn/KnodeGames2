@@ -8,11 +8,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as S from "../math.js";
 import { SURVIVOR_GAME } from "../../../bot/picks.ts";
+import { page } from "./load-page.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const game = JSON.parse(fs.readFileSync(path.join(ROOT, "games/survivor/game.json"), "utf8"));
 
-test("Survivor's math.js and game.json equal bot/picks.ts SURVIVOR_GAME", () => {
+test("Survivor's math.js, game.json and page limits equal bot/picks.ts SURVIVOR_GAME", () => {
   assert.equal(SURVIVOR_GAME.id, S.GAME_ID, "game id (math.js)");
   assert.equal(SURVIVOR_GAME.id, game.picks.gameId, "game id (game.json)");
   assert.equal(SURVIVOR_GAME.round, S.DAY, "one round = one UTC day");
@@ -22,6 +23,8 @@ test("Survivor's math.js and game.json equal bot/picks.ts SURVIVOR_GAME", () => 
   assert.equal(SURVIVOR_GAME.lockMode, 2, "locks by time");
   assert.equal(SURVIVOR_GAME.kind, 1, "one producer per pick");
   assert.equal(SURVIVOR_GAME.listSize, 1, "one producer per pick");
+  assert.equal(SURVIVOR_GAME.maxChanges, page.MAX_CHANGES, "changes per pick (the page)");
+  assert.equal(SURVIVOR_GAME.picksPerDay, page.PICKS_PER_DAY, "picks per day (the page)");
   // the values themselves, so a change on both sides at once still shows here
-  assert.deepEqual([S.DAY, S.LEAD_MS, S.AHEAD_MS, S.GAME_ID], [86400000, 300000, 604800000, 3]);
+  assert.deepEqual([S.DAY, S.LEAD_MS, S.AHEAD_MS, S.GAME_ID, page.MAX_CHANGES, page.PICKS_PER_DAY], [86400000, 300000, 604800000, 3, 5, 20]);
 });

@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "survivor-page-"));
 fs.copyFileSync(path.join(ROOT, "web/survivor.js"), path.join(dir, "survivor.js"));
-fs.symlinkSync(path.join(ROOT, "games"), path.join(dir, "games"), "dir");
+fs.symlinkSync(path.join(ROOT, "games"), path.join(dir, "games"), "junction"); // "junction": no admin rights on Windows; ignored elsewhere
 process.on("exit", () => fs.rmSync(dir, { recursive: true, force: true }));
 
 export const page = await import(pathToFileURL(path.join(dir, "survivor.js")).href);

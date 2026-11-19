@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import * as S from "../math.js";
 import { makeGame } from "../recorder.ts";
 
-const FIRST = 7;                                         // the season's first week (math.js FIRST_WEEK on mainnet)
+const FIRST = 7;                                         // a test launch week (mainnet's math.js FIRST_WEEK is 6 since D-246)
 const P = (i) => "1P" + "123456789"[i] + "Z".repeat(30);
 const A = "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", B = "1BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", C = "1CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
 // Days 1-7 on the same field of 8 producers (scores 0..700). Day 1: A and B pick in the out-zone, C picks safe.
