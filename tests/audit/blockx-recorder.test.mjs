@@ -1081,7 +1081,7 @@ test("Repo Lens #E-23 L-1: only when every node says game 12 is missing are its 
 const RR = await import(path.resolve(APP, "bot/blockx-ruler.ts"));
 const stubEntry = (points, { card = "stub-card\n", note = null, isVoid = false } = {}) => (t, lead, now, old) => old && (old.card || old.void) ? old
   : { round: t.round, height: t.height, lock: t.height - lead, cardRound: RR.roundOf(t.time), window: RR.windowOf(t.height - lead), card: t.void ? null : card, note, signer: t.signer, points: isVoid ? 0 : points, void: !!t.void || isVoid, why: null };
-async function weekThenLookOut(picks, hoursAfter, extra = {}) {
+async function weekThenLookOut(picks, hoursAfter, extra = {}, againHours = 0) {
   const rd = raceDir();
   let prev;
   const startH = H0 - Math.floor(3600000 / 3000), endH = startH + 7 * 28800;
@@ -1092,7 +1092,11 @@ async function weekThenLookOut(picks, hoursAfter, extra = {}) {
   }
   const at = endH + hoursAfter * 1200, out = tmp();
   const r = await quiet(() => run({ p: "main", check: null, prev, out, raceDir: rd, picksContract: "1P", blockOf: blockOf(), picksOf: picks, rankedOf, head: { height: at, time: T(at), lib: at - 60 }, ...extra }));
-  return { r, out };
+  if (!againHours) return { r, out };
+  // (a week closes only when two runs an hour or more apart agree: one more run, after the first)
+  const at2 = at + againHours * 1200, out2 = tmp();
+  const r2 = await quiet(() => run({ p: "main", check: null, prev: out, out: out2, raceDir: rd, picksContract: "1P", blockOf: blockOf(), picksOf: picks, rankedOf, head: { height: at2, time: T(at2), lib: at2 - 60 }, ...extra }));
+  return { r: r2, out: out2 };
 }
 const xFiles = (out) => fs.readdirSync(out).filter((f) => /^X\d{3}-\d\.json$/.test(f)).sort();
 
@@ -1155,4 +1159,32 @@ test("Repo Lens #G-49 G49-1: in an ON week, targets waiting over 6 hours for the
   // (switch 5: week 4, the running week, is the shadow week and week 3 is off)
   const sh = await weekThenLookOut(picksGuest, 13, { rulerFrom: 5, rulerEntryOf: stubEntry(1234, { card: null, note: "not yet: x" }) });
   assert.ok(!sh.r.held.some((h) => /VHP ruler/.test(h)), "shadow: no alert (it counts for nothing)");
+});
+
+test("48-hour old-points fallback (owner, 18 Nov): an ON week the ruler couldn't score in 48 hours closes with the old-rule points, and alerts once per target", async () => {
+  const off = await weekThenLookOut(picksGuest, 13, { rulerFrom: null });
+  const fbStub = (t, lead, now, old) => old && (old.card || old.void || RR.isFallback(old)) ? old
+    : { round: t.round, height: t.height, lock: t.height - lead, cardRound: RR.roundOf(t.time), window: RR.windowOf(t.height - lead), card: null, note: "the ruler couldn't score this target within 48 hours (x): scored the old way", signer: t.signer, points: 0, void: !!t.void, why: t.void ? "void" : RR.FALLBACK_WHY };
+  const fb = await weekThenLookOut(picksGuest, 13, { rulerFrom: 3, rulerEntryOf: fbStub });
+  const lw = fb.r.board.lastWeek;
+  assert.equal(lw.final, true, "a fallback target counts as scored: the week can close");
+  assert.deepEqual(lw.rows, off.r.board.lastWeek.rows, "the points are exactly the ruler-off (old-rule) points");
+  assert.ok(fb.r.held.some((h) => /couldn't score this ON-week target within 48 hours.*scored the old way/.test(h)), "an alert when a fallback is made");
+  assert.ok(!fb.r.held.some((h) => /target\(s\) have waited more than|within 3 days/.test(h)), "a fallback is neither a late wait nor a void");
+});
+
+test("48-hour old-points fallback, through the real entryFor: no ruler data at all, an ON week still closes once its counted targets are 48 hours old, with old-rule points and no 3-day void", async () => {
+  // (the counted week ends Saturday 24:00 UTC, so 26 hours after the week's last block its last counted target is about 50 hours old)
+  const off = await weekThenLookOut(picksGuest, 26, { rulerFrom: null }, 2);
+  const real = await weekThenLookOut(picksGuest, 26, { rulerFrom: 3 }, 2);
+  const lw = real.r.board.lastWeek;
+  assert.equal(lw.final, true, JSON.stringify({ held: real.r.held }).slice(0, 600));
+  assert.deepEqual(lw.rows, off.r.board.lastWeek.rows, "the old-rule points, exactly as with the ruler off");
+  const ents = xFiles(real.out).filter((f) => f.startsWith("X003-")).flatMap((f) => JSON.parse(fs.readFileSync(path.join(real.out, f), "utf8")).targets);
+  assert.ok(ents.some((e) => RR.isFallback(e)), "fallback entries were made");
+  assert.ok(!ents.some((e) => e.void && e.why && /3 days/.test(e.why)), "no 3-day voids");
+  // the same outage in a shadow week never makes a fallback (it counts for nothing there)
+  const sh = await weekThenLookOut(picksGuest, 26, { rulerFrom: 4 }, 2);
+  const sents = xFiles(sh.out).filter((f) => f.startsWith("X003-")).flatMap((f) => JSON.parse(fs.readFileSync(path.join(sh.out, f), "utf8")).targets);
+  assert.ok(sents.length > 0 && !sents.some((e) => RR.isFallback(e)), "shadow: never a fallback");
 });

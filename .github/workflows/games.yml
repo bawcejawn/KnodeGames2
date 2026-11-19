@@ -2365,6 +2365,10 @@ jobs:
           # copy embedded in the step above (byte for byte the repository's file, tested), loaded from that path only. ──
           RULER_GAME = {"game": 2, "c": "500000", "minK": 10, "poolRule": "min", "ownRule": "spot", "paying": True, "pooled": ["1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr"]}   # = RULER in bot/blockx-ruler.ts (tested)
           RULER_LEAD, RULER_CARD, RULER_SIZE, RULER_CAP, RULER_BASE, RULER_VOID, RULER_WAIT = 100, 7200, 7200, 120, 100, 1200, 3 * 86400000
+          # The 48-hour old-points fallback (owner, 18 Nov 2026) = RULER_FALLBACK_MS and FALLBACK_WHY in bot/blockx-ruler.ts (tested).
+          RULER_FALLBACK = 2 * 86400000
+          FALLBACK_WHY = "old points: the ruler couldn't score this target within 48 hours, so a right pick keeps its old-rule points"
+          def is_fallback(e): return type(e) is dict and e.get("card") is None and e.get("void") is False and e.get("why") == FALLBACK_WHY
           RM, DAY = 1000000, 86400000
           _vr = []
           def VR():
@@ -2457,11 +2461,12 @@ jobs:
                   assert e["note"] is None or (type(e["note"]) is str and len(e["note"]) < 400), tag + ": note"
                   assert e["why"] is None or (type(e["why"]) is str and len(e["why"]) < 400), tag + ": why"
                   po = old.get(h)
-                  if type(po) is dict and (type(po.get("card")) is str or po.get("void") is True): assert same(e, po), tag + ": a published ruler entry would change"
+                  if type(po) is dict and (type(po.get("card")) is str or po.get("void") is True or is_fallback(po)): assert same(e, po), tag + ": a published ruler entry would change"
                   if t.get("void") is not None: assert e["void"] is True and e["card"] is None and e["points"] == 0, tag + ": the target is void, so its entry must be"
                   if e["card"] is None:
                       assert e["points"] == 0, tag + ": points without a card"
                       if e["void"] and t.get("void") is None: assert now - t["time"] >= RULER_WAIT, tag + ": voided before the ruler's 3-day wait"
+                      if is_fallback(e): assert j["mode"] == "on" and t.get("void") is None and t.get("signer") is not None and now - t["time"] >= RULER_FALLBACK, tag + ": the old-points fallback needs an ON week and 48 hours"
                       continue
                   assert type(e["card"]) is str and len(e["card"]) < 500000 and t.get("signer") is not None, tag + ": card"
                   if type(po) is dict and po.get("card") == e["card"]: continue   # checked byte for byte when it was published
@@ -2498,9 +2503,10 @@ jobs:
               for t in (wf.get("targets") if type(wf) is dict and type(wf.get("targets")) is list else []):
                   if not (type(t) is dict and start <= t.get("time", -1) < end) or t.get("void") is not None: continue
                   e = ent.get(t.get("height"))
-                  if type(e) is not dict or (e.get("card") is None and e.get("void") is not True): missing += 1; continue
+                  if type(e) is not dict or (e.get("card") is None and e.get("void") is not True and not is_fallback(e)): missing += 1; continue
                   for pk in t.get("picks") or []:
-                      tot[pk[0]] = tot.get(pk[0], 0) + (e["points"] if e["void"] is not True and pk[1] == e["signer"] else 0)
+                      # a fallback entry scores the pick's own old-rule points (the week file's); the ruler's entries score theirs
+                      tot[pk[0]] = tot.get(pk[0], 0) + ((pk[3] if is_fallback(e) else e["points"]) if e["void"] is not True and pk[1] == e["signer"] else 0)
               rows = {r.get("a"): r.get("pts") for r in (_nlw.get("rows") or []) if type(r) is dict}
               why = None
               if missing and _nlw.get("final") is True: why = "final before the ruler scored every target (%d not scored)" % missing
