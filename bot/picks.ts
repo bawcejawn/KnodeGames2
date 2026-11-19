@@ -20,6 +20,9 @@
  *                                                   (no transaction): after an accept whose read-back didn't agree in time
  *   npm run picks -- lock-test <id> --testnet --send      send one pick per block across a target's lock, report each
  *   npm run picks -- mana-test <id> --testnet --send      send 1, 3 and 7 picks in one transaction each, report the Mana
+ *   npm run picks -- batch-test <game> --n N [--also-game G --also-n M] --wallet <address> [--rc MANA] [--send --mainnet]
+ *                                                   MAINNET measurement (D-254): one real sponsored batch of picks from the small
+ *                                                   test wallet; a dry run unless --send --mainnet. Key: BATCH_TEST_WIF.
  *
  * The Picks v2 upgrade (Combo Card; docs/blockx/MAINNET-LAUNCH.md "Later: the Picks v2 upgrade", steps 2-4). Each one is
  * a dry run without --send; a mainnet send also needs --mainnet and --code 92d555d0 (the first 8 characters of v2's
@@ -36,6 +39,7 @@
  *   PAYER_WIF   pays the upload's Mana (both sign the upload). Default: OPERATOR_WIF (the bot wallet, which holds KOIN).
  *   OWNER_WIF   the KnodeGames owner (mainnet: 1635QUr…H717; testnet: the test owner from npm run bot -- keys --testnet).
  *   PLAYER_WIF  testnet only: the test player for lock-test and mana-test.
+ *   BATCH_TEST_WIF  batch-test only: the small, empty test wallet (put it in .env for the measurement, then take it out).
  *   NEW_OWNER_WIF  owner-accept only: the proposed new owner's key (put it in .env for that one command, then take it
  *               out). That wallet pays its own Mana for the accept, so it needs a little KOIN.
  */
@@ -984,7 +988,7 @@ const pickOp = async (p: Provider, picks: string, player: string, game: number, 
   (await (new Contract({ id: picks, abi: loadAbi(), provider: p }).functions as any).pick({ player, game, round: String(round), producers: [producer], number: "0" }, { onlyOperation: true })).operation;
 
 /** Where a transaction ended up: the block that holds it and whether it was applied or reverted there. */
-export async function findTx(p: Provider, txId: string): Promise<{ block: number; reverted: boolean; logs: string[] } | null> {
+export async function findTx(p: Provider, txId: string): Promise<{ block: number; reverted: boolean; logs: string[]; rcUsed?: string } | null> {
   const t: any = await p.call("transaction_store.get_transactions_by_id", { transaction_ids: [txId] }).catch(() => null);
   const bid = t?.transactions?.[0]?.containing_blocks?.[0];
   if (!bid) return null;
@@ -993,7 +997,7 @@ export async function findTx(p: Provider, txId: string): Promise<{ block: number
   if (!it) return null;
   const i = (it.block?.transactions ?? []).findIndex((x: any) => x.id === txId);
   const rec = it.receipt?.transaction_receipts?.[i] ?? {};
-  return { block: Number(it.block_height), reverted: !!rec.reverted, logs: rec.logs ?? [] };
+  return { block: Number(it.block_height), reverted: !!rec.reverted, logs: rec.logs ?? [], rcUsed: rec.rc_used !== undefined ? String(rec.rc_used) : undefined };
 }
 
 /**
@@ -1089,6 +1093,121 @@ async function manaTest(id: number, send: boolean) {
   log("Saved testnet-data/mana-test-<id>.json. Send the numbers to Claude (they size the sponsor's per-pick Mana limit).");
 }
 
+
+// ═══════════════════════════════ mainnet batch measurement (D-252, D-254) ═══════════════════════════════
+/** The live Mana sponsor (pinned: the measurement never names another payer). */
+export const BATCH_SPONSOR = "1ByDDSBUzy5zkRceELc54Jh8i41yNRoKt8";
+const WOULD_PAY_ENTRY = 0xda1fd8f5;
+/** The most Mana a batch-test may ask for in one transaction. */
+export const BATCH_TEST_MAX_RC = 8;
+const BATCH_TEST_MAX_PICKS = 10;
+export type BatchPlan = { game: number; n: number; alsoGame: number | null; alsoN: number; rc: number; wallet: string };
+/** Read the batch-test command line: batch-test <game> --n N [--also-game G --also-n M] --wallet <address> [--rc MANA].
+ *  Strict: anything unknown or out of range stops it before a key is read. Exported for the tests. */
+export function batchPlan(a: string[]): BatchPlan {
+  const flag = (k: string) => { const i = a.indexOf(k); return i < 0 ? null : a[i + 1] ?? ""; };
+  const known = new Set(["--n", "--also-game", "--also-n", "--wallet", "--rc", "--send", "--mainnet"]);
+  for (let i = 1; i < a.length; i++) if (a[i].startsWith("--") && !known.has(a[i])) throw new Error(`Unknown option ${a[i]}.`);
+  const int = (v: string | null, what: string) => { if (v === null || !/^[0-9]{1,3}$/.test(v)) throw new Error(`${what} must be a whole number.`); return Number(v); };
+  const game = int(a[0] && !a[0].startsWith("--") ? a[0] : null, "The game");
+  const n = int(flag("--n"), "--n");
+  const alsoGame = flag("--also-game") === null ? null : int(flag("--also-game"), "--also-game");
+  const alsoN = alsoGame === null ? 0 : int(flag("--also-n"), "--also-n");
+  if (alsoGame === null && flag("--also-n") !== null) throw new Error("--also-n needs --also-game.");
+  if (alsoGame === game) throw new Error("--also-game must be a different game.");
+  if (n < 1 || (alsoGame !== null && alsoN < 1)) throw new Error("Each game needs at least 1 pick.");
+  if (n + alsoN > BATCH_TEST_MAX_PICKS) throw new Error(`A batch holds at most ${BATCH_TEST_MAX_PICKS} picks.`);
+  const wallet = flag("--wallet") ?? "";
+  if (!isAddr(wallet)) throw new Error("--wallet <the test wallet's address> is needed: the tool checks the key in .env belongs to it.");
+  const rcRaw = flag("--rc") ?? "2.4";
+  if (!/^[0-9]{1,2}(\.[0-9]{1,2})?$/.test(rcRaw) || Number(rcRaw) <= 0 || Number(rcRaw) > BATCH_TEST_MAX_RC) throw new Error(`--rc must be a Mana amount above 0 and at most ${BATCH_TEST_MAX_RC}.`);
+  return { game, n, alsoGame, alsoN, rc: Number(rcRaw), wallet };
+}
+/** The sponsor's would_pay question for a transaction (the same bytes wallet.js asks): payee, rc_limit, games. Exported for the tests. */
+export function wouldPayArgs(payee: string, rcLimit: bigint, games: number[]): Uint8Array {
+  const acct = utils.decodeBase58(payee);
+  const b: number[] = [0x0a, acct.length, ...acct, 0x10];
+  const push = (x: bigint) => { do { let y = Number(x & 0x7fn); x >>= 7n; if (x > 0n) y |= 0x80; b.push(y); } while (x > 0n); };
+  push(rcLimit);
+  for (const g of games) { b.push(0x28); push(BigInt(g)); }
+  return new Uint8Array(b);
+}
+/** The wallet the key belongs to must be the one named on the command line, and not any wallet that matters. */
+export function batchWalletCheck(keyAddr: string, named: string, protectedAddrs: Record<string, string>) {
+  if (keyAddr !== named) throw new Error(`BATCH_TEST_WIF belongs to ${keyAddr}, not the wallet named on the command line (${named}). Nothing was sent.`);
+  if (protectedAddrs[keyAddr]) throw new Error(`BATCH_TEST_WIF is ${protectedAddrs[keyAddr]}'s key. The batch test needs its own empty wallet. Nothing was sent.`);
+}
+/** batch-test: send ONE real sponsored batch of N picks from the small test wallet and report what it really cost.
+ *  Mainnet only, sponsored only, a dry run unless --send --mainnet. It measures; it changes no setting. */
+async function batchTest(a: string[], send: boolean) {
+  const net = network();
+  if (net.testnet) throw new Error("batch-test is a MAINNET measurement (the testnet's Mana is not the real price). Run it without --testnet.");
+  const plan = batchPlan(a);
+  mainnetGuard(net, send);
+  if (!net.picks) throw new Error("No Picks contract yet.");
+  const dep = readJson(path.join("game-data", "deployment.json"));
+  const sp = dep?.sponsor;
+  if (!sp || sp.address !== BATCH_SPONSOR) throw new Error(`game-data/deployment.json does not name the live sponsor ${BATCH_SPONSOR}. Nothing was sent.`);
+  if (!Array.isArray(sp.covers) || !sp.covers.includes(net.picks)) throw new Error("The sponsor settings don't cover the Picks contract. Nothing was sent.");
+  const { p, chainId } = await connect(net);
+  await assertAuditedContract(net, p);
+  const key = signerOf("BATCH_TEST_WIF", p), me = key.getAddress();
+  const protectedAddrs: Record<string, string> = { [net.owner]: "the Picks owner", [mainnetOwner()]: "the Picks owner", [net.picks]: "the Picks contract", [BATCH_SPONSOR]: "the Mana sponsor",
+    "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "the vault", "1EN7xU8R9tQXjHvrX79qZvvvGkkKWVnB5K": "the race contract", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Swap" };
+  for (const k of ["OWNER_WIF", "OPERATOR_WIF", "PAYER_WIF", "PICKS_WIF", "NEW_OWNER_WIF"]) if (E[k]) protectedAddrs[Signer.fromWif(E[k]!).getAddress()] = `the ${k} wallet`;
+  batchWalletCheck(me, plan.wallet, protectedAddrs);
+  const koin = BigInt(await p.getAccountRc(me));
+  const rcLimit = toSat(plan.rc);
+  // Targets: the next open targets of each game, far from their lock (picks need to land well before it).
+  const head = Number(((await p.getHeadInfo()) as any).head_topology.height);
+  const games = [[plan.game, plan.n], ...(plan.alsoGame !== null ? [[plan.alsoGame, plan.alsoN]] : [])] as [number, number][];
+  const ops: any[] = [], picked: { game: number; round: number; target: number }[] = [];
+  for (const [id, n] of games) {
+    const g = (await read(p, net.picks, "get_game", { game: id })).game;
+    if (!g || !g.enabled) throw new Error(`Game ${id} isn't in force on chain. Nothing was sent.`);
+    if (Number(g.lock_mode) === 2 || Number(g.kind) !== 1) throw new Error(`Game ${id} is not a block-target game. batch-test is for Who Signs Block X (games 2 and 12).`);
+    const G = X.forGame({ id, round: Number(g.round_size), offset: Number(g.round_offset), lead: Number(g.lead), ahead: Number(g.ahead), picksPerDay: g.max_picks_per_day, maxChanges: g.max_changes });
+    const rounds = G.offerRounds(head, 60);
+    if (rounds.length < n) throw new Error(`Game ${id} has only ${rounds.length} open targets far enough from their lock; try again in a few minutes.`);
+    if (n > G.PICKS_PER_DAY) throw new Error(`Game ${id} allows ${G.PICKS_PER_DAY} picks a day, fewer than ${n}.`);
+    for (let j = 0; j < n; j++) {
+      const r = rounds[j];
+      const cur = (await read(p, net.picks, "get_pick", { game: id, round: String(r), player: me })).pick;
+      const producer = cur?.producers?.[0] === net.owner ? net.picks : net.owner;   // always a new pick or a change, never "already your pick"
+      ops.push(await pickOp(p, net.picks, me, id, r, producer));
+      picked.push({ game: id, round: r, target: G.target(r) });
+    }
+  }
+  const gameIds = [...new Set(games.map(([id]) => id))];
+  const ask = await p.readContract({ contract_id: BATCH_SPONSOR, entry_point: WOULD_PAY_ENTRY, args: utils.encodeBase64url(wouldPayArgs(me, rcLimit, gameIds)) } as any).catch(() => null) as any;
+  const out = ask?.result ? utils.decodeBase64url(ask.result) : new Uint8Array(0);
+  const yes = out.length >= 2 && out[0] === 0x08 && out[1] === 0x01;
+  const why = out[2] === 0x12 ? Buffer.from(out.subarray(4, 4 + out[3])).toString("ascii") : "";
+  log(`batch-test on MAINNET: ${plan.n} pick${plan.n > 1 ? "s" : ""} on game ${plan.game}${plan.alsoGame !== null ? ` + ${plan.alsoN} on game ${plan.alsoGame}` : ""} in ONE transaction, from ${me} (${showKoin(koin)} Mana of its own).`);
+  log(`  The sponsor ${BATCH_SPONSOR} pays; this asks for ${plan.rc} Mana (the sponsor's per-transaction cap decides if that is allowed).`);
+  log(`  The sponsor's answer to that: ${ask === null ? "could not be read (try again)" : yes ? "yes, it would pay" : `NO${why ? `, "${why}"` : ""}`}`);
+  for (const x of picked) log(`    game ${x.game}: target block ${x.target}`);
+  if (!send) { log("\nDry run only. Nothing was sent. Add --send --mainnet to send it."); return; }
+  if (!yes) throw new Error("The sponsor would not pay for this, so nothing was sent.");
+  if (koin > toSat(1)) throw new Error("The test wallet has more than 1 Mana of its own, so it is not the small empty wallet this test is for. Nothing was sent.");
+  const tx = new Transaction({ signer: key, provider: p, options: { payer: BATCH_SPONSOR, payee: me, rcLimit: rcLimit.toString(), chainId } });
+  for (const op of ops) await tx.pushOperation(op);
+  let receipt: any;
+  try { receipt = await tx.send(); } catch (e) { throw new Error(`The node refused it: ${String((e as Error).message ?? e).slice(0, 300)}`); }
+  const txId = tx.transaction?.id;
+  await sleep(12000);
+  const seen = txId ? await findTx(p, txId) : null;
+  const used = seen?.rcUsed ?? (receipt?.rc_used !== undefined ? String(receipt.rc_used) : null);
+  const per = used ? BigInt(used) / BigInt(plan.n + plan.alsoN) : null;
+  log(`\nResult: ${seen ? `landed in block ${seen.block}, ${seen.reverted ? "REFUSED by the contract" : "applied"}` : "sent; not seen in a block yet (look it up and read it later)"}`);
+  if (used) log(`  Mana used: ${showKoin(used)} for ${plan.n + plan.alsoN} picks (${showKoin(per!)} each)${seen ? " (from the block's receipt)" : " (the node's estimate)"}; asked ${plan.rc}.`);
+  if (seen?.reverted) log(`  Reason: ${String(seen.logs?.[0] ?? "")}`);
+  const row = { at: new Date().toISOString(), plan: { game: plan.game, n: plan.n, alsoGame: plan.alsoGame, alsoN: plan.alsoN, rcAskedMana: plan.rc }, wallet: me, txId, block: seen?.block ?? null, reverted: seen?.reverted ?? null, rcUsed: used, perPick: per !== null ? String(per) : null, picks: picked };
+  const file = path.join("sponsor-data", "batch-test", `batch-${plan.n + plan.alsoN}-${Date.now()}.json`);
+  writeJson(file, row);
+  log(`Saved ${file}. Send the numbers (not the file's key: it holds none) to the Block X chat.`);
+}
+
 function buildTestnet() {
   if (!TESTNET) throw new Error("build-testnet is for the testnet: add --testnet.");
   const owner = Signer.fromWif(need("OWNER_WIF")).getAddress();
@@ -1121,6 +1240,7 @@ async function main() {
     }
     case "lock-test": return lockTest(num(), send);
     case "mana-test": return manaTest(num(), send);
+    case "batch-test": return batchTest(a, send);
     case "upgrade-schedule": return upgradeSchedule(send);
     case "upgrade-upload": return upgradeUpload(send);
     case "upgrade-clear": return upgradeClear(send);
@@ -1128,7 +1248,7 @@ async function main() {
     case "owner-accept": return ownerAccept(send);
     case "owner-cancel": return ownerCancel(send);
     case "owner-sync": return ownerSync();
-    default: throw new Error(`Unknown command "${cmd}". Commands: keys, build-testnet, status, upload, announce <id>, apply <id>, pause <id>, tighten <id> [--per-day N] [--changes N] [--lead N] [--ahead N], lock-test <id>, mana-test <id>, owner-propose <address>, owner-accept, owner-cancel, owner-sync, upgrade-schedule, upgrade-upload, upgrade-clear`);
+    default: throw new Error(`Unknown command "${cmd}". Commands: keys, build-testnet, status, upload, announce <id>, apply <id>, pause <id>, tighten <id> [--per-day N] [--changes N] [--lead N] [--ahead N], lock-test <id>, mana-test <id>, batch-test <game> --n N --wallet <address>, owner-propose <address>, owner-accept, owner-cancel, owner-sync, upgrade-schedule, upgrade-upload, upgrade-clear`);
   }
 }
 if (process.argv[1] && /picks\.ts$/.test(process.argv[1])) {
