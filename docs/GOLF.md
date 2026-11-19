@@ -82,8 +82,8 @@ The Clubhouse is one more hole, the same weight as a game hole. It's scored by h
 
   | Feature | The operation |
   |---|---|
-  | `burn` (burned KOIN for VHP; Get VHP is the same, Swap desk chat 15 Nov) | PoB `159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv` `burn` (entry `0x859facc5`) with `burn_address` = the wallet |
-  | `producer-key` (registered a producer key) | PoB `register_public_key` (entry `0x53192be1`) with `producer` = the wallet |
+  | `burn` (burned KOIN for VHP; Get VHP is the same, Swap desk chat 15 Nov) | PoB `159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv` `burn` (entry `0x859facc5`) with `burn_address` = the wallet, for 1 VHP or more (D-244) |
+  | `producer-key` (registered a producer key) | PoB `register_public_key` (entry `0x53192be1`) with `producer` = the wallet, counted only once the wallet has signed a block (has `producer`; D-244) |
   | `move-stake` (moved stake between games) | the vault's `move_stake` (entry `2082901609`) with `player` = the wallet |
 
   Up to 10 players a run (those still missing one of the three), each read forward from where the last run stopped (`clubhouse.json` `hist`: the next history number per wallet, which can only grow), at most 3 pages of 100 a run.

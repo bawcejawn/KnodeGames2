@@ -306,6 +306,7 @@ const POB_ABI: any = {
     empty: { fields: {} },
   } } } },
 };
+export const BURN_MIN = 100000000n;   // D-244: 1 VHP
 export type HistFacts = { burn: boolean; move: boolean; key: boolean };
 /** What one page of a wallet's history shows (each entry: { seq_num, trx: { transaction, receipt } } or a block). */
 export async function historyFacts(a: string, entries: any[], vault: string | null): Promise<HistFacts> {
@@ -321,7 +322,8 @@ export async function historyFacts(a: string, entries: any[], vault: string | nu
       try {
         if (cc.contract_id === POB_CONTRACT && (cc.entry_point === 0x859facc5 || cc.entry_point === 0x53192be1)) {
           const d: any = await pob.decodeOperation(op);
-          if (d.name === "burn" && d.args?.burn_address === a) out.burn = true;
+          // D-244 (J13-3): a burn counts only at 1 VHP or more (token_amount in 8-decimal units).
+          if (d.name === "burn" && d.args?.burn_address === a && BigInt(d.args?.token_amount ?? "0") >= BURN_MIN) out.burn = true;
           if (d.name === "register_public_key" && d.args?.producer === a) out.key = true;
         } else if (knode && cc.contract_id === vault && cc.entry_point === 2082901609) {
           const d: any = await knode.decodeOperation(op);
@@ -799,6 +801,9 @@ export async function run(o: Opts) {
       const read = o.histOf ?? ((n: any, a: string, seq: number, newest?: boolean) => readHistoryPage(n, a, seq, newest));
       if (!o.histOf && !o.hist) return;
       if (o.histSame) throw new Error("the history node and its check node are the same, so burn, move-stake and producer-key aren't read (set GOLF_HISTORY_RPC_CHECK to another node)");
+      // D-244 (J13-3): a registered key counts only once the wallet has signed a block (the "producer" feature, kept or
+      // seen this run). A key read before that isn't counted; the safe way round (PR B can find it again).
+      const signed = (a: string) => old?.wallets[a]?.producer !== undefined || seen.get("producer")?.has(a) === true;
       const n1 = o.hist ?? "main", n2 = o.histCheck ?? (o.histOf ? "check" : null);
       const budget = Math.max(1, o.histBudget ?? 10), start = need.length > budget ? Math.floor(now / HOUR) * budget % need.length : 0;
       const who = need.length > budget ? [...need.slice(start), ...need.slice(0, start)].slice(0, budget) : need;
@@ -810,13 +815,13 @@ export async function run(o: Opts) {
         // One node can be a block or two behind on the newest page: count only the entries both show, and they must agree.
         const both = newestBoth(nx, ny);
         if (!both) throw new Error(`the two nodes don't agree yet on ${a}'s history`);
-        if (both.length) { const f = await historyFacts(a, both, KNODE); if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key) add("producer-key", a); }
+        if (both.length) { const f = await historyFacts(a, both, KNODE); if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key && signed(a)) add("producer-key", a); }
         for (let pg = 0; pg < HIST_PAGES; pg++) {
           const x = await read(n1, a, seq), y = n2 ? await read(n2, a, seq) : x;
           if (!samePage(x, y)) throw new Error(`the two nodes don't agree yet on ${a}'s history`);
           if (!x.length) break;
           const f = await historyFacts(a, x, KNODE);
-          if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key) add("producer-key", a);
+          if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key && signed(a)) add("producer-key", a);
           const last = Number(x[x.length - 1]?.seq_num);
           if (!Number.isSafeInteger(last) || last < seq) throw new Error(`${a}'s history didn't move forward`);
           seq = last + 1;

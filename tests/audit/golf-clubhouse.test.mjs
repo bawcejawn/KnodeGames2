@@ -252,7 +252,7 @@ async function trx(seq, ops, reverted = false) {
   for (const o of ops) { const e = await o; assert.equal(typeof e.call_contract.args, "string"); operations.push({ call_contract: { ...e.call_contract } }); }
   return { seq_num: String(seq), trx: { transaction: { id: "0x" + seq, operations }, receipt: { id: "0x" + seq, ...(reverted ? { reverted: true } : {}) } } };
 }
-const burnOp = (a) => pob.encodeOperation({ name: "burn", args: { token_amount: "100", burn_address: a, vhp_address: a } });
+const burnOp = (a, amount = "100000000") => pob.encodeOperation({ name: "burn", args: { token_amount: amount, burn_address: a, vhp_address: a } });
 const keyOp = (a) => pob.encodeOperation({ name: "register_public_key", args: { producer: a, public_key: "AiAeY4PIK6GLlepslYHfS0_gFgRaYIfqarbOEIuo0Qc" } });
 const moveOp = (c, a) => c.encodeOperation({ name: "move_stake", args: { player: a, from_game: 1, to_game: 2, amount: "100000000" } });
 
@@ -265,13 +265,29 @@ test("history: a burn, a key registration and a stake move each count only when 
   assert.deepEqual(await historyFacts(a, [await trx(1, [moveOp(other, a)])], VAULT), { burn: false, move: false, key: false }, "move_stake on another contract");
   assert.deepEqual(await historyFacts(a, [await trx(1, [burnOp(a), keyOp(a)], true)], VAULT), { burn: false, move: false, key: false }, "a reverted transaction");
   assert.deepEqual(await historyFacts(a, [{ seq_num: "1", block: { header: { signer: a }, receipt: { events: [] } } }], VAULT), { burn: false, move: false, key: false }, "block entries never count");
+  // D-244 (J13-3): a burn counts only at 1 VHP or more.
+  assert.deepEqual(await historyFacts(a, [await trx(1, [burnOp(a, "99999999")])], VAULT), { burn: false, move: false, key: false }, "a burn under 1 VHP");
+  assert.deepEqual(await historyFacts(a, [await trx(1, [burnOp(a, "100000000")])], VAULT), { burn: true, move: false, key: false }, "a burn of exactly 1 VHP");
+});
+
+test("history (D-244, J13-3): a registered producer key counts only once the wallet has signed a block", async () => {
+  const pages = { [R[0]]: [await trx(0, [keyOp(R[0])])], [R[1]]: [await trx(0, [keyOp(R[1])])] };
+  const histOf = async (n, a, seq) => (pages[a] ?? []).filter((e) => Number(e.seq_num) >= seq);
+  // R[1] already has "producer" (signed a block before); R[0] doesn't.
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W }, club: { v: 1, updated: "", wallets: { [R[1]]: { producer: W - 1 } } },
+    files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 4, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
+  const out = tmp("golf-");
+  await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histBudget: 20 }));
+  const c = club(out);
+  assert.equal(c.wallets[R[1]]["producer-key"], W, "key + signed a block: counts");
+  assert.equal(c.wallets[R[0]]?.["producer-key"], undefined, "key but no block signed: doesn't count");
 });
 
 test("history in a run: read forward from the saved place, on two nodes, a few wallets a run", async () => {
   const pages = { [R[0]]: [await trx(0, [burnOp(R[0])]), await trx(1, [moveOp(vault, R[0])])], [R[1]]: [await trx(0, [keyOp(R[1])])] };
   const asked = [];
   const histOf = async (n, a, seq) => { asked.push([n, a, seq]); return (pages[a] ?? []).filter((e) => Number(e.seq_num) >= seq); };
-  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W }, club: { v: 1, updated: "", wallets: {}, hist: { [R[1]]: 0 } },
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W }, club: { v: 1, updated: "", wallets: { [R[1]]: { producer: W - 1 } }, hist: { [R[1]]: 0 } },
     files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 6, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
   const out = tmp("golf-");
   const r = await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histBudget: 20 }));
@@ -351,7 +367,7 @@ test("history (Repo Lens #J-13 J13-2): the newest page counts what both nodes sh
   // In a run: the burn only node 1 shows on its newest page waits; the key both show counts.
   const pages = { main: [e9, e8], check: [e8] };
   const histOf = async (n, a, seq, newest) => (a !== R[0] ? [] : newest ? pages[n] : []);
-  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W },
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W }, club: { v: 1, updated: "", wallets: { [R[0]]: { producer: W - 1 } } },
     files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 4, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
   const out = tmp("golf-");
   const r = await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histBudget: 20 }));
