@@ -23,9 +23,14 @@ export const PENDING = [
   // ·
   "overunder.js",
 ];
+// The six names the list started with. Never edited by a converting PR (it deletes only its own entry line above); it stops a
+// shrinking list from being used to slip in a new page name (Repo Lens #R4-2b).
+const STARTED_NAMES = new Set(["blockx.js", "bracket.js", "combo.js", "race.js", "survivor.js", "overunder.js"]);
 const STARTED_WITH = 6;   // the list on the day the card landed; PENDING may only be at most this long
 const BUILDS_PICKS = /functions\s*(?:\.\s*pick\b|\[\s*["'`]pick["'`]\s*\])|\{\s*[^}]*\bpick\b[^}]*\}\s*=\s*\w+\.functions/;
-const USES_CARD = /from\s+["']\.\/js\/lib\/send-picks\.js["']/;
+// Importing the card is not using it (Repo Lens #R4-2b): the page must also send through it, SP.send(...).
+const USES_CARD_TEXT = (src) => /from\s+["']\.\/js\/lib\/send-picks\.js["']/.test(src) && /\bSP\.send\s*\(/.test(src);
+const USES_CARD = { test: USES_CARD_TEXT };
 
 const pages = fs.readdirSync("web").filter((f) => f.endsWith(".js")).map((f) => ({ f, src: fs.readFileSync(path.join("web", f), "utf8") }));
 
@@ -40,6 +45,7 @@ test("a page in PENDING that now uses the card is taken off the list (the list o
   assert.deepEqual(converted, [], `remove from PENDING: ${converted.join(", ")}`);
   assert.ok(PENDING.length <= STARTED_WITH, "nothing is added to PENDING (it only shrinks)");
   assert.equal(new Set(PENDING).size, PENDING.length, "no entry twice");
+  assert.deepEqual(PENDING.filter((f) => !STARTED_NAMES.has(f)), [], "PENDING may only keep names it started with: a new page must use the card, not join the list");
 });
 
 test("Fantasy uses the card, and the pattern catches the ways around a plain text rule", () => {
