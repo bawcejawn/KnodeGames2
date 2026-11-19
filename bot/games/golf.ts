@@ -167,7 +167,7 @@ export const STANDARD_ID = /^[a-z][a-z0-9-]{1,23}$/;   // Repo Lens G92-2: the c
 // ── the Clubhouse: the accumulated record and the feature readers (claude/golf/CLUBHOUSE-BUILD-PLAN-2026-11-15.md) ──
 export const CLUB_SOURCE: Source = { id: G.CLUBHOUSE, name: "Clubhouse", reader: "clubhouse", live: true };
 /** clubhouse.json: every wallet's features, each with the vault week it was first seen. Only ever grows. */
-export type Club = { v: 1; updated: string; wallets: Record<string, Record<string, number>>; desk?: number; hist?: Record<string, number> };   // desk: the swap desk's swap count at the last read
+export type Club = { v: 1; updated: string; wallets: Record<string, Record<string, number>>; desk?: number; hist?: Record<string, number>; keys?: string[] };   // desk: the swap desk's swap count at the last read; keys: wallets whose producer key registration was read (D-244, Repo Lens #K-3 K3-1)
 const CLUB_MAX_WALLETS = 100000, CLUB_MAX_FEATURES = 64;
 /** The last run's record: null if there is none yet; an error if it is there but can't be used (never a fresh start). */
 export function loadClub(dir: string | undefined): Club | null {
@@ -186,7 +186,12 @@ export function loadClub(dir: string | undefined): Club | null {
     if (!j.hist || typeof j.hist !== "object" || Array.isArray(j.hist)) throw new Error("clubhouse.json: hist isn't a list of wallets");
     for (const [a, n] of Object.entries(j.hist)) { if (!isAddr(a) || !Number.isSafeInteger(n) || (n as number) < 0) throw new Error(`clubhouse.json: hist for ${plain(a)} isn't a count`); hist[a] = n as number; }
   }
-  return { v: 1, updated: String(j.updated ?? ""), wallets, ...(Number.isSafeInteger(j.desk) && j.desk >= 0 ? { desk: j.desk } : {}), ...(Object.keys(hist).length ? { hist } : {}) } as Club;
+  const keys: string[] = [];
+  if (j.keys !== undefined) {
+    if (!Array.isArray(j.keys) || j.keys.length > CLUB_MAX_WALLETS) throw new Error("clubhouse.json: keys isn't a list of wallets");
+    for (const a of j.keys) { if (!isAddr(a)) throw new Error(`clubhouse.json: keys has a bad wallet ${plain(a)}`); keys.push(a); }
+  }
+  return { v: 1, updated: String(j.updated ?? ""), wallets, ...(Number.isSafeInteger(j.desk) && j.desk >= 0 ? { desk: j.desk } : {}), ...(Object.keys(hist).length ? { hist } : {}), ...(keys.length ? { keys: [...new Set(keys)].sort() } : {}) } as Club;
 }
 /** Adds what was seen this run, stamped with week w. Never removes or restamps anything. */
 export function growClub(old: Club | null, seen: Map<string, Set<string>>, w: number, now: number, problems: string[]): Club {
@@ -795,15 +800,17 @@ export async function run(o: Opts) {
     // From wallets' own transactions: a few wallets a run (players still missing one of the three), each read forward
     // from where the last run stopped (club.hist), a few pages at a time, on two nodes that must agree.
     const hist: Record<string, number> = { ...(old?.hist ?? {}) };
+    // D-244 (J13-3) + Repo Lens #K-3 K3-1: a registered producer key counts only once the wallet has also signed a block
+    // (the "producer" feature, kept or seen this run). A key read earlier is kept in club.keys, so it counts in the first
+    // run where the block shows up, even though that run doesn't read its history again.
+    const keys = new Set<string>(old?.keys ?? []);
+    const signed = (a: string) => old?.wallets[a]?.producer !== undefined || seen.get("producer")?.has(a) === true;
     await collect("transactions", async () => {
-      const need = [...players].filter((a) => { const f = old?.wallets[a] ?? {}; return f.burn === undefined || f["move-stake"] === undefined || f["producer-key"] === undefined; }).sort();
+      const need = [...players].filter((a) => { const f = old?.wallets[a] ?? {}; return f.burn === undefined || f["move-stake"] === undefined || (f["producer-key"] === undefined && !keys.has(a)); }).sort();
       if (!need.length) return;
       const read = o.histOf ?? ((n: any, a: string, seq: number, newest?: boolean) => readHistoryPage(n, a, seq, newest));
       if (!o.histOf && !o.hist) return;
       if (o.histSame) throw new Error("the history node and its check node are the same, so burn, move-stake and producer-key aren't read (set GOLF_HISTORY_RPC_CHECK to another node)");
-      // D-244 (J13-3): a registered key counts only once the wallet has signed a block (the "producer" feature, kept or
-      // seen this run). A key read before that isn't counted; the safe way round (PR B can find it again).
-      const signed = (a: string) => old?.wallets[a]?.producer !== undefined || seen.get("producer")?.has(a) === true;
       const n1 = o.hist ?? "main", n2 = o.histCheck ?? (o.histOf ? "check" : null);
       const budget = Math.max(1, o.histBudget ?? 10), start = need.length > budget ? Math.floor(now / HOUR) * budget % need.length : 0;
       const who = need.length > budget ? [...need.slice(start), ...need.slice(0, start)].slice(0, budget) : need;
@@ -815,13 +822,13 @@ export async function run(o: Opts) {
         // One node can be a block or two behind on the newest page: count only the entries both show, and they must agree.
         const both = newestBoth(nx, ny);
         if (!both) throw new Error(`the two nodes don't agree yet on ${a}'s history`);
-        if (both.length) { const f = await historyFacts(a, both, KNODE); if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key && signed(a)) add("producer-key", a); }
+        if (both.length) { const f = await historyFacts(a, both, KNODE); if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key) keys.add(a); }
         for (let pg = 0; pg < HIST_PAGES; pg++) {
           const x = await read(n1, a, seq), y = n2 ? await read(n2, a, seq) : x;
           if (!samePage(x, y)) throw new Error(`the two nodes don't agree yet on ${a}'s history`);
           if (!x.length) break;
           const f = await historyFacts(a, x, KNODE);
-          if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key && signed(a)) add("producer-key", a);
+          if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key) keys.add(a);
           const last = Number(x[x.length - 1]?.seq_num);
           if (!Number.isSafeInteger(last) || last < seq) throw new Error(`${a}'s history didn't move forward`);
           seq = last + 1;
@@ -830,7 +837,9 @@ export async function run(o: Opts) {
         hist[a] = seq;
       }
     });
+    for (const a of keys) if (signed(a)) add("producer-key", a);   // growClub never restamps one already earned
     club = growClub(old, seen, nowW, now, problems);
+    if (keys.size) club.keys = [...keys].sort();
     if (Object.keys(hist).length) club.hist = Object.fromEntries(Object.entries(hist).sort((x, y) => (x[0] < y[0] ? -1 : 1)));
     if (deskTotal !== null) club.desk = deskTotal; else if (Number.isSafeInteger(old?.desk)) club.desk = old!.desk;
   }

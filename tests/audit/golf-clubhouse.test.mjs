@@ -3,6 +3,7 @@
 // week it is seen, and kept for good. Strokes come from a fixed ladder of the features earned by the end of the week.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -374,4 +375,70 @@ test("history (Repo Lens #J-13 J13-2): the newest page counts what both nodes sh
   assert.deepEqual(r.problems.filter((p) => /history/.test(p)), []);
   assert.equal(club(out).wallets[R[0]]["producer-key"], W);
   assert.equal(club(out).wallets[R[0]].burn, undefined);
+});
+
+// Repo Lens #K-3 (owner: fix K3-1 with a per-wallet "key seen" mark). A producer from the vhp-data fixture, with real hour files.
+// The fixture's addresses aren't real (koilib won't encode a key registration for them), so one signer's address is
+// swapped for a real one in every hour file; the files still pass checkHour (asserted below via "producer").
+const keyChain = makeChain({ seed: 7, hours: 3, np: 4 });
+// The fixture signer 1Prod11… → a real address that keeps each file's addrs sorted (searched once; checkHour passes).
+const keyFake = "1Prod11abcdefghijkmnopqrstuvwxy";
+const keyReal = Signer.fromSeed("golf clubhouse test k3 producer 0").getAddress();
+const keyTexts = [];
+for (const t of keyChain.texts) {   // re-link the hash chain (prev = sha256 of the previous file's bytes) after the swap
+  const u = t.split(keyFake).join(keyReal);
+  keyTexts.push(keyTexts.length ? u.replace(/"prev":"[0-9a-f]*"/, `"prev":"${crypto.createHash("sha256").update(keyTexts.at(-1)).digest("hex")}"`) : u);
+}
+const keySigners = [keyReal];
+const keyVhp = () => { const d = tmp("vhp-"); keyTexts.forEach((t, i) => write(path.join(d, "h"), `${keyChain.n0 + i}.json`, t)); return d; };
+const keyPrev = (S) => prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W },
+  files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 4, rows: [S, ...R.slice(0, 3)].map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
+
+test("K3-1: a key read before the wallet's first block counts in the week the block shows up, though its history isn't read again", async () => {
+  const S = keySigners[0];
+  const pages = { [S]: [await trx(0, [keyOp(S)])] };
+  const asked = [];
+  const histOf = async (n, a, seq) => { asked.push([a, seq]); return (pages[a] ?? []).filter((e) => Number(e.seq_num) >= seq); };
+  // Run 1 (week W): the key is read; no block signed yet. Not counted, but kept as seen.
+  const out1 = tmp("golf-");
+  await run(base({ now: START + DAY, prev: keyPrev(S), out: out1, histOf, knodeGame: VAULT, histBudget: 20 }));
+  assert.equal(club(out1).wallets[S]?.["producer-key"], undefined, "no block yet: not counted");
+  assert.deepEqual(club(out1).keys, [S]);
+  assert.equal(club(out1).hist[S], 1, "the registration is now behind the saved place");
+  // Run 2 (week W+1): the wallet's first blocks show up in vhp-data. Its history has nothing new.
+  asked.length = 0;
+  const out2 = tmp("golf-");
+  await run(base({ now: START + 8 * DAY, prev: out1, out: out2, histOf, knodeGame: VAULT, histBudget: 20, vhpDir: keyVhp() }));
+  const c = club(out2);
+  assert.equal(c.wallets[S].producer, W + 1);
+  assert.equal(c.wallets[S]["producer-key"], W + 1, "counts in the week the block shows up");
+  assert.ok(asked.every(([a, seq]) => a !== S || seq >= 1), "the registration wasn't read again");
+  assert.deepEqual(c.keys, [S], "the mark is kept");
+});
+
+test("K3-2: a key and the wallet's first block seen in the same run count that run (the 'producer seen this run' half)", async () => {
+  const S = keySigners[0], other = R[0];
+  const pages = { [S]: [await trx(0, [keyOp(S)])], [other]: [await trx(0, [keyOp(other)])] };
+  const histOf = async (n, a, seq) => (pages[a] ?? []).filter((e) => Number(e.seq_num) >= seq);
+  const out = tmp("golf-");
+  await run(base({ now: START + DAY, prev: keyPrev(S), out, histOf, knodeGame: VAULT, histBudget: 20, vhpDir: keyVhp() }));
+  const c = club(out);
+  assert.equal(c.wallets[S].producer, W, "no producer kept from before: seen this run");
+  assert.equal(c.wallets[S]["producer-key"], W);
+  assert.equal(c.wallets[other]?.["producer-key"], undefined, "a key without a block: not counted");
+  assert.deepEqual(c.keys, [S, other].sort());
+});
+
+test("K3: the publish job checks keys' shape, and a key that was read can't be dropped", async (t) => {
+  try { execFileSync("python3", ["--version"]); } catch { t.skip("no python3 here"); return; }
+  const [shape, history] = checks();
+  const { mid, out } = await finalWeek();
+  edit(mid, "clubhouse.json", (j) => { j.keys = [P[0]]; });
+  edit(out, "clubhouse.json", (j) => { j.keys = [P[0], P[1]]; });
+  assert.match(py([shape, out], END + 22 * H), /golf files ok/);
+  assert.match(py([history, out, mid], END + 22 * H), /golf history ok/);
+  const drop = copyDir(out); edit(drop, "clubhouse.json", (j) => { j.keys = [P[1]]; });
+  assert.throws(() => py([history, drop, mid], END + 22 * H), /a key that was read can't be dropped/);
+  const bad = copyDir(out); edit(bad, "clubhouse.json", (j) => { j.keys = [P[1], P[0]]; });
+  assert.throws(() => py([shape, bad], END + 22 * H), /clubhouse.json: keys/);
 });
