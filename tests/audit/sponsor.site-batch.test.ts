@@ -116,3 +116,9 @@ test("R3-2.1: a refused batch (over rcLimitOther) writes nothing even with --sen
     assert.deepEqual([raw("game-data/deployment.json"), raw("desk-data/deployment.json")], before);
   });
 });
+
+// Repo Lens #R3-2b.1: the typed command must hand its flags to siteLimits.
+test("site-limits command passes its flags on", () => {
+  const src = fs.readFileSync(new URL("../../bot/sponsor.ts", import.meta.url), "utf8");
+  assert.ok(src.includes('case "site-limits": return siteLimits(send, a);'));
+});
