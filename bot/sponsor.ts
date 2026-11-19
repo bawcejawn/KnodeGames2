@@ -706,13 +706,64 @@ async function currentChainConfig(): Promise<any> {
 }
 /** Step 1 of a limits change (review L1): the website gets, for each action, the lower of the sponsor's current limit
  *  and the new one, so whatever the page asks for is accepted before and after the chain changes. */
-async function siteLimits(send: boolean) {
+async function siteLimits(send: boolean, a: string[] = []) {
   const cur = await currentChainConfig();
   const perTx = BigInt(cur.max_mana_per_tx && cur.max_mana_per_tx !== "0" ? cur.max_mana_per_tx : units(DEFAULT_CAPS.perTx));
   const rows = transitionRows(cur.mana_caps ?? [], readLimits().rows, perTx);
   for (const r of rows) log(`  ${r.name.padEnd(32)} the website will ask for ${toMana(r.max_mana)} Mana`);
+  // D-211 (pick batching), step 2: the batch numbers. Without --batch-* flags the batch block is left as it is.
+  const batch = batchFromFlags(a, readJson(GAME_DEP)?.sponsor);
+  if (batch) log(`  batch (2 to ${MAX_BATCH} picks in one send): ${toMana(BigInt(batch.fixed))} + ${Object.entries(batch.perOp).map(([k, v]) => `${toMana(BigInt(v))} per ${k}`).join(", ")} + ${toMana(BigInt(batch.margin))} margin; ${MAX_BATCH} picks ask for at most ${toMana(batchWorst(batch))} Mana`);
   if (!send) { log("\nDry run only. Add --send to write game-data/ and desk-data/deployment.json."); return; }
-  log(syncSiteLimits(rows) ? `✔ written. Commit and push ${GAME_DEP} and ${DESK_DEP}, wait for the site to update (a few minutes), then: npm run sponsor -- config --send` : "No sponsor block in the deployment files yet (npm run sponsor -- payer sponsor --send).");
+  const ok = syncSiteLimits(rows);
+  if (ok && batch) setSiteBatch(batch);
+  log(ok ? `✔ written. Commit and push ${GAME_DEP} and ${DESK_DEP}, wait for the site to update (a few minutes), then: npm run sponsor -- config --send` : "No sponsor block in the deployment files yet (npm run sponsor -- payer sponsor --send).");
+}
+
+// ═══════════════════════════════ pick batching (D-211) ═══════════════════════════════
+/** Owner, O-29 (16 Nov 2026): at most 10 picks per send. */
+export const MAX_BATCH = 10;
+type SiteBatch = { fixed: string; perOp: Record<string, string>; margin: string };
+const ACTION_KEYS: Record<string, (s: any) => string | undefined> = {
+  "picks:pick": (s) => (s?.picks ? `${s.picks}:8ce33c6c` : undefined),
+  "race:pick": (s) => (s?.race ? `${s.race}:8ce33c6c` : undefined),
+};
+/** "0.03" → "3000000" (base units, 8 decimals). Refuses anything else. */
+export function manaToBase(v: string, what: string): string {
+  if (!/^\d+(\.\d{1,8})?$/.test(v ?? "")) throw new Error(`${what} ${v ?? "(missing)"}: a number of Mana, like 0.03`);
+  const [i, f = ""] = v.split(".");
+  return (BigInt(i) * 100000000n + BigInt((f + "00000000").slice(0, 8))).toString();
+}
+/** The most a batch can ask for: fixed + MAX_BATCH × the largest per-pick row + margin. */
+export const batchWorst = (b: SiteBatch) => BigInt(b.fixed) + BigInt(MAX_BATCH) * Object.values(b.perOp).reduce((m, v) => (BigInt(v) > m ? BigInt(v) : m), 0n) + BigInt(b.margin);
+/** --batch-fixed X --batch-per-op picks:pick=Y[,race:pick=Z] --batch-margin W (Mana): all three or none. A batch that
+ *  could ask for more than the site's rcLimitOther is refused (the page caps there and the send would run out of Mana). */
+export function batchFromFlags(a: string[], sponsor: any): SiteBatch | null {
+  const get = (n: string) => { const i = a.indexOf(n); return i >= 0 ? a[i + 1] : undefined; };
+  const fixed = get("--batch-fixed"), per = get("--batch-per-op"), margin = get("--batch-margin");
+  if (fixed === undefined && per === undefined && margin === undefined) return null;
+  if (fixed === undefined || per === undefined || margin === undefined) throw new Error("Give all three: --batch-fixed, --batch-per-op and --batch-margin.");
+  const perOp: Record<string, string> = {};
+  for (const part of per.split(",")) {
+    const [action, mana] = part.split("=");
+    const key = ACTION_KEYS[action]?.(sponsor);
+    if (!key) throw new Error(`--batch-per-op ${part}: the action must be ${Object.keys(ACTION_KEYS).join(" or ")}, with its contract in ${GAME_DEP}.`);
+    perOp[key] = manaToBase(mana, `--batch-per-op ${action}`);
+    if (perOp[key] === "0") throw new Error(`--batch-per-op ${action}: must be more than 0.`);
+  }
+  const b = { fixed: manaToBase(fixed, "--batch-fixed"), perOp, margin: manaToBase(margin, "--batch-margin") };
+  const cap = /^[0-9]{1,16}$/.test(String(sponsor?.rcLimitOther ?? "")) ? BigInt(sponsor.rcLimitOther) : null;
+  if (cap === null) throw new Error(`No rcLimitOther in ${GAME_DEP}: the batch can't be checked against it.`);
+  if (batchWorst(b) > cap) throw new Error(`${MAX_BATCH} picks would ask for ${toMana(batchWorst(b))} Mana, more than the site's limit of ${toMana(cap)} (rcLimitOther). Nothing was written.`);
+  return b;
+}
+/** Writes the batch block into the game's deployment file (the pages read it there; desk pages never batch). */
+export function setSiteBatch(b: SiteBatch, file = GAME_DEP): boolean {
+  const d = readJson(file);
+  if (!d?.sponsor) return false;
+  d.sponsor.batch = b;
+  writeJson(file, d);
+  return true;
 }
 
 /** Reads sponsored transactions from the last `blocks` blocks: what each action used (read-only). */
@@ -889,7 +940,7 @@ async function main() {
     case "disable": return setConfig(a, send, false);
     case "mana-report": return manaReport(a);
     case "mana-limit": return manaLimit(a);
-    case "site-limits": return siteLimits(send);
+    case "site-limits": return siteLimits(send, a);
     case "payer": {
       const choice = a[0];
       if (choice !== "sponsor" && choice !== "self") throw new Error('payer sponsor | payer self');

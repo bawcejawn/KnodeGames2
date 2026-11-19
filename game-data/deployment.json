@@ -43,6 +43,8 @@
     ],
     "rcLimit": "130000000",
     "rcLimitOther": "240000000",
+    "selfPayMin": "2500000000",
+    "batch": {},
     "rcLimits": {
       "1LmgqBGctL9F2YkyjTXgieTXwnYHh8Y6Pm:8ce33c6c": "130000000",
       "1EN7xU8R9tQXjHvrX79qZvvvGkkKWVnB5K:8ce33c6c": "120000000",
