@@ -71,7 +71,7 @@ if ($RestoreKey) {
   }
   # The key must be the one registered on chain for -Producer (Repo Lens #F-8 F8-7): the game key restored into the desk
   # node, or any wrong file, is refused here. Read-only; prints the PUBLIC key only.
-  Push-Location (Split-Path $PSScriptRoot -Parent)
+  Push-Location (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))   # the repository folder (Repo Lens L9-3)
   try {
     $ErrorActionPreference = "Continue"
     if (-not $env:RPC) { $env:RPC = "https://koinos.armana.io" }
