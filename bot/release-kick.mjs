@@ -150,10 +150,14 @@ export function heartbeatDecision(runs, now) {
   return { start: true, why: last ? `no bot run has started since ${stamp(last)}` : "no bot run found" };
 }
 
-/** Today's question file on main: null (not there), or { n: number of questions, skipped }. */
+/** The question files live on the game-data branch, not on main (docs/DATA.md; Repo Lens J14-1). */
+export const DATA_REF = "game-data";
+/** Where today's question file is read from (pure, for the tests). */
+export const todaysFilePath = (repo, label) => `/repos/${repo}/contents/game-data/questions/${label}.json?ref=${DATA_REF}`;
+/** Today's question file on the game-data branch: null (not there), or { n: number of questions, skipped }. */
 async function todaysFile(label) {
   // Read without the token: the repository is public, and the token only has Actions permission.
-  const r = await gh("GET", `/repos/${REPO}/contents/game-data/questions/${label}.json?ref=main`, null, false);
+  const r = await gh("GET", todaysFilePath(REPO, label), null, false);
   if (r.status === 404) return null;
   if (!r.ok) throw new GitHubError(`GitHub said ${r.status} reading ${label}.json`);
   const j = await r.json();
