@@ -155,6 +155,9 @@ jobs:
           # A second, independent node: results are posted only when both agree on the window's blocks (audit M-9).
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}   # a second, independent node (audit M-4); set the variable to "off" to turn it off
           GEN_DIR: game-data
+          # Repo Lens J16-1: question ids the owner OK'd to void although they are newer than the bot's saved state
+          # (normally empty; the bot's NEEDS ATTENTION message says when to set it).
+          BOT_VOID_ORPHANS: ${{ vars.BOT_VOID_ORPHANS }}
           BOT_GIT_PUSH: "1"
           # The producer lookup's block snapshot (display only); the publish job puts it on the blocks-data branch.
           SNAPSHOT_OUT: ${{ runner.temp }}/snapshot/recent-blocks.json
