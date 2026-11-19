@@ -39,7 +39,7 @@ if ($env:KNODE_TEST_ROOTS) { $Roots = @{}; ($env:KNODE_TEST_ROOTS | ConvertFrom-
 $Alpine = "alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc"   # a small Linux image, pinned by digest (Repo Lens #F-8 F8-9), used only to copy and check files
 $Koinos = Join-Path $Roots[$Node] "koinos"
 $Override = Join-Path $Koinos "docker-compose.override.yml"
-$LockFile = Join-Path $(if ($env:HEAL_DIR) { $env:HEAL_DIR } else { $PSScriptRoot }) "repair.lock"   # the self-heal's lock
+$LockFile = Join-Path $(if ($env:HEAL_DIR) { $env:HEAL_DIR } else { Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "node" }) "repair.lock"   # the self-heal's lock
 $stamp = Get-Date -Format "yyyyMMdd-HHmm"
 
 function Say($m) { Write-Host $m }

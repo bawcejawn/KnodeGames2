@@ -73,7 +73,8 @@ test("the Block X game config: game 2 on mainnet is exactly the plan's settings;
   assert.throws(() => buildGameConfig({ ...base, name: "x".repeat(41) }), /1 to 40 bytes/);
   const mainnet = network(false);
   // Combo chat, 13 Nov: Combo Card (game 8, a card game, announced only after Picks v2) joins Fantasy's games 4 and 5; see its own test.
-  assert.equal(mainnet.games.length, 6, "on mainnet the tool registers Who Signs Block X (game 2, hourly game 12), Producer Bracket (game 9), Fantasy (games 4 and 5) and Combo Card (game 8)");
+  // Owner D-246, 18 Nov: Survivor (game 3) joins; its exact values are pinned in picks-survivor-game3.test.ts.
+  assert.equal(mainnet.games.length, 7, "on mainnet the tool registers Who Signs Block X (game 2, hourly game 12), Producer Bracket (game 9), Fantasy (games 4 and 5), Combo Card (game 8) and Survivor (game 3)");
   assert.deepEqual(buildGameConfig(mainnet.games[0]), c);
   assert.deepEqual(buildGameConfig(mainnet.games[1]), { id: 12, name: "Who Signs Block X (hourly)", kind: 1, list_size: 1, number_min: "0", number_max: "0", lock_mode: 1,
     round_size: "1200", round_offset: "0", lead: "100", ahead: "14500", max_picks_per_day: 48, max_changes: 1, enabled: true }, "R-BX-25: every 1,200 blocks, 48 picks a day; owner 14 Nov: 12 hours ahead (on chain by tighten 12 --ahead 14500)");
