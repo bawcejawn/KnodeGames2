@@ -442,3 +442,18 @@ test("K3: the publish job checks keys' shape, and a key that was read can't be d
   const bad = copyDir(out); edit(bad, "clubhouse.json", (j) => { j.keys = [P[1], P[0]]; });
   assert.throws(() => py([shape, bad], END + 22 * H), /clubhouse.json: keys/);
 });
+
+test("K3b-1: a wallet whose key is already marked and that misses only producer-key isn't read again (budget)", async () => {
+  const asked = [];
+  const histOf = async (n, a, seq) => { asked.push(a); return []; };
+  // R[0] has burn and move-stake, and its key is marked in keys; it only waits for its first block. R[1] still needs reading.
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W },
+    club: { v: 1, updated: "", wallets: { [R[0]]: { burn: W - 1, "move-stake": W - 1 } }, keys: [R[0]] },
+    files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 4, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
+  const out = tmp("golf-");
+  await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histBudget: 20 }));
+  assert.ok(asked.includes(R[1]), "the others are still read");
+  assert.equal(asked.includes(R[0]), false, "the marked wallet isn't read again");
+  assert.deepEqual(club(out).keys, [R[0]], "the mark is kept");
+  assert.equal(club(out).wallets[R[0]]["producer-key"], undefined, "still no block: not counted");
+});
