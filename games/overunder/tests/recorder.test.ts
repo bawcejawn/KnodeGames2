@@ -12,6 +12,7 @@ const WEEK = { week: 4, start: MON, end: MON + 7 * DAY };
 const A = "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", B = "1BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", C = "1CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
 const D = "1DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD", E = "1EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE";
 const S = "1SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS", T = "1TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT", U = "1UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU";
+const CH = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const BLOCK0 = 1000000, T0 = Date.UTC(2026, 9, 1);
 const clock = (upTo = Infinity) => async (ms: number) => { if (ms > upTo) throw new NotYet("not yet: not irreversible"); return BLOCK0 + Math.ceil((ms - T0) / 3000); };
 type Row = { credited: number; expected: number; void?: boolean; entry?: boolean; quality?: "ok" | "flagged" };
@@ -31,10 +32,14 @@ const base = (): Record<string, Row> => ({ [A]: { credited: 20, expected: 20.4 }
 const ctxOf = (vhp: unknown, blockAt: unknown = clock(), extra: object = {}) => ({ now: MON, vhp, blockAt, ...extra } as any);
 const roster = async (): Promise<Inputs> => (await game.inputsFor!(WEEK, ctxOf(fakeVhp(base)))) as Inputs;
 
-test("rounds: Monday to Sunday, one a UTC day, id d<yyyymmdd>, Picks round = the day number, day = dayOf(locksAt)", () => {
+test("rounds: Monday to Sunday, two a UTC day (A rows 0-31, B rows 32-63), 12-hour Picks rounds, day = dayOf(locksAt)", () => {
   const rs = game.roundsFor(WEEK, { now: MON });
-  assert.deepEqual(rs.map((x) => x.id), ["d20261116", "d20261117", "d20261118", "d20261119", "d20261120", "d20261121", "d20261122"]);
-  for (const x of rs) { assert.equal(x.locksAt, x.day + 1); assert.equal(x.pickRound, x.day / DAY); assert.equal(x.resolvesAt, x.day + DAY); }
+  assert.equal(rs.length, 14);
+  assert.deepEqual(rs.map((x) => x.id), ["d20261116", "d20261116b", "d20261117", "d20261117b", "d20261118", "d20261118b", "d20261119", "d20261119b", "d20261120", "d20261120b", "d20261121", "d20261121b", "d20261122", "d20261122b"]);
+  for (const x of rs) { assert.equal(x.locksAt, x.day + 1); assert.equal(x.resolvesAt, x.day + DAY); assert.equal(x.pickRound, F.pickRoundOf(x.day, F.halfOfId(x.id))); }
+  assert.equal(new Set(rs.map((x) => x.pickRound)).size, 14, "every round its own Picks round");
+  assert.equal(rs[0].pickRound, MON / DAY * 2);
+  assert.equal(rs[1].pickRound, MON / DAY * 2 - 1);
 });
 
 test("manifest: Picks game 16 and vault game 16, kind of inputs, and the roster is made at least a day before the first picks open", () => {
@@ -44,7 +49,7 @@ test("manifest: Picks game 16 and vault game 16, kind of inputs, and the roster 
   assert.equal(game.slug, m.slug);
   assert.equal(m.inputsFile, true);
   assert.equal(m.freePrizeDefault, "on", "D-290");
-  assert.equal(m.maxRoundPoints, F.MAX_ROWS);
+  assert.equal(m.maxRoundPoints, F.HALF);
   // D-284: the roster is published BEFORE picks open. Monday's picks open F.AHEAD (2 days) before the week; the roster
   // is made inputsLeadHours before it. The roster must exist, with a margin of at least a day, before that moment.
   assert.ok(m.inputsLeadHours * 3600000 >= F.AHEAD + DAY, `inputsLeadHours ${m.inputsLeadHours} h is not at least ${(F.AHEAD + DAY) / 3600000} h`);
@@ -58,7 +63,6 @@ test("inputsFor: the newest ruler card (Thursday), Over/Under's own settings, ro
   assert.equal(inp.start, MON);
   assert.equal(inp.roster.cardRound, "20261112");
   assert.deepEqual(inp.roster.rows, [{ a: A, line: 41 }, { a: B, line: 61 }, { a: C, line: 81 }], "D has no entry, E is void; 20.4 → 20.5, 30.4 → 30.5, 40.4 → 40.5");
-  assert.deepEqual(inp.roster.dropped, []);
   F.checkRoster(inp.roster, MON);
   const again = (await game.inputsFor!(WEEK, ctxOf(fakeVhp(base)))) as Inputs;
   assert.equal(JSON.stringify(again), JSON.stringify(inp));
@@ -128,7 +132,7 @@ test("scoreRound: 1 point a right row for every wallet that picked, 0 included; 
   const s = game.scoreRound(mon, picks, result, inp);
   assert.deepEqual([...s.entries()], [[S, { points: 2, at: MON }], [T, { points: 0, at: 0 }], [U, { points: 0, at: 0 }]]);
   // a Tuesday-round pick from Sunday: still inside the week, never before its start
-  const tue = game.roundsFor(WEEK, { now: MON })[1];
+  const tue = game.roundsFor(WEEK, { now: MON })[2];
   const s2 = game.scoreRound(tue, [pick(S, { [A]: "over" }, MON - 2 * DAY)] as any, result, inp);
   assert.equal(s2.get(S)!.at, MON);
   const s3 = game.scoreRound(tue, [pick(S, { [A]: "over" }, tue.day + 5000)] as any, result, inp);
@@ -149,4 +153,29 @@ test("scoreRound refuses any roster that is not exactly the published one, and a
   assert.throws(() => game.scoreRound(mon, p, result, undefined), /no roster/);
   const wrong = { ...inp, start: MON + DAY } as Inputs;
   assert.throws(() => game.scoreRound(mon, p, result, wrong), /roster: for the week starting|id does not match/);
+});
+
+test("round B scores rows 32 to 63 from its own number; round A ignores them; a wallet that only picked A has no entry in B", () => {
+  const adr = (i: number) => "1" + CH[i % CH.length].repeat(33 - Math.floor(i / CH.length)) + "Z".repeat(Math.floor(i / CH.length));
+  const roster = F.makeRoster(MON, "20261112", Array.from({ length: 40 }, (_, i) => ({ a: adr(i), expected: "20400000", entry: true, void: false })));
+  const inp = { start: MON, roster } as any;
+  const rows = Object.fromEntries(roster.rows.map((x: any) => [x.a, ["25000000", "0", false]])) as any;   // every row: over (line 20.5)
+  const [a, b] = game.roundsFor(WEEK, { now: MON });
+  assert.equal(b.id, "d20261116b");
+  const all = Object.fromEntries(roster.rows.map((x: any) => [x.a, "over"])) as Record<string, "over">;
+  const [na, nb] = F.encodePicks(roster, all);
+  const mkPick = (wallet: string, number: string) => ({ wallet, round: "x", pick: { number }, at: MON - 1000 });
+  const sa = game.scoreRound(a, [mkPick(S, na)] as any, { round: "20261116", rows } as any, inp);
+  const sb = game.scoreRound(b, [mkPick(S, nb)] as any, { round: "20261116", rows } as any, inp);
+  assert.equal(sa.get(S)!.points, 32);
+  assert.equal(sb.get(S)!.points, 8, "rows 32 to 39");
+  // B's number read as A (or the reverse) can't give the other half's points
+  assert.equal(game.scoreRound(a, [mkPick(S, nb)] as any, { round: "20261116", rows } as any, inp).get(S)!.points, 8, "the same bits mean rows 0 to 7 in A: that is what the round says");
+  assert.equal(game.scoreRound(b, [mkPick(S, "0")] as any, { round: "20261116", rows } as any, inp).get(S)!.points, 0);
+});
+
+test("inputsFor: more than 64 qualifying producers stops the roster loudly (D-296): not NotYet, nothing cut", async () => {
+  const adr = (i: number) => "1" + CH[i % CH.length].repeat(33 - Math.floor(i / CH.length)) + "Z".repeat(Math.floor(i / CH.length));
+  const many = (): Record<string, Row> => Object.fromEntries(Array.from({ length: 65 }, (_, i) => [adr(i), { credited: 20, expected: 20.4 }]));
+  await assert.rejects(() => game.inputsFor!(WEEK, ctxOf(fakeVhp(many))), (e: any) => !(e instanceof NotYet) && /65 producers qualify, the limit is 64/.test(e.message));
 });

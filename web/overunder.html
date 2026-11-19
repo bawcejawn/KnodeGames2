@@ -107,7 +107,6 @@
         <button type="button" class="btn" id="ou-reset" hidden>Undo my edits</button>
       </div>
       <p class="ou-small" id="ou-saved"></p>
-      <p class="ou-small" id="ou-dropped" hidden></p>
       <p class="ou-small" id="ou-roster"></p>
     </section>
 
@@ -119,8 +118,8 @@
     <details class="ou-help" id="help">
       <summary>How it works</summary>
       <div>
-        <p><b>The roster and the lines.</b> The roster for each week comes out on Friday 00:00 UTC, a day before the first picks open, and never changes. It lists the producers that have the ruler's entry (not in ramp-up) and are inside the ruler's VHP range, at most 32. Each has a line: the Ruler's expected blocks for it, rounded to a half block (28.5, 29.5, …). Nobody types a line. The page checks the roster against its own checksum before it shows a row.</p>
-        <p><b>Your pick.</b> Over means you think the producer will be credited with more blocks than its line that UTC day; Under means fewer. All your rows for a day are one number on the Koinos chain, sent in one approval. Blank rows are no pick. Picks open 2 days ahead and lock 5 minutes before the day starts.</p>
+        <p><b>The roster and the lines.</b> The roster for each week comes out on Friday 00:00 UTC, a day before the first picks open, and never changes. It lists the producers that have the ruler's entry (not in ramp-up) and are inside the ruler's VHP range, at most 64. Each has a line: the Ruler's expected blocks for it, rounded to a half block (28.5, 29.5, …). Nobody types a line. The page checks the roster against its own checksum before it shows a row.</p>
+        <p><b>Your pick.</b> Over means you think the producer will be credited with more blocks than its line that UTC day; Under means fewer. Your rows for a day are two numbers on the Koinos chain (rows 1 to 32, rows 33 to 64), sent in one approval. Blank rows are no pick. Picks open 2 days ahead. Rows 1 to 32 lock 5 minutes before the day starts; rows 33 to 64 lock 12 hours earlier.</p>
         <p><b>Changes.</b> After your first send you can change a day's picks up to 2 more times before the lock. Every change is paid with your own Mana, not the free sponsor. A played day can't be re-picked, and no pick is ever given back.</p>
         <p><b>Points.</b> 1 point for each row you called right. A producer that is void that day (its VHP left the ruler's range) is skipped: no win, no loss. A count exactly on the line is skipped too. Sunday is a fun round: it counts on Today and All time only.</p>
         <p><b>Prizes.</b> The Free play board pays 2 VHP for first and 1 VHP for second each week. Wallets with at least 1 VHP staked in Over/Under that week play on the Staked board when staking is on. Weekly boards; All time is bragging rights.</p>

@@ -22,8 +22,8 @@ export function sampleWorld(t: number, decided: boolean): World {
   const wd = world(t);
   const d0 = Math.floor(at(4) / DAY);
   wd.picks = {
-    [`16:${d0}`]: [{ player: S, pick: { number: "9", time: String(at(4) - 600000) } }, { player: F, pick: { number: "6", time: String(at(4) - 500000) } }],
-    [`16:${d0 + 1}`]: [{ player: S, pick: { number: "10", time: String(at(4) + DAY - 600000) } }],
+    [`16:${2 * d0}`]: [{ player: S, pick: { number: "9", time: String(at(4) - 600000) } }, { player: F, pick: { number: "6", time: String(at(4) - 500000) } }],
+    [`16:${2 * (d0 + 1)}`]: [{ player: S, pick: { number: "10", time: String(at(4) + DAY - 600000) } }],
   };
   wd.gamePlayers = { [S]: { week_stake: "500000000", peak_stake: "500000000" }, [F]: { week_stake: "0", peak_stake: "0" } };
   const top = decided ? t : Math.min(t, SAT_LOCK - 6000);

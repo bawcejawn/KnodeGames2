@@ -50,5 +50,6 @@
   "maxRoundPoints": 32,
   "inputsFile": true,
   "inputsLeadHours": 72,
-  "vhpData": true
+  "vhpData": true,
+  "cardPerRound": false
 }

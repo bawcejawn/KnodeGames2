@@ -3,9 +3,10 @@
 // producer's line (made 72 hours before the week from the VHP Ruler's cards), each day's result from the ruler, and the
 // scoring. Every rule is in math.js; how a UTC day becomes a ruler card is in ruler-view.ts.
 //
-// Rounds: Monday to Saturday play days, then Sunday's fun round (Today and All time only). A round's Picks round is its
-// day number (Picks game 16: kind 3 number, time lock, round size one day, lead 5 min, ahead 2 days). A pick is ONE
-// number per wallet per day, decoded against the week's roster; there is no other way to read a pick (D-284).
+// Rounds: Monday to Saturday play days, then Sunday's fun round (Today and All time only), two kit rounds a day (A: rows
+// 0 to 31, B: rows 32 to 63). Picks game 16: kind 3 number, time lock, round size 12 hours, lead 5 min, ahead 2 days.
+// A day's picks are TWO numbers per wallet (D-296), decoded against the week's roster; there is no other way to read a
+// pick (D-284).
 // Nothing is ever guessed: while the ruler data or the block clock doesn't reach a day, the kit's NotYet keeps the round
 // PENDING (or the roster waiting); a flagged card, or a roster producer missing from a card, stays PENDING too.
 import { DAY } from "../../kit/recorder/clock.ts";
@@ -18,22 +19,21 @@ export const VAULT_GAME = F.GAME;            // one constant: Picks game 16 and 
 export { CARD };
 
 /** The week's write-once inputs (FC-9): the roster, with each producer's line, and where it came from. */
-export type Roster = { v: number; start: number; cardRound: string; rows: { a: string; line: number }[]; dropped: string[]; id: string };
+export type Roster = { v: number; start: number; cardRound: string; rows: { a: string; line: number }[]; id: string };
 export type Inputs = { start: number; roster: Roster };
 /** A day's result: its ruler round and each roster producer's [credited, expected, void] (millionths of a block).
  *  `flagged` / `fallback`: no usable card; every row is skipped that day. */
 export type DayResult = { round: string; rows: Record<string, [string, string, boolean]>; flagged?: true; fallback?: true };
-
-const dayNo = (t: number) => Math.floor(t / DAY);
 
 export const game: GameModule<RawPick, DayResult, Inputs> = {
   slug: "overunder",
   picks: { source: "picks-contract", gameId: VAULT_GAME },
 
   roundsFor(week): Round[] {
-    // locksAt = 1 ms into the day (the kit's dayOf rule; see Fantasy KC-30). Picks themselves lock 5 minutes before the
-    // day in the Picks contract; the kit reads each round's picks by pickRound.
-    return F.weekDays(week.start).map((day) => ({ id: `d${F.ymd(day)}`, day, locksAt: day + 1, resolvesAt: day + DAY, pickRound: dayNo(day) }));
+    // Two kit rounds a day (D-296): A holds the pick number for rows 0 to 31, B the number for rows 32 to 63, each its own
+    // 12-hour Picks round (math.js pickRoundOf). locksAt = 1 ms into the day (the kit's dayOf rule; see Fantasy KC-30);
+    // both numbers lock in the Picks contract before the day starts.
+    return F.weekDays(week.start).flatMap((day) => [0, 1].map((half) => ({ id: F.roundIdOf(day, half), day, locksAt: day + 1, resolvesAt: day + DAY, pickRound: F.pickRoundOf(day, half) })));
   },
 
   /** The write-once roster (FC-9), made 72 hours before the week (Friday 00:00 UTC), so it is published a day before
@@ -92,9 +92,9 @@ export const game: GameModule<RawPick, DayResult, Inputs> = {
     const roster = F.checkRoster(inputs.roster, inputs.start);
     if (round.day < inputs.start || round.day >= inputs.start + F.PLAY_DAYS * DAY) throw new Error(`scoreRound: day ${F.ymd(round.day)} is not in the roster's week`);
     const outcomes = F.dayOutcomes(roster, Object.fromEntries(Object.entries(result.rows)));
-    const out: Score = new Map();
+    const half = F.halfOfId(round.id), out: Score = new Map();
     for (const p of picks) {
-      const points = F.scorePick(roster, (p.pick as RawPick)?.number as string | number | undefined, outcomes);
+      const points = F.scorePick(roster, (p.pick as RawPick)?.number as string | number | undefined, outcomes, half);
       out.set(p.wallet, { points, at: points > 0 ? Math.min(round.day, Math.max(inputs.start, p.at)) : 0 });
     }
     return out;

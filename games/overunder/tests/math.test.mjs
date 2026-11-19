@@ -30,21 +30,29 @@ test("outcomeOf: above the line is over, below is under, on the line or void is 
   assert.equal(F.outcomeOf(0, 1, false), "under");
 });
 
-test("pick number: 2 bits a row in roster order, row 0 lowest; encode and decode agree for all 32 rows", () => {
-  const r = mk(Array.from({ length: 32 }, (_, i) => row(i, 20000000 + i)));
-  assert.equal(r.rows.length, 32);
+test("pick numbers: 2 bits a row in roster order; number A holds rows 0 to 31, B rows 32 to 63; encode and decode agree for all 64 rows", () => {
+  const r = mk(Array.from({ length: 64 }, (_, i) => row(i, 20000000 + i)));
+  assert.equal(r.rows.length, 64);
   const ch = {};
-  r.rows.forEach((x, i) => { if (i % 3 === 0) ch[x.a] = "over"; else if (i % 3 === 1) ch[x.a] = "under"; });
-  const n = F.encodePick(r, ch);
-  assert.deepEqual(F.decodePick(r, n), ch);
+  r.rows.forEach((x, i) => { ch[x.a] = i % 2 ? "under" : "over"; });
+  const [na, nb] = F.encodePicks(r, ch);
+  assert.deepEqual({ ...F.decodePick(r, na, 0), ...F.decodePick(r, nb, 1) }, ch);
+  assert.equal(Object.keys(F.decodePick(r, na, 0)).length, 32);
+  assert.ok(Object.keys(F.decodePick(r, na, 0)).every((a) => r.rows.findIndex((x) => x.a === a) < 32), "A reads only rows 0 to 31");
+  assert.ok(Object.keys(F.decodePick(r, nb, 1)).every((a) => r.rows.findIndex((x) => x.a === a) >= 32), "B reads only rows 32 to 63");
   assert.equal(F.encodePick(r, { [r.rows[0].a]: "over" }), "1");
   assert.equal(F.encodePick(r, { [r.rows[0].a]: "under" }), "2");
   assert.equal(F.encodePick(r, { [r.rows[1].a]: "over" }), "4");
   assert.equal(F.encodePick(r, { [r.rows[31].a]: "under" }), (2n << 62n).toString());
-  assert.equal(F.encodePick(r, {}), "0");
+  assert.equal(F.encodePick(r, { [r.rows[32].a]: "over" }, 1), "1", "row 32 is the lowest bits of B");
+  assert.equal(F.encodePick(r, { [r.rows[63].a]: "under" }, 1), (2n << 62n).toString());
+  assert.equal(F.encodePick(r, { [r.rows[32].a]: "over" }, 0), "0", "a B row is not in A");
+  assert.deepEqual(F.encodePicks(r, {}), ["0", "0"]);
   assert.deepEqual(F.decodePick(r, "0"), {});
   assert.throws(() => F.encodePick(r, { [addr(500)]: "over" }), /not on the roster/);
   assert.throws(() => F.encodePick(r, { [r.rows[0].a]: "maybe" }));
+  assert.throws(() => F.encodePick(r, {}, 2));
+  assert.throws(() => F.decodePick(r, "1", 2));
 });
 
 test("decodePick: invalid bits (11) are blank, bits past the roster are ignored, and anything that isn't a plain 64-bit number is no pick", () => {
@@ -73,21 +81,21 @@ test("score: 1 point for each row called right; blank, wrong, skipped and void r
   assert.throws(() => F.dayOutcomes(r, { [a]: ["1", "1", false] }), /no result row/);
 });
 
-test("roster: entry and not void, sorted by address, lines in half blocks, checksum; the cap keeps the biggest and names the rest", () => {
+test("roster: entry and not void, sorted by address, lines in half blocks, checksum; up to 64, over 64 stops", () => {
   const rows = [row(5, 25e6), row(1, 21e6, { entry: false }), row(2, 22e6, { void: true }), row(3, 23e6), row(0, 20e6)];
   const r = mk(rows);
   assert.deepEqual(r.rows.map((x) => x.a), [addr(0), addr(3), addr(5)].sort());
   assert.deepEqual(r.rows.map((x) => x.line).sort((x, y) => x - y), [41, 47, 51]);
-  assert.deepEqual(r.dropped, []);
   assert.equal(F.checkRoster(r, MON), r);
   assert.equal(F.rosterId(r), r.id);
-  // 35 qualifying producers: the 32 with the most expected blocks stay; the 3 smallest are named, never silently cut
-  const many = Array.from({ length: 35 }, (_, i) => row(i, (100 + i) * 1e6));
+  // 64 qualifying producers fit; 65 is a loud error that stops the roster, never a silent cut (D-296)
+  const many = Array.from({ length: 64 }, (_, i) => row(i, (100 + i) * 1e6));
   const big = mk(many);
-  assert.equal(big.rows.length, 32);
-  assert.deepEqual(big.dropped, [addr(0), addr(1), addr(2)].sort());
+  assert.equal(big.rows.length, 64);
   assert.ok(big.rows.every((x, i, xs) => i === 0 || xs[i - 1].a < x.a));
   F.checkRoster(big, MON);
+  assert.throws(() => mk([...many, row(64, 200e6)]), /65 producers qualify, the limit is 64: stopping, nothing is cut/);
+  assert.equal(mk([...many, row(64, 200e6, { entry: false }), row(65, 200e6, { void: true })]).rows.length, 64, "those that don't qualify don't count");
   assert.throws(() => mk([row(0, 1e6), row(0, 2e6)]), /twice/);
   assert.throws(() => mk([{ a: "nope", expected: "1", entry: true, void: false }]), /not an address/);
   assert.throws(() => F.makeRoster(MON + 1, "20261113", []), /00:00 UTC/);
@@ -102,12 +110,12 @@ test("checkRoster refuses any roster that is not exactly the published one (D-28
   const t2 = clone(); t2.rows.reverse(); assert.throws(() => F.checkRoster(t2, MON), /sorted/);
   const t3 = clone(); t3.rows.pop(); assert.throws(() => F.checkRoster(t3, MON), /id does not match/);
   const t4 = clone(); t4.rows[0].line = 40; assert.throws(() => F.checkRoster(t4, MON), /odd/);
-  const t5 = clone(); t5.dropped = [addr(9)]; assert.throws(() => F.checkRoster(t5, MON), /id does not match/);
+  const t5 = clone(); t5.extra = 1; t5.id = "0000000000000000"; assert.throws(() => F.checkRoster(t5, MON), /id does not match/);
   const t6 = clone(); t6.cardRound = "20261112"; assert.throws(() => F.checkRoster(t6, MON), /id does not match/);
   const t7 = clone(); t7.v = 2; assert.throws(() => F.checkRoster(t7, MON), /version/);
   assert.throws(() => F.checkRoster(clone(), MON + F.DAY), /for the week starting/);
   assert.throws(() => F.checkRoster(null, MON));
-  const t8 = clone(); t8.rows = Array.from({ length: 33 }, (_, i) => ({ a: addr(i), line: 1 })); assert.throws(() => F.checkRoster(t8, MON), /0 to 32/);
+  const t8 = clone(); t8.rows = Array.from({ length: 65 }, (_, i) => ({ a: addr(i), line: 1 })); assert.throws(() => F.checkRoster(t8, MON), /0 to 64/);
   // the same rows in another week are a different roster
   assert.notEqual(F.makeRoster(MON + 7 * F.DAY, "20261120", [row(0, 20e6), row(1, 21e6), row(2, 22e6)]).id, r.id);
 });
@@ -129,5 +137,24 @@ test("Picks game 16's numbers: lead 5 minutes, ahead 2 days, 2 changes, a 64-bit
   assert.equal(F.AHEAD, 172800000);
   assert.equal(F.MAX_CHANGES, 2);
   assert.equal(F.MAX_NUMBER, 2n ** 64n - 1n);
-  assert.equal(F.MAX_ROWS * 2, 64);
+  assert.equal(F.MAX_ROWS, 64);
+  assert.equal(F.HALF * 2, F.MAX_ROWS);
+  assert.equal(F.PICK_ROUND, 43200000, "Picks round size: 12 hours");
+});
+
+test("a day's two Picks rounds: A ends at the day's start, B 12 hours earlier; both lock before the day; round ids", () => {
+  const day = MON + 2 * F.DAY;
+  assert.equal(F.pickRoundOf(day, 0), (day / F.DAY) * 2);
+  assert.equal(F.pickRoundOf(day, 1), (day / F.DAY) * 2 - 1);
+  assert.equal(F.lockOf(day, 0), day - 300000);
+  assert.equal(F.lockOf(day, 1), day - F.DAY / 2 - 300000);
+  assert.ok(F.lockOf(day, 1) < F.lockOf(day, 0) && F.lockOf(day, 0) < day);
+  // no two (day, half) share a Picks round, and the week's 14 rounds are consecutive
+  const rs = F.weekDays(MON).flatMap((d) => [0, 1].map((h) => F.pickRoundOf(d, h)));
+  assert.equal(new Set(rs).size, 14);
+  assert.equal(F.roundIdOf(day, 0), "d20261118");
+  assert.equal(F.roundIdOf(day, 1), "d20261118b");
+  assert.equal(F.halfOfId("d20261118"), 0);
+  assert.equal(F.halfOfId("d20261118b"), 1);
+  for (const bad of ["d2026111", "d20261118c", "x20261118", "", "d20261118bb"]) assert.throws(() => F.halfOfId(bad));
 });

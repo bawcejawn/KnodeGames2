@@ -10,6 +10,8 @@ test("the page loads games/overunder/math.js, the same file the recorder uses, a
   assert.match(js, /from "\.\/games\/overunder\/math\.js"/);
   assert.match(js, /F\.checkRoster\(/);
   assert.match(js, /F\.encodePick\(/);
+  assert.match(js, /F\.pickRoundOf\(/, "number A and number B are two Picks rounds (D-296)");
+  assert.match(js, /sendBatch/, "both numbers go in one approval (D-211)");
   assert.match(js, /F\.decodePick\(/);
   assert.match(html, /<script type="module" src="overunder\.js"><\/script>/);
 });
@@ -23,8 +25,8 @@ test("no HTML strings: the page is built with textContent and elements (no inner
   assert.doesNotMatch(js, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function/);
 });
 
-test("the page sends one Picks operation a day to game 16 with an empty producer list; a change is paid with the player's own Mana (D-278)", () => {
-  assert.match(js, /game: GAME, round: String\(d\), producers: \[\], number/);
+test("the page sends one Picks operation per pick number (up to two a day, batched) to game 16 with an empty producer list; a change is paid with the player's own Mana (D-278)", () => {
+  assert.match(js, /game: GAME, round: String\(F\.pickRoundOf\(d \* DAY, x\.h\)\), producers: \[\], number: x\.number/);
   assert.match(js, /GAME = F\.GAME/);
   assert.match(js, /isChange \? \{ ownMana: true \} : \{\}/);
   assert.match(js, /Connect a wallet to change a pick/);
