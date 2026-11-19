@@ -6,12 +6,15 @@
  *                      for a week written as one file: players, each day's points per player, the carried teams (`next`), Weekly Rival (`extras`)
  *   board.json         the Staked / Free play board of the latest week
  *   alltime.json       every final week, added up
- * and your picks from the Picks contract. It sends two things, each confirmed in your wallet: your team for a day
+ * and your picks from the Picks contract. It sends two things, each through the shared "Send my picks" card
+ * (js/lib/send-picks.js, D-255/D-278: a new pick may be sponsored; a change shows your pick this round, asks, and is
+ * paid with your own Mana), each confirmed in your wallet: your team for a day
  * (Picks game 4, round = the UTC day number) and your rival challenge for a week (Picks game 5, round = that week's
  * Monday day number). The rules are games/fantasy/math.js, the same file the recorder uses. Everything on screen is
  * built with textContent: no HTML strings. Points in the files are hundredths (15000 = 150.00); shown as points. */
 import * as F from "./games/fantasy/math.js";
 import { loadWeekParts } from "./games/fantasy/parts-web.js";
+import * as SP from "./js/lib/send-picks.js";
 
 const $ = (id) => document.getElementById(id);
 if (typeof document !== "undefined" && $("fx-slots")) start();
@@ -413,8 +416,31 @@ function start() {
     modal.hidden = false;
     const b = modal.querySelector("button"); if (b) b.focus();
   }
-  function closePop() { if (modal) modal.hidden = true; }
+  let asking = null;   // the open "change it?" question: any way of closing the card (Escape, a click outside) answers "keep"
+  function closePop() { if (modal) modal.hidden = true; if (asking) { const a = asking; asking = null; a(false); } }
   const okBtn = (t = "Done") => el("button", { class: "btn btn-primary", type: "button", onclick: closePop }, t);
+  /** The shared card's question (D-255): "your pick this round is X. Change it to Y?" Resolves true for Change. */
+  function ask(title) {
+    return (lines) => new Promise((done) => {
+      const go = (v) => () => { asking = null; closePop(); done(v); };
+      pop("info", title, lines, [el("button", { class: "btn btn-primary", type: "button", onclick: go(true) }, "Change it"), el("button", { class: "btn", type: "button", onclick: go(false) }, "Keep my pick")]);
+      asking = done;
+      const keep = modal.querySelectorAll("button")[1]; if (keep) keep.focus();
+    });
+  }
+  /** One pick through the shared card: reads the pick on chain for that round first. Returns the send result, or null
+   *  when the player kept the pick they had (or nothing changed). */
+  async function sendOne(game, round, wanted, label, title, lockAt) {
+    const existing = await getPick(game, round);
+    const { operation } = await picks.functions.pick({ player: me(), game, round: String(round), producers: wanted, number: "0" }, { onlyOperation: true });
+    const open = () => lockAt - Date.now() >= 60000;
+    const p = SP.plan([{ key: `${game}:${round}`, label, op: operation, existing, wanted, open: open() }]);
+    if (p.refused.length) throw new Error("locked");
+    if (p.same.length) throw new Error("already your pick");
+    if (!(await SP.confirm(p, ask(title), nameOf))) return null;
+    pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [p.changes.length ? "A change: paid with your own Mana." : "Free: the Knode Mana sponsor pays the Mana."]);
+    return SP.send(W, p, { label, stillOpen: open });
+  }
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal && !modal.hidden && !modal.querySelector(".fx-spin")) closePop(); });
   function why(e) {
     const m = String((e && e.message) || e);
@@ -439,10 +465,12 @@ function start() {
     if (lockOfDay(d) - Date.now() < 60000) { pop("bad", "Too close to the lock", ["That day locks in under a minute. Try again for the next one."], [okBtn("OK")]); selDay = null; await refreshMine(); return; }
     sending = true; render();
     const what = `C ${nameOf(list[0])}, ${list.slice(1).map(nameOf).join(", ")}`;
-    pop("busy", W.kind === "guest" ? "Saving your team…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [`For ${when(dayStart(d))}: ${what}.`, "Free: the Knode Mana sponsor pays the Mana."]);
+    pop("busy", "Checking your pick for that day…", [`For ${when(dayStart(d))}: ${what}.`]);
     try {
-      const { operation } = await picks.functions.pick({ player: me(), game: GAME, round: String(d), producers: list, number: "0" }, { onlyOperation: true });
-      const id = await W.send(`Fantasy team for ${when(dayStart(d))}`, [operation]);
+      const r = await sendOne(GAME, d, list, `Fantasy team for ${when(dayStart(d))}`, "Change your team for that day?", lockOfDay(d));
+      if (!r) { closePop(); return; }
+      if (!r.sent && !r.changed) throw new Error("locked");
+      const id = r.ids[r.ids.length - 1];
       pop("busy", "Sent. Checking the chain…", [what]);
       const ok = await confirmPick(GAME, d, list);
       draftFor = null;
@@ -461,10 +489,11 @@ function start() {
     if (sending || !picks) return;
     const rw = mine.rw, round = dayNo(weekStart(rw));
     sending = true; render();
-    pop("busy", W.kind === "guest" ? "Sending your challenge…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [`You challenge ${nameOf(target)} for ${WL(rw)}.`]);
+    pop("busy", "Checking your challenge for that week…", [`You challenge ${nameOf(target)} for ${WL(rw)}.`]);
     try {
-      const { operation } = await picks.functions.pick({ player: me(), game: RIVAL, round: String(round), producers: [target], number: "0" }, { onlyOperation: true });
-      await W.send(`Weekly Rival: challenge ${nameOf(target)}`, [operation]);
+      const r = await sendOne(RIVAL, round, [target], `Weekly Rival: challenge ${nameOf(target)}`, "Change your rival?", lockOfDay(round));
+      if (!r) { closePop(); return; }
+      if (!r.sent && !r.changed) throw new Error("locked");
       const ok = await confirmPick(RIVAL, round, [target]);
       $("fx-rival-addr").value = "";
       pop(ok ? "ok" : "info", ok ? "Challenge sent" : "Sent, not seen yet", [ok ? `${nameOf(target)} is your rival for ${WL(rw)}. It counts if you are both staked in Fantasy and both score.` : "It usually shows within a minute."], [okBtn()]);
