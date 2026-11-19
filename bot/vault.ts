@@ -20,6 +20,7 @@
  * then seals the week. The owner then has 24 hours to correct anything (npm run bot -- game-correct …).
  */
 import fs from "node:fs";
+import { PICKS_OF, weekFileSpec, identicalGroups, identicalNotice } from "./identical-picks.ts";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash, createPublicKey, verify } from "node:crypto";
@@ -465,7 +466,20 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
       if (sf.why) { alert(`${id}:${w}:sealed-nofile`, `${name} week ${w} is SEALED on chain, but its results file can't be used (${sf.why}), so nobody can check who it will pay. The bot won't finalize it. Check the rows on chain (npm run bot -- status) and correct them (game-correct) or void the week (game-void) before ${ends}.`); continue; }
       const v = await chainVsFile(gw, sf.r, k.minStakeFor(w), g.staked || big(gw.bucket) > 0n, true, (a) => readPlayer(ctx, id, w, a));
       if (v.diffs.length) alert(`${id}:${w}:sealed-diff:${hashOf(v.diffs).slice(0, 12)}`, `${name} week ${w} is SEALED on chain with results that differ from its published file: ${v.diffs.join("; ")}. The bot won't finalize it. If you did not do this, the operator or owner key may be compromised: correct it (npm run bot -- game-correct ${id} ${w} <wallet> <points> --send) or void it (game-void) before ${ends}.`);
-      else log(ctx, `  ${name} week ${w}: sealed; the chain matches the results file`);
+      else {
+        log(ctx, `  ${name} week ${w}: sealed; the chain matches the results file`);
+        // Audit AB-061 (owner's option A): a notice, once per game-week, when staked wallets with points made exactly
+        // the same picks. Nothing is held. Only games whose week file lists every wallet's picks (identical-picks.ts).
+        const picksOf = PICKS_OF[id];
+        if (picksOf && !legacy && sf.r) {
+          const wf = readFile(weekFileSpec(source, w));
+          if (wf.state === "ok") {
+            const scorers = (sf.r.rows ?? []).filter((x: any) => num(x?.points) > 0).map((x: any) => String(x.player));
+            const groups = identicalGroups(picksOf(wf.data), scorers);
+            if (groups.length) alert(`${id}:${w}:identical:${hashOf(groups).slice(0, 12)}`, identicalNotice(name, w, groups));
+          }
+        }
+      }
       continue;
     }
     if (k.time >= due) { if (only) throw new Error(`Week ${w} of ${name} is past its results deadline (${utc(due)}).`); continue; }

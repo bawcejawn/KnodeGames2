@@ -74,6 +74,8 @@ The bot compares the chain with the records on `main` (`game-data/deployment.jso
 | "The Desk's KOIN fell by…" | KOIN left the Desk beyond swaps | an owner withdrawal | check the owner key |
 | **"Swaps took … pause the Desk"** | swaps took > 50% of the float in one hour | never | `npm run desk -- pause on --send`, then ask the Vault chat |
 | "The Desk contract on chain is not what … records… act now." | Desk code or switches differ | Desk upgrade | Vault chat at once |
+| "… runs code …, not … as …/deployment.json records (audit AB-057)…" / "… its authorize switches changed …" / "… no contract found on chain" | Race picks, Picks or the Mana sponsor run other code (or switches) than recorded | an upload you made: update `wasmSha256` in that deployment file; otherwise its key may be stolen | Vault chat (Race: Race chat) at once |
+| "The code watch can't check …: no contract address or wasmSha256 in the file" | a broken `race-data`, `picks-data` or `sponsor-data` `deployment.json` on `main` | fix the file | Audit-fix chat |
 
 > `docs/WALLETS.md` §6 lists only the wallet-move emails. The **game-list**, **owner settings** and **code fingerprint** alerts above are also expected after `game-apply`, `pause` and upgrades.
 
@@ -141,6 +143,8 @@ The bot compares the chain with the records on `main` (`game-data/deployment.jso
 | "results are not ready (…) and are due …" | **only in the last 12 h** before the deadline (before that: silent, §10) | game chat; under 12 h it's urgent |
 | "… its results file carries a VHP-ruler shadow mark (…), so the vault won't post it" | **at once**, once per game-week (a shadow mark never clears by itself; Repo Lens #G-17 G-SH-1) | game chat: the recorder published the ruler's shadow result as the vault file; it must publish the real week's file before the deadline, or the week rolls over |
 | "free-prize switches can't be read" | the `prize-settings` file broken | `npm run prizes -- list`; resend the setting. Under 6 h the bot seals without free winners |
+| "the free-prize winners can't be checked against the board …" / "… is in the results file as a prize winner but isn't on the board's Free play list …" | Repo Lens L2-4: the board is missing, unreadable, unsealed, or doesn't list that winner as Free play with points | game chat: check its recorder and board; under 6 h the bot seals without free winners |
+| "… some winning wallets may be playing as one: N group(s) made exactly the same picks … (audit AB-061 …)" | weekly watch, once per game-week: identical picks or answers among the week's winners | look at the wallets; nothing is held (owner, O-31 option A); policy goes to the Library |
 | prize winner already has a result / was staked / too many tied | free-prize list problem | game chat |
 | "didn't go through" | network or Mana; retried | wait; Vault chat if it repeats |
 | "… is a test week (vaultTestWeeks in deployment.json): it plays but pays nothing …" | `game-post` was asked for a test week (owner, 10 Nov: the week of Mon 9 Nov) | nothing: the week rolls over at its deadline, and its earnings go to Week 1 |

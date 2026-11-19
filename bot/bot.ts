@@ -49,6 +49,7 @@ import { pobAbi } from "./token-abi.ts";
 import { formatProduction, loadSigners, signerFromBlockItem, type SignedBlock } from "./production.ts";
 import { contractManaVerdict } from "./mana.ts";
 import { contractMetadata, checkMeta, sha256OfMeta, type Check } from "./chaincheck.ts";
+import { watchedContracts, codeWatch } from "./code-watch.ts";
 import { vaultView, vaultResultsPass, vaultFinalizePass, vaultAlerts, recentGameWeeks, vaultStatus, sharedRulesWeek, questionWeekShared, testWeeks, type VaultCtx, type VaultMemo, type SendResult } from "./vault.ts";
 import { writeSummary } from "./alert-summary.mjs";
 
@@ -202,6 +203,8 @@ type BotState = {
   /** For each open question (by paramsHash): how many VHP readings the bot has recorded and the newest one's height.
    *  An older, validly sealed list put back in the question file is noticed against this (audit F-02). */
   vhpLists?: Record<string, { n: number; last: number }>;
+  /** Audit AB-057: the authorize switches of Race picks, Picks and the Mana sponsor as last seen (bot/code-watch.ts). */
+  codeFlags?: Record<string, string>;
   /** The Desk as last seen (audit D1-04): its settings, KOIN balance and total KOIN paid out by swaps. */
   desk?: { settings: string; koin: string; koinOut: string; at: number };
   /** The vault's game list as last seen (v6): a change is reported once. */
@@ -617,6 +620,13 @@ async function healthPass(ctx: Ctx, bs: BotState) {
     if (o !== 0 && o !== 1000) ownerAlert(`orphan-outcome:${id}:${o}:${q?.data_hash ?? ""}`, `Orphan question #${id} (it matches no question file) has outcome ${o} on chain, not VOID. Only the operator key or the owner key can set that: if you did not, a key may be compromised. The owner can void it with correct_question.`);
   }
   if (ctx.desk) await deskHealth(ctx, bs, ownerAlert);
+  // Audit AB-057: Race picks, Picks and the Mana sponsor take new code from their own key, two of them at once, so their
+  // code is checked hourly too (bot/code-watch.ts), against the wasmSha256 each deployment file on main records.
+  if (ctx.metadata && ctx.chain.kind === "koinos") {
+    const w = watchedContracts((f) => { try { return readJson(f, null); } catch { return null; } });
+    if (w.missing.length) ownerAlert(`code-watch-files:${w.missing.join(",")}`, `The code watch can't check ${w.missing.join(", ")}: no contract address or wasmSha256 in the file (audit AB-057).`);
+    bs.codeFlags = await codeWatch(w.list, ctx.metadata, bs.codeFlags ?? {}, ownerAlert, (t) => log(t));
+  }
   // v6: game announcements, changes to the game list, owner corrections and voided game weeks.
   const view = await vaultView(ctx.chain);
   if (view) bs.games = vaultAlerts(view, st, await recentGameWeeks(ctx.chain, view, st.weeksClosed, st.c), ownerAlert, bs.games);

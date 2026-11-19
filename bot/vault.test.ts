@@ -967,3 +967,25 @@ test("L2-4: a missing or unreadable board holds the free winners and the seal; a
   await vaultResultsPass(v, sendAs(sim, operator, s), { game: 3, week: 1 });
   assert.ok(s.includes(`Block X week 1: prize place 2 → ${addr(E)}`), "unmarked board: not checked, as before");
 });
+
+// ═══════════════ Audit AB-061: a sealed week's identical picks are reported once, nothing held ═══════════════
+test("AB-061: once a week is sealed and matches its file, identical picks among its scorers are reported once; nothing changes", { skip: !fs.existsSync(NEW) && `${NEW} missing` }, async () => {
+  const { PICKS_OF } = await import("./identical-picks.ts");
+  PICKS_OF[2] = (wf: any) => new Map((wf?.picks?.rows ?? []).map((r: any) => [r[0], String(r[1])]));   // Fantasy as a covered game, for this test
+  try {
+    const { sim } = await weekOneClosed();
+    const files: any = { ...allFiles(), "mem:fantasy/W001.json": { picks: { rows: [[addr(B), 5], [addr(C), 5]] } } };
+    await vaultResultsPass(fctx(sim, files), sendAs(sim, operator, []), { game: 2, week: 1 });   // posts and seals
+    const memo: VaultMemo = {};
+    const v = fctx(sim, files, memo), s: string[] = [];
+    await vaultResultsPass(v, sendAs(sim, operator, s));
+    assert.deepEqual(s.filter((x) => x.startsWith("Fantasy")), [], "nothing sent");
+    assert.match(v.problems.join(" | "), new RegExp(`Fantasy week 1: some winning wallets may be playing as one: 1 group\\(s\\) made exactly the same picks: 2 wallets \\(${[addr(B), addr(C)].sort().join(", ")}\\)`));
+    const v2 = fctx(sim, files, memo);
+    await vaultResultsPass(v2, sendAs(sim, operator, []));
+    assert.doesNotMatch(v2.problems.join(" | "), /playing as one/, "once per game-week");
+    const v3 = fctx(sim, { ...files, "mem:fantasy/W001.json": { picks: { rows: [[addr(B), 5], [addr(C), 6]] } } });
+    await vaultResultsPass(v3, sendAs(sim, operator, []));
+    assert.doesNotMatch(v3.problems.join(" | "), /playing as one/, "different picks: no notice");
+  } finally { delete PICKS_OF[2]; }
+});
