@@ -115,7 +115,13 @@ export const FANTASY_TEAM_GAME = Object.freeze({ id: 4, name: "Fantasy Producers
   lead: 5 * 60000, ahead: 7 * DAY_MS, picksPerDay: 20, maxChanges: 20 });
 export const FANTASY_RIVAL_GAME = Object.freeze({ id: 5, name: "Weekly Rival", kind: 1, listSize: 1, lockMode: 2, round: DAY_MS, offset: 0,
   lead: 5 * 60000, ahead: 7 * DAY_MS, picksPerDay: 10, maxChanges: 5 });
-const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME];
+/** Survivor, Picks game 3 (the Survivor chat's values, claude/survivor/TO-CHATS-SURVIVOR-BUILT-2026-11-14.md; owner D-246:
+ *  Season 1 from Mon 30 Nov 2026): one producer a day, TIME-locked, one round a UTC day (target 00:00 UTC), locking 5 minutes
+ *  before and opening 7 days ahead; 20 picks a day per wallet, 5 changes per pick. The same shape as Weekly Rival (game 5)
+ *  except the id and the limits. The SHAPE (id, kind, list_size, lock_mode, round_size, round_offset) never changes. */
+export const SURVIVOR_GAME = Object.freeze({ id: 3, name: "Survivor", kind: 1, listSize: 1, lockMode: 2, round: DAY_MS, offset: 0,
+  lead: 5 * 60000, ahead: 7 * DAY_MS, picksPerDay: 20, maxChanges: 5 });
+const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME];
 /** The picks per wallet per day and changes per pick the Picks contract allows at most. */
 const MAX_PICKS_PER_DAY = 50, MAX_CHANGES = 50;
 
@@ -431,7 +437,7 @@ export function timeRounds(g: { round: number; offset: number; lead: number; ahe
 }
 function gameOf(net: Net, id: number) {
   const g = net.games.find((x) => x.id === id);
-  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8)"}.`);
+  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8; Survivor game 3)"}.`);
   return g;
 }
 async function sendCall(net: Net, p: Provider, chainId: string, signer: Signer, method: string, args: any, rcKoin = 2) {
