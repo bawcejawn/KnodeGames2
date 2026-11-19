@@ -115,7 +115,12 @@
   // Audit AB-062: also no invisible or format characters of any kind (\p{Cf}: soft hyphen, word joiner, BOM …), no
   // private-use or unassigned ones, no space but the plain one, and no mix of Latin with Cyrillic or Greek letters
   // ("Armаna" with a Cyrillic а beside the real "Armana"). A name all in one script is fine.
-  const mixedScript = (n) => /\p{Script=Latin}/u.test(n) && /[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(n);
+  // Repo Lens J18-1: a name with any Latin letter must also fold to plain a-z / 0-9 (after the usual European letters that
+  // don't split into a base letter + accent), so lookalikes from any other script or Latin's own extensions (small
+  // capitals ᴏ, alpha ɑ; Armenian օ, Coptic ⲟ, Cherokee Ꮶ …) can't sit beside Latin. "Bjørn", "Łódź", "Straße" still show.
+  const LATIN_PLAIN = { "ß": "ss", "æ": "ae", "œ": "oe", "ø": "o", "ł": "l", "đ": "d", "ð": "d", "þ": "th", "ħ": "h", "ŋ": "n" };
+  const plainLatin = (n) => !/[^a-z0-9]/.test(fold(n).replace(/[ßæœøłđðþħŋ]/g, (c) => LATIN_PLAIN[c]));
+  const mixedScript = (n) => /\p{Script=Latin}/u.test(n) && (/[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(n) || !plainLatin(n));
   const okPool = (n) => typeof n === "string" && n.length >= 1 && n.length <= 48 && n.trim() === n && !/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(n)
     && !/[\p{Cf}\p{Co}\p{Cn}\p{Zl}\p{Zp}]|(?! )\p{Zs}/u.test(n) && !mixedScript(n)
     && (n.match(/[\p{L}\p{N}]/gu) || []).length >= 2 && !reserved(n) && !addressLike(n);
