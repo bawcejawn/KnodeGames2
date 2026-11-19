@@ -2,8 +2,8 @@
   Knode - make sure the daily questions come out on time (Windows Task Scheduler, every 5 minutes): the 12:00 UTC
   round, and from the week of Mon 9 Nov also the 00:00 UTC round (D-092).
 
-  Run once in PowerShell from C:\kprediction:
-      powershell -ExecutionPolicy Bypass -File node\install-release-kick.ps1
+  Run once in PowerShell from your KnodeGames2 folder (e.g. C:\knodegames2):
+      powershell -ExecutionPolicy Bypass -File ops\node\install-release-kick.ps1
 
   What it runs: node bot\release-kick.mjs (see that file). Windows starts it every 5 minutes, all day (UTC, so daylight
   saving time doesn't shift it). Around each round's release it makes sure the questions come out; at any hour, every
@@ -15,7 +15,10 @@
   Remove it again:   Unregister-ScheduledTask -TaskName "Knode question release" -Confirm:$false
 #>
 $ErrorActionPreference = "Stop"
-$root = Split-Path -Parent $PSScriptRoot
+# This script is in ops\node\, two folders below the repository folder (it was node\ in the old repository).
+$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+# The tasks keep their logs and state in node\ under the repository folder (git ignores it).
+New-Item -ItemType Directory -Force -Path (Join-Path $root "node") | Out-Null
 $script = Join-Path $root "bot\release-kick.mjs"
 if (-not (Test-Path $script)) { throw "bot\release-kick.mjs not found. Run 'git pull' in $root first." }
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
@@ -43,7 +46,7 @@ $t.Repetition = (New-ScheduledTaskTrigger -Once -At ([DateTime]::Today) -Repetit
 $t.StartBoundary = "${day}T00:00:00Z"
 $triggers = @($t)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 4) -MultipleInstances IgnoreNew
-Register-ScheduledTask -TaskName "Knode question release" -Action $action -Trigger $triggers -Settings $settings -Description "Every 5 minutes, all day: start the Knode bot on GitHub so each round's questions come out on time, start it if it hasn't run for 120 minutes (at most 6 a day), and email if they don't. See C:\kprediction\bot\release-kick.mjs" -Force | Out-Null
+Register-ScheduledTask -TaskName "Knode question release" -Action $action -Trigger $triggers -Settings $settings -Description "Every 5 minutes, all day: start the Knode bot on GitHub so each round's questions come out on time, start it if it hasn't run for 120 minutes (at most 6 a day), and email if they don't. See $script" -Force | Out-Null
 
 Write-Host ""
 $info = ((Get-ScheduledTask -TaskName "Knode question release").Triggers | ForEach-Object { $_.StartBoundary }) -join ", "
