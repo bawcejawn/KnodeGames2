@@ -6,7 +6,8 @@ import fs from "node:fs";
 import { NODE_KIT, MORE, TOP } from "../../tools/site-nav.mjs";
 
 const pages = fs.readdirSync("web").filter((f) => f.endsWith(".html"));
-const read = (f) => fs.readFileSync(f, "utf8");
+// Pages are listed by name from web/; other reads already name web/ (KnodeGames2 layout).
+const read = (f) => fs.readFileSync(f.startsWith("web/") ? f : `web/${f}`, "utf8");
 
 test("every page with a footer row carries the node line with both ways, and the Koinos AI link is ads.json's", () => {
   const ads = JSON.parse(read("web/ads.json"));

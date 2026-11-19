@@ -40,7 +40,7 @@ test("C-W-3: a sponsored 6-leg card goes out with at least 2x the measured 10-le
   const used = seen.find((o) => o && o.payer === SP);
   assert.ok(used, "the card was offered to the sponsor");
   assert.ok(BigInt(used.rcLimit) >= 2n * MEASURED_10_LEGS, `a card asked for ${used.rcLimit}: less than 2x a measured 10-leg card`);
-  const admin = fs.readFileSync(`${APP}/admin/actions.ts`, "utf8");
+  const admin = fs.readFileSync(`${APP}/ops/admin/actions.ts`, "utf8");
   assert.match(admin, /"mana-limit", "picks:pick", [^\n]*"--limit", "0\.2"/, "the launch sets the Picks pick row to 0.2 Mana");
   // (Fix-check FC-13: 0.0916 was a 10-leg card paid by the player; a SPONSORED single pick used 0.116 on testnet, so a
   // sponsored 10-leg card must be measured against the 0.2 row before cards go live. That measurement is a launch step.)

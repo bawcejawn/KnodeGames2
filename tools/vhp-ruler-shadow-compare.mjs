@@ -17,7 +17,7 @@ import path from "node:path";
 import vm from "node:vm";
 
 const root = new URL("..", import.meta.url).pathname, box = { window: {} };
-vm.runInNewContext(fs.readFileSync(root + "blockx-math.js", "utf8"), box);
+vm.runInNewContext(fs.readFileSync(root + "web/blockx-math.js", "utf8"), box);
 const BXM = box.window.KBlockX;
 const pad = (w) => String(w).padStart(3, "0");
 const readJson = (f) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : null);

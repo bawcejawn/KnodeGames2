@@ -17,9 +17,12 @@ function copy(from, to) {
 // The pages still ask for these URLs. The files live with the contracts, not in web/.
 copy(path.join(root, "contracts/vault/abi/kpred.koilib.json"), path.join(out, "game/abi/kpred.koilib.json"));
 copy(path.join(root, "contracts/vault/abi/kpred-v6.koilib.json"), path.join(out, "game/abi/kpred-v6.koilib.json"));
-copy(path.join(root, "contracts/picks/abi/picks.koilib.json"), path.join(out, "picks/abi/picks.koilib.json"));
-copy(path.join(root, "contracts/race/abi/race.koilib.json"), path.join(out, "race/abi/race.koilib.json"));
-copy(path.join(root, "contracts/desk/abi/desk.koilib.json"), path.join(out, "desk/abi/desk.koilib.json"));
+// The Picks, Race and Desk pages ask for their ABI at its own path in this repo (contracts/<name>/abi/...).
+for (const f of ["contracts/picks/abi/picks.koilib.json", "contracts/race/abi/race.koilib.json", "contracts/desk/abi/desk.koilib.json"]) {
+  copy(path.join(root, f), path.join(out, f));
+}
+// The pages read each contract's address from its deployment file (combo, bracket, blockx, fantasy, race, swap, trust).
+for (const dir of ["picks-data", "race-data", "desk-data"]) copy(path.join(root, dir, "deployment.json"), path.join(out, dir, "deployment.json"));
 
 for (const name of ["deployment.json", "game.json"]) {
   const src = path.join(root, "game-data", name);

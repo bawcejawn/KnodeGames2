@@ -78,7 +78,7 @@ test("(guard) nothing on the pages needs what the CSP blocks (inline script, on*
     if (/\.src\s*=\s*["'`](data|javascript):/.test(js) || /["'`]\s*javascript:/i.test(js)) bad.push(`${f}: data:/javascript: script or URL`);
   }
   // node-page.js's el() sets every attr with setAttribute, so it must never be handed an on* key.
-  const np = read("web/node-page.js");
+  const np = read("node-page.js");
   for (const m of np.matchAll(/\bel\(\s*"[a-z]+"\s*,\s*\{([^}]*)\}/g)) if (/\bon[a-z]+\s*:/.test(m[1])) bad.push(`node-page.js: el(..., { on... }) becomes an inline handler`);
   assert.deepEqual(bad, []);
 });
