@@ -36,7 +36,7 @@ This Worker checks whether the ruler's data job, the two recorders and the race'
 5. Don't add triggers yet. They come in step 2b, after the old Worker's are off.
 
 **2b. Swap the triggers (at cutover, Sun 22 Nov 2026, in this order)**
-Only one Worker may have triggers on at a time. If both had them, each would check GitHub and could start the same job twice (no double runs). The account is on Workers Paid (up to 250 triggers), so the old 5-trigger limit no longer applies, but the one-Worker rule does.
+Only one Worker may have triggers on at a time. If both had them on, each would check GitHub on its own and could start a job the other just started. The workflows' concurrency groups keep those runs from overlapping, but the runs would still be wasted. So turn the old Worker's triggers off first. The account is on Workers Paid (up to 250 triggers), so the old 5-trigger limit no longer applies, but the one-Worker rule does.
 1. Cloudflare → **Compute (Workers)** → **kg-dispatch** (the old one) → **Settings** → **Trigger Events** (called "Cron Triggers" in some views). Remove all four: `22 * * * *`, `41 * * * *`, `51 * * * *`, `7,37 * * * *`. Save. Don't delete the Worker or its code: it stays for rollback.
 2. Check: **kg-dispatch** → **Settings** → **Trigger Events** shows none.
 3. Cloudflare → **kg-dispatch-2** → **Settings** → **Trigger Events** → **Add**. Add `22 * * * *`, then `41 * * * *`, then `51 * * * *`, then `7,37 * * * *`. Save.
