@@ -1,7 +1,7 @@
 // Audit AB-061, owner's option A (O-31): a weekly notice when staked wallets with points made exactly the same picks.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { PICKS_OF, COVERED, weekFileSpec, identicalGroups, identicalNotice } from "../../bot/identical-picks.ts";
+import { PICKS_OF, COVERED, MIN_RACE_PICKS, weekFileSpec, identicalGroups, identicalNotice } from "../../bot/identical-picks.ts";
 
 const A = "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa", B = "1BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBb", C = "1CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc", D = "1DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDd";
 
@@ -16,7 +16,8 @@ test("AB-061: Race picks: every (race, horse) of the week; same set = same picks
   const wf = { races: [
     { start: 100, result: { picks: [[A, "1H1", 1, 1, 0, 0], [B, "1H1", 2, 1, 0, 0], [C, "1H2", 3, 0, 0, 1]] } },
     { start: 200, result: { picks: [[B, "1H3", 4, 0, 0, 0], [A, "1H3", 5, 0, 0, 0], [C, "1H3", 6, 0, 0, 0]] } },
-    { start: 300, result: { final: false } },
+    { start: 300, result: { picks: [[A, "1H4", 7, 0, 0, 0], [B, "1H4", 8, 0, 0, 0], [C, "1H4", 9, 0, 0, 0]] } },
+    { start: 400, result: { final: false } },
   ] };
   const p = PICKS_OF[7](wf);
   assert.equal(p.get(A), p.get(B));
@@ -36,4 +37,15 @@ test("AB-061: odd files compare nothing, and the notice names the groups and say
   const t = identicalNotice("Producer Race", 4, [[A, B, C], [C, D]]);
   assert.match(t, /^Producer Race week 4: some winning wallets may be playing as one: 2 group\(s\) made exactly the same picks: 3 wallets \(/);
   assert.match(t, /Nothing is held \(audit AB-061, owner's option A\)/);
+});
+
+test("J17-6: Race compares only wallets that picked in 3 or more races", () => {
+  assert.equal(MIN_RACE_PICKS, 3);
+  const race = (start: number, ...who: string[]) => ({ start, result: { picks: who.map((a, i) => [a, "1H9", i, 0, 0, 0]) } });
+  const two = PICKS_OF[7]({ races: [race(1, A, B), race(2, A, B)] });
+  assert.equal(two.size, 0, "two races: nobody compared");
+  assert.deepEqual(identicalGroups(two, [A, B]), []);
+  const three = PICKS_OF[7]({ races: [race(1, A, B, C), race(2, A, B, C), race(3, A, B)] });
+  assert.deepEqual([...three.keys()].sort(), [A, B], "C picked in only 2 races");
+  assert.deepEqual(identicalGroups(three, [A, B, C]), [[A, B]]);
 });

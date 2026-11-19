@@ -965,7 +965,8 @@ test("L2-4: a missing or unreadable board holds the free winners and the seal; a
   const files: any = { ...allFiles(), "mem:blockx/board.json": blockxBoard([{ a: addr(D), pts: 40, place: 1 }]) };   // no `ranked`
   const v = fctx(sim, files), s: string[] = [];
   await vaultResultsPass(v, sendAs(sim, operator, s), { game: 3, week: 1 });
-  assert.ok(s.includes(`Block X week 1: prize place 2 → ${addr(E)}`), "unmarked board: not checked, as before");
+  assert.ok(s.includes(`Block X week 1: prize place 2 → ${addr(E)}`), "unmarked board: not checked, winners posted as before");
+  assert.match(v.problems.join(" | "), /Block X week 1: its board mem:blockx\/board\.json doesn't mark Staked \/ Free rows .*J17-3/, "J17-3: the owner is told");
 });
 
 // ═══════════════ Audit AB-061: a sealed week's identical picks are reported once, nothing held ═══════════════

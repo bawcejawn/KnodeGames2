@@ -647,8 +647,8 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
     // list (a row marked ranked: false) with points: the board is published and sealed with the file, so a winner the
     // board doesn't show isn't posted. A board that can't be read or isn't sealed holds the winners and the seal, as
     // unreadable switches do (FP-2); under 6 h to the deadline the week seals without them. Boards that don't mark
-    // Staked / Free rows can't tell the two apart: the check is skipped and logged. A game with board "none" (Survivor)
-    // has no board to check.
+    // Staked / Free rows can't tell the two apart: the check is skipped, and the owner is told once per game-week
+    // (J17-3). A game with board "none" (Survivor) has no board to check.
     let freeOnBoard: Set<string> | null = null;
     if (prizeWeek && !legacy && cfg[String(id)]?.board !== "none" && ((r.first ?? []).length || (r.second ?? []).length)) {
       const bspec = boardSpec(source, cfg[String(id)]?.board);
@@ -665,7 +665,7 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
       } else if (lw.rows.some((x: any) => typeof x?.ranked === "boolean")) {
         freeOnBoard = new Set<string>();
         for (const row of lw.rows) if (row && row.ranked === false && ADDRESS.test(String(row.a)) && (boardScore(row) ?? 1) > 0) freeOnBoard.add(row.a);
-      } else log(ctx, `  ${name} week ${w}: its board doesn't mark Staked / Free rows, so the free-prize winners aren't checked against it`);
+      } else alert(`${id}:${w}:board-unmarked`, `${name} week ${w}: its board ${bspec} doesn't mark Staked / Free rows (ranked), so the free-prize winners can't be checked against it (Repo Lens L2-4, J17-3). They are posted as before; the game's recorder should mark its rows.`);
     }
     if (prizeWeek) {
       for (const [place, list] of [[1, r.first ?? []], [2, r.second ?? []]] as Array<[number, string[]]>) {

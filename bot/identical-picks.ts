@@ -9,6 +9,9 @@
  * games-data:bracket/W004.json). Games whose week file doesn't list every wallet's picks yet are not covered (COVERED).
  */
 
+/** Race: only wallets with picks in at least this many races are compared (Repo Lens J17-6). */
+export const MIN_RACE_PICKS = 3;
+
 /** A wallet's picks for the week as one comparable text, per game id. Unknown shape → empty map (nothing compared). */
 export const PICKS_OF: Record<number, (weekFile: any) => Map<string, string>> = {
   // Producer Race: races[].result.picks = [player, horse, time, won, 0, show]; a wallet's week = every (race, horse).
@@ -21,7 +24,9 @@ export const PICKS_OF: Record<number, (weekFile: any) => Map<string, string>> = 
         (by.get(p[0]) ?? by.set(p[0], []).get(p[0])!).push(`${id}:${p[1]}`);
       }
     }
-    return new Map([...by].map(([a, l]) => [a, l.sort().join(",")]));
+    // Repo Lens J17-6: two wallets with one or two matching races is common honest play; only wallets that picked in
+    // 3 or more races are compared.
+    return new Map([...by].filter(([, l]) => new Set(l.map((x) => x.slice(0, x.indexOf(":")))).size >= MIN_RACE_PICKS).map(([a, l]) => [a, l.sort().join(",")]));
   },
   // Producer Bracket: picks.rows = [player, bracket number, time]; the number is the whole bracket.
   9: (wf) => new Map((Array.isArray(wf?.picks?.rows) ? wf.picks.rows : [])
