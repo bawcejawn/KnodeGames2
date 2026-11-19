@@ -706,8 +706,9 @@ async function currentChainConfig(): Promise<any> {
 }
 /** Step 1 of a limits change (review L1): the website gets, for each action, the lower of the sponsor's current limit
  *  and the new one, so whatever the page asks for is accepted before and after the chain changes. */
-async function siteLimits(send: boolean, a: string[] = []) {
-  const cur = await currentChainConfig();
+/** (Exported, with the chain read as a parameter, for the tests: Repo Lens R3-2.1.) */
+export async function siteLimits(send: boolean, a: string[] = [], chain: () => Promise<any> = currentChainConfig) {
+  const cur = await chain();
   const perTx = BigInt(cur.max_mana_per_tx && cur.max_mana_per_tx !== "0" ? cur.max_mana_per_tx : units(DEFAULT_CAPS.perTx));
   const rows = transitionRows(cur.mana_caps ?? [], readLimits().rows, perTx);
   for (const r of rows) log(`  ${r.name.padEnd(32)} the website will ask for ${toMana(r.max_mana)} Mana`);

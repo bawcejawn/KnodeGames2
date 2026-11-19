@@ -66,3 +66,53 @@ test("step 1 on main: selfPayMin 25 Mana and an empty batch block (batching stay
   assert.deepEqual(sp.batch, {});
   assert.ok(BigInt(sp.rcLimitOther) >= 50000000n, "rcLimitOther is above the example 10-pick ask of 0.50");
 });
+
+// Repo Lens R3-2.1: site-limits end to end (the chain read is stubbed; the files are copies in a temp folder).
+import { siteLimits } from "../../bot/sponsor.ts";
+const HERE = process.cwd();
+const copyOf = (f: string) => fs.readFileSync(path.join(HERE, f), "utf8");
+async function inTemp(fn: (read: (f: string) => any, raw: (f: string) => string) => Promise<void>) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "site-limits-"));
+  for (const f of ["game-data/deployment.json", "desk-data/deployment.json", "sponsor-data/mana-limits.json"]) {
+    fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
+    fs.writeFileSync(path.join(dir, f), copyOf(f));
+  }
+  const log = console.log; console.log = () => {};
+  process.chdir(dir);
+  try { await fn((f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")), (f) => fs.readFileSync(path.join(dir, f), "utf8")); }
+  finally { process.chdir(HERE); console.log = log; }
+}
+const chain = async () => ({ max_mana_per_tx: "240000000", mana_caps: [] });
+const FLAGS = ["--batch-fixed", "0.10", "--batch-per-op", "picks:pick=0.03", "--batch-margin", "0.10"];
+
+test("R3-2.1: without --send nothing is written, flags or not", async () => {
+  await inTemp(async (_, raw) => {
+    const before = [raw("game-data/deployment.json"), raw("desk-data/deployment.json")];
+    await siteLimits(false, FLAGS, chain);
+    assert.deepEqual([raw("game-data/deployment.json"), raw("desk-data/deployment.json")], before);
+  });
+});
+
+test("R3-2.1: --send with the flags writes the batch block into the game file only", async () => {
+  await inTemp(async (read) => {
+    await siteLimits(true, FLAGS, chain);
+    const g = read("game-data/deployment.json");
+    assert.deepEqual(g.sponsor.batch, { fixed: "10000000", perOp: { [`${PICKS}:8ce33c6c`]: "3000000" }, margin: "10000000" });
+    assert.equal(read("desk-data/deployment.json").sponsor?.batch, undefined, "desk pages never batch");
+  });
+});
+
+test("R3-2.1: --send without the flags leaves the batch block as it is (empty: batching stays off)", async () => {
+  await inTemp(async (read) => {
+    await siteLimits(true, [], chain);
+    assert.deepEqual(read("game-data/deployment.json").sponsor.batch, {});
+  });
+});
+
+test("R3-2.1: a refused batch (over rcLimitOther) writes nothing even with --send", async () => {
+  await inTemp(async (_, raw) => {
+    const before = [raw("game-data/deployment.json"), raw("desk-data/deployment.json")];
+    await assert.rejects(() => siteLimits(true, ["--batch-fixed", "0.5", "--batch-per-op", "picks:pick=0.2", "--batch-margin", "0.1"], chain), /more than the site's limit/);
+    assert.deepEqual([raw("game-data/deployment.json"), raw("desk-data/deployment.json")], before);
+  });
+});
