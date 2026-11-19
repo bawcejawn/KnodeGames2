@@ -8,7 +8,22 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-export const PENDING = ["blockx.js", "bracket.js", "combo.js", "race.js", "survivor.js", "overunder.js"];
+// One entry per line, a comment line between entries: a converting PR deletes ONLY its own entry line, so two pages
+// converting at the same time never conflict (Repo Lens #R5-1b C1). Never add an entry; nothing else needs editing.
+export const PENDING = [
+  "blockx.js",
+  // ·
+  "bracket.js",
+  // ·
+  "combo.js",
+  // ·
+  "race.js",
+  // ·
+  "survivor.js",
+  // ·
+  "overunder.js",
+];
+const STARTED_WITH = 6;   // the list on the day the card landed; PENDING may only be at most this long
 const BUILDS_PICKS = /functions\s*(?:\.\s*pick\b|\[\s*["'`]pick["'`]\s*\])|\{\s*[^}]*\bpick\b[^}]*\}\s*=\s*\w+\.functions/;
 const USES_CARD = /from\s+["']\.\/js\/lib\/send-picks\.js["']/;
 
@@ -23,7 +38,8 @@ test("every page that builds picks uses the card, or is listed in PENDING", () =
 test("a page in PENDING that now uses the card is taken off the list (the list only shrinks)", () => {
   const converted = pages.filter((p) => PENDING.includes(p.f) && USES_CARD.test(p.src)).map((p) => p.f);
   assert.deepEqual(converted, [], `remove from PENDING: ${converted.join(", ")}`);
-  assert.equal(PENDING.length, 6, "nothing is added to PENDING");
+  assert.ok(PENDING.length <= STARTED_WITH, "nothing is added to PENDING (it only shrinks)");
+  assert.equal(new Set(PENDING).size, PENDING.length, "no entry twice");
 });
 
 test("Fantasy uses the card, and the pattern catches the ways around a plain text rule", () => {
