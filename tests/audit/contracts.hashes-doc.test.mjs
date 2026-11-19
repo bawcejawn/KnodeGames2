@@ -36,7 +36,11 @@ test("a source hash that differs from live says why", () => {
 });
 
 test("CI runs the contract build check, with the ABI stdin shim (Repo Lens #L-3 I-1)", () => {
-  assert.match(read("tools/ci/contract-hashes.mjs"), /protoc-stdin-shim\.cjs/);
+  assert.match(read("tools/ci/contract-hashes.mjs"), /use-protoc-shim\.mjs/);
+  assert.match(read("tools/ci/use-protoc-shim.mjs"), /protoc-stdin-shim\.cjs/);
+  for (const w of ["test", "desk-test", "picks-test", "race-test", "sponsor-test"]) {
+    assert.match(read(`.github/workflows/${w}.yml`), /node \.\.\/\.\.\/tools\/ci\/use-protoc-shim\.mjs \./, `${w}.yml runs the stdin shim`);
+  }
   assert.match(read("tools/ci/protoc-stdin-shim.cjs"), /readSync\(0/);
   assert.match(read(".github/workflows/ci.yml"), /npm run test:hashes/);
   assert.match(JSON.parse(read("package.json")).scripts["test:hashes"], /tools\/ci\/contract-hashes\.mjs/);
