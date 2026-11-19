@@ -106,6 +106,10 @@ export type Opts = {
   deskOf?: (node: any) => Promise<DeskRecent>;          // the swap desk's recent swaps (tests)
   vaultOf?: (node: any, who: string[], week: number) => Promise<Map<string, VaultFacts>>;   // vault facts per wallet (tests)
   clubBudget?: number;                                 // wallets whose vault facts are read per run (tests)
+  hist?: any; histCheck?: any;                         // the two nodes read for wallets' own transactions (account_history)
+  histOf?: (node: any, a: string, seq: number, newest?: boolean) => Promise<any[]>;   // one page of a wallet's history: ascending from seq, or the newest page (tests)
+  histBudget?: number;                                 // wallets whose history is read per run (tests)
+  histSame?: boolean;                                  // the history node and its check are the same node (J13-5): not read
 };
 /** The swap desk's recent swaps: the accounts of its newest swaps and its total swap count (to spot a gap). */
 export type DeskRecent = { total: number; accounts: string[] };
@@ -163,7 +167,7 @@ export const STANDARD_ID = /^[a-z][a-z0-9-]{1,23}$/;   // Repo Lens G92-2: the c
 // ── the Clubhouse: the accumulated record and the feature readers (claude/golf/CLUBHOUSE-BUILD-PLAN-2026-11-15.md) ──
 export const CLUB_SOURCE: Source = { id: G.CLUBHOUSE, name: "Clubhouse", reader: "clubhouse", live: true };
 /** clubhouse.json: every wallet's features, each with the vault week it was first seen. Only ever grows. */
-export type Club = { v: 1; updated: string; wallets: Record<string, Record<string, number>>; desk?: number };   // desk: the swap desk's swap count at the last read
+export type Club = { v: 1; updated: string; wallets: Record<string, Record<string, number>>; desk?: number; hist?: Record<string, number> };   // desk: the swap desk's swap count at the last read
 const CLUB_MAX_WALLETS = 100000, CLUB_MAX_FEATURES = 64;
 /** The last run's record: null if there is none yet; an error if it is there but can't be used (never a fresh start). */
 export function loadClub(dir: string | undefined): Club | null {
@@ -177,7 +181,12 @@ export function loadClub(dir: string | undefined): Club | null {
     for (const [k, w] of Object.entries(f as any)) { if (!G.isFeature(k) || !Number.isInteger(w) || (w as number) < 0 || (w as number) >= 10000) throw new Error(`clubhouse.json: ${plain(a)} has a bad feature ${plain(k)}`); ok[k] = w as number; }
     wallets[a] = ok;
   }
-  return { v: 1, updated: String(j.updated ?? ""), wallets, ...(Number.isSafeInteger(j.desk) && j.desk >= 0 ? { desk: j.desk } : {}) } as Club;
+  const hist: Record<string, number> = {};
+  if (j.hist !== undefined) {
+    if (!j.hist || typeof j.hist !== "object" || Array.isArray(j.hist)) throw new Error("clubhouse.json: hist isn't a list of wallets");
+    for (const [a, n] of Object.entries(j.hist)) { if (!isAddr(a) || !Number.isSafeInteger(n) || (n as number) < 0) throw new Error(`clubhouse.json: hist for ${plain(a)} isn't a count`); hist[a] = n as number; }
+  }
+  return { v: 1, updated: String(j.updated ?? ""), wallets, ...(Number.isSafeInteger(j.desk) && j.desk >= 0 ? { desk: j.desk } : {}), ...(Object.keys(hist).length ? { hist } : {}) } as Club;
 }
 /** Adds what was seen this run, stamped with week w. Never removes or restamps anything. */
 export function growClub(old: Club | null, seen: Map<string, Set<string>>, w: number, now: number, problems: string[]): Club {
@@ -278,6 +287,76 @@ async function readVaultFacts(node: any, vault: string | null, who: string[], w:
     out.set(a, { staked, games: n, claimed });
   }
   return out;
+}
+
+/** Features from a wallet's OWN transactions (owner's node check, 15 Nov: api.koinos.io serves account_history).
+ *  Only transaction entries count (never block entries), only operations that weren't reverted, and only when the
+ *  operation acts for this wallet: the burn's burn_address, register_public_key's producer, move_stake's player.
+ *  Get VHP is the burn (Swap desk chat, 15 Nov). */
+export const POB_CONTRACT = "159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv";
+const ADDR_T = { type: "bytes", options: { "(koinos.btype)": "ADDRESS" } }, U64_T = { type: "uint64", options: { jstype: "JS_STRING" } };
+const POB_ABI: any = {
+  methods: {
+    burn: { entry_point: 0x859facc5, argument: "p.burn_arguments", return: "p.empty", read_only: false },
+    register_public_key: { entry_point: 0x53192be1, argument: "p.register_public_key_arguments", return: "p.empty", read_only: false },
+  },
+  koilib_types: { nested: { p: { nested: {
+    burn_arguments: { fields: { token_amount: { ...U64_T, id: 1 }, burn_address: { ...ADDR_T, id: 2 }, vhp_address: { ...ADDR_T, id: 3 } } },
+    register_public_key_arguments: { fields: { producer: { ...ADDR_T, id: 1 }, public_key: { type: "bytes", id: 2 } } },
+    empty: { fields: {} },
+  } } } },
+};
+export type HistFacts = { burn: boolean; move: boolean; key: boolean };
+/** What one page of a wallet's history shows (each entry: { seq_num, trx: { transaction, receipt } } or a block). */
+export async function historyFacts(a: string, entries: any[], vault: string | null): Promise<HistFacts> {
+  const out: HistFacts = { burn: false, move: false, key: false };
+  const pob = new Contract({ id: POB_CONTRACT, abi: POB_ABI });
+  const knode = vault ? new Contract({ id: vault, abi: GAME_ABI() }) : null;
+  for (const e of entries) {
+    const t = e && e.trx;
+    if (!t || !t.transaction || !t.receipt || t.receipt.reverted === true) continue;
+    for (const op of Array.isArray(t.transaction.operations) ? t.transaction.operations : []) {
+      const cc = op && op.call_contract;
+      if (!cc || typeof cc.contract_id !== "string") continue;
+      try {
+        if (cc.contract_id === POB_CONTRACT && (cc.entry_point === 0x859facc5 || cc.entry_point === 0x53192be1)) {
+          const d: any = await pob.decodeOperation(op);
+          if (d.name === "burn" && d.args?.burn_address === a) out.burn = true;
+          if (d.name === "register_public_key" && d.args?.producer === a) out.key = true;
+        } else if (knode && cc.contract_id === vault && cc.entry_point === 2082901609) {
+          const d: any = await knode.decodeOperation(op);
+          if (d.name === "move_stake" && d.args?.player === a) out.move = true;
+        }
+      } catch { /* an operation that doesn't decode is not one of ours */ }
+    }
+  }
+  return out;
+}
+/** Repo Lens #J-13 J13-2: two nodes agree on a page when every entry agrees on what Golf reads from it: its seq_num, whether
+ *  it is a transaction, the transaction id, whether it was reverted, and each operation's contract, entry point and
+ *  arguments. Field order, extra fields and how each node writes the rest don't matter. */
+function histKey(e: any): string {
+  const t = e && e.trx;
+  if (!t) return JSON.stringify([String(e?.seq_num ?? ""), "b"]);
+  const ops = Array.isArray(t.transaction?.operations) ? t.transaction.operations : [];
+  return JSON.stringify([String(e.seq_num ?? ""), "t", String(t.transaction?.id ?? ""), t.receipt?.reverted === true,
+    ops.map((op: any) => { const c = op?.call_contract; return c ? [String(c.contract_id ?? ""), Number(c.entry_point ?? -1), String(c.args ?? "")] : null; })]);
+}
+/** The newest pages from two nodes: the entries both show (by seq_num), or null if any of those disagree. */
+export function newestBoth(x: any[], y: any[]): any[] | null {
+  const ky = new Map(y.map((e) => [String(e?.seq_num ?? ""), histKey(e)]));
+  const both = x.filter((e) => ky.has(String(e?.seq_num ?? "")));
+  return both.every((e) => ky.get(String(e?.seq_num ?? "")) === histKey(e)) ? both : null;
+}
+export function samePage(x: any[], y: any[]): boolean { return x.length === y.length && x.every((e, i) => histKey(e) === histKey(y[i])); }
+const HIST_PAGE = 100, HIST_PAGES = 3;
+async function readHistoryPage(node: any, a: string, seq: number, newest = false): Promise<any[]> {
+  // newest (Repo Lens #J-13 J13-1): the newest page, newest first (no seq_num, ascending false).
+  const q = newest ? { address: a, limit: HIST_PAGE, ascending: false, irreversible: true } : { address: a, seq_num: String(seq), limit: HIST_PAGE, ascending: true, irreversible: true };
+  const r: any = await withRetry(`history of ${a}`, () => node.call("account_history.get_account_history", q));
+  const v = r?.values ?? [];
+  if (!Array.isArray(v)) throw new Error(`no history answer for ${a}`);
+  return v;
 }
 
 // ── readers: one per game, each turning that game's own published results into hole rows ──
@@ -711,7 +790,43 @@ export async function run(o: Opts) {
       if (JSON.stringify([...a]) !== JSON.stringify([...b])) throw new Error("the two nodes don't agree yet");
       for (const [x, v] of a) { if (v.staked) add("staked", x); if (v.games >= 2) add("two-games", x); if (v.claimed) add("claimed", x); }
     });
+    // From wallets' own transactions: a few wallets a run (players still missing one of the three), each read forward
+    // from where the last run stopped (club.hist), a few pages at a time, on two nodes that must agree.
+    const hist: Record<string, number> = { ...(old?.hist ?? {}) };
+    await collect("transactions", async () => {
+      const need = [...players].filter((a) => { const f = old?.wallets[a] ?? {}; return f.burn === undefined || f["move-stake"] === undefined || f["producer-key"] === undefined; }).sort();
+      if (!need.length) return;
+      const read = o.histOf ?? ((n: any, a: string, seq: number, newest?: boolean) => readHistoryPage(n, a, seq, newest));
+      if (!o.histOf && !o.hist) return;
+      if (o.histSame) throw new Error("the history node and its check node are the same, so burn, move-stake and producer-key aren't read (set GOLF_HISTORY_RPC_CHECK to another node)");
+      const n1 = o.hist ?? "main", n2 = o.histCheck ?? (o.histOf ? "check" : null);
+      const budget = Math.max(1, o.histBudget ?? 10), start = need.length > budget ? Math.floor(now / HOUR) * budget % need.length : 0;
+      const who = need.length > budget ? [...need.slice(start), ...need.slice(0, start)].slice(0, budget) : need;
+      for (const a of who) {
+        let seq = hist[a] ?? 0;
+        // Repo Lens #J-13 J13-1: the newest page first, so what a wallet did lately counts now, however long its history is.
+        // The oldest-first read below still finds what came before; reading an entry twice adds nothing.
+        const nx = await read(n1, a, seq, true), ny = n2 ? await read(n2, a, seq, true) : nx;
+        // One node can be a block or two behind on the newest page: count only the entries both show, and they must agree.
+        const both = newestBoth(nx, ny);
+        if (!both) throw new Error(`the two nodes don't agree yet on ${a}'s history`);
+        if (both.length) { const f = await historyFacts(a, both, KNODE); if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key) add("producer-key", a); }
+        for (let pg = 0; pg < HIST_PAGES; pg++) {
+          const x = await read(n1, a, seq), y = n2 ? await read(n2, a, seq) : x;
+          if (!samePage(x, y)) throw new Error(`the two nodes don't agree yet on ${a}'s history`);
+          if (!x.length) break;
+          const f = await historyFacts(a, x, KNODE);
+          if (f.burn) add("burn", a); if (f.move) add("move-stake", a); if (f.key) add("producer-key", a);
+          const last = Number(x[x.length - 1]?.seq_num);
+          if (!Number.isSafeInteger(last) || last < seq) throw new Error(`${a}'s history didn't move forward`);
+          seq = last + 1;
+          if (x.length < HIST_PAGE) break;
+        }
+        hist[a] = seq;
+      }
+    });
     club = growClub(old, seen, nowW, now, problems);
+    if (Object.keys(hist).length) club.hist = Object.fromEntries(Object.entries(hist).sort((x, y) => (x[0] < y[0] ? -1 : 1)));
     if (deskTotal !== null) club.desk = deskTotal; else if (Number.isSafeInteger(old?.desk)) club.desk = old!.desk;
   }
   const ctx: Ctx = { now, raceDir: o.raceDir, gamesDir: o.gamesDir, o, questions, club };
@@ -1001,6 +1116,11 @@ if (isMain && process.argv[2] !== undefined && process.argv[2] !== "status") {
   run({
     prev: E.GOLF_PREV, out: E.GOLF_OUT, stakedFromWeek: sf, raceDir: E.RACE_DATA, gamesDir: E.GAMES_DATA, holdWeeks: E.GOLF_HOLD_WEEKS,
     namesDir: E.NAMES_DATA, vhpDir: E.VHP_DATA,
+    // A wallet's own transactions (account_history): api.koinos.io serves it (owner's check, 15 Nov), checked against
+    // the main node. GOLF_HISTORY_RPC / GOLF_HISTORY_RPC_CHECK override; "off" turns these three features off.
+    // Repo Lens #J-13 J13-5: the two must be different nodes, or the check means nothing (said aloud in the run's problems).
+    ...(E.GOLF_HISTORY_RPC === "off" ? {} : { hist: new Provider([E.GOLF_HISTORY_RPC || "https://api.koinos.io"]), histCheck: new Provider([E.GOLF_HISTORY_RPC_CHECK || RPC]),
+      histSame: (E.GOLF_HISTORY_RPC || "https://api.koinos.io").replace(/\/+$/, "") === (E.GOLF_HISTORY_RPC_CHECK || RPC).replace(/\/+$/, "") }),
     p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null,
   }).catch((e) => { console.error(e); process.exit(1); });
 }

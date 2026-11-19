@@ -228,3 +228,134 @@ test("producer: the signers of hour files that pass checkHour (the oldest file i
   const r2 = await run(base({ now: START + DAY, prev: prevWith(), out: tmp("golf-"), vhpDir: bad }));
   assert.ok(r2.problems.some((p) => /clubhouse producers: 2 vhp-data hour file\(s\) didn't pass checkHour/.test(p)));
 });
+
+// ── features from a wallet's own transactions (account_history; owner's node check 15 Nov; Swap desk: Get VHP = burn) ──
+const { historyFacts, POB_CONTRACT } = await import(path.resolve(APP, "bot/games/golf.ts"));
+const { Contract, Signer } = await import("koilib");
+// Real addresses (koilib checks the checksum when it encodes an operation).
+const R = Array.from({ length: 4 }, (_, i) => Signer.fromSeed(`golf clubhouse test ${i}`).getAddress());
+const VAULT = Signer.fromSeed("golf clubhouse test vault").getAddress();
+const ADDR_T = { type: "bytes", options: { "(koinos.btype)": "ADDRESS" } }, U64_T = { type: "uint64", options: { jstype: "JS_STRING" } };
+const pobAbi = { methods: {
+  burn: { entry_point: 0x859facc5, argument: "p.burn_arguments", return: "p.empty", read_only: false },
+  register_public_key: { entry_point: 0x53192be1, argument: "p.register_public_key_arguments", return: "p.empty", read_only: false } },
+  koilib_types: { nested: { p: { nested: {
+    burn_arguments: { fields: { token_amount: { ...U64_T, id: 1 }, burn_address: { ...ADDR_T, id: 2 }, vhp_address: { ...ADDR_T, id: 3 } } },
+    register_public_key_arguments: { fields: { producer: { ...ADDR_T, id: 1 }, public_key: { type: "bytes", id: 2 } } },
+    empty: { fields: {} } } } } } };
+const pob = new Contract({ id: POB_CONTRACT, abi: pobAbi });
+const vault = new Contract({ id: VAULT, abi: JSON.parse(fs.readFileSync(path.join(APP, "contracts/vault/abi/kpred.koilib.json"), "utf8")) });
+const other = new Contract({ id: Signer.fromSeed("golf clubhouse test other").getAddress(), abi: JSON.parse(fs.readFileSync(path.join(APP, "contracts/vault/abi/kpred.koilib.json"), "utf8")) });
+/** An account_history transaction entry (koilib's encodeOperation already gives args as base64url, like the node's JSON). */
+async function trx(seq, ops, reverted = false) {
+  const operations = [];
+  for (const o of ops) { const e = await o; assert.equal(typeof e.call_contract.args, "string"); operations.push({ call_contract: { ...e.call_contract } }); }
+  return { seq_num: String(seq), trx: { transaction: { id: "0x" + seq, operations }, receipt: { id: "0x" + seq, ...(reverted ? { reverted: true } : {}) } } };
+}
+const burnOp = (a) => pob.encodeOperation({ name: "burn", args: { token_amount: "100", burn_address: a, vhp_address: a } });
+const keyOp = (a) => pob.encodeOperation({ name: "register_public_key", args: { producer: a, public_key: "AiAeY4PIK6GLlepslYHfS0_gFgRaYIfqarbOEIuo0Qc" } });
+const moveOp = (c, a) => c.encodeOperation({ name: "move_stake", args: { player: a, from_game: 1, to_game: 2, amount: "100000000" } });
+
+test("history: a burn, a key registration and a stake move each count only when they act for this wallet", async () => {
+  const a = R[0], b = R[1];
+  assert.deepEqual(await historyFacts(a, [await trx(1, [burnOp(a)])], VAULT), { burn: true, move: false, key: false });
+  assert.deepEqual(await historyFacts(a, [await trx(1, [burnOp(b)])], VAULT), { burn: false, move: false, key: false });
+  assert.deepEqual(await historyFacts(a, [await trx(1, [keyOp(a)])], VAULT), { burn: false, move: false, key: true });
+  assert.deepEqual(await historyFacts(a, [await trx(1, [moveOp(vault, a)])], VAULT), { burn: false, move: true, key: false });
+  assert.deepEqual(await historyFacts(a, [await trx(1, [moveOp(other, a)])], VAULT), { burn: false, move: false, key: false }, "move_stake on another contract");
+  assert.deepEqual(await historyFacts(a, [await trx(1, [burnOp(a), keyOp(a)], true)], VAULT), { burn: false, move: false, key: false }, "a reverted transaction");
+  assert.deepEqual(await historyFacts(a, [{ seq_num: "1", block: { header: { signer: a }, receipt: { events: [] } } }], VAULT), { burn: false, move: false, key: false }, "block entries never count");
+});
+
+test("history in a run: read forward from the saved place, on two nodes, a few wallets a run", async () => {
+  const pages = { [R[0]]: [await trx(0, [burnOp(R[0])]), await trx(1, [moveOp(vault, R[0])])], [R[1]]: [await trx(0, [keyOp(R[1])])] };
+  const asked = [];
+  const histOf = async (n, a, seq) => { asked.push([n, a, seq]); return (pages[a] ?? []).filter((e) => Number(e.seq_num) >= seq); };
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W }, club: { v: 1, updated: "", wallets: {}, hist: { [R[1]]: 0 } },
+    files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 6, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
+  const out = tmp("golf-");
+  const r = await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histBudget: 20 }));
+  const c = club(out);
+  assert.equal(c.wallets[R[0]].burn, W); assert.equal(c.wallets[R[0]]["move-stake"], W); assert.equal(c.wallets[R[1]]["producer-key"], W);
+  assert.equal(c.hist[R[0]], 2); assert.equal(c.hist[R[1]], 1);
+  assert.ok(asked.some(([n]) => n === "check"), "read on the second node too");
+  assert.deepEqual(r.problems.filter((p) => /transactions/.test(p)), []);
+  // The next run starts where this one stopped.
+  asked.length = 0;
+  if (!fs.existsSync(path.join(out, "W002.json"))) fs.copyFileSync(path.join(prev, "W002.json"), path.join(out, "W002.json"));   // last week's players
+  await run(base({ now: START + DAY + H, prev: out, out: tmp("golf-"), histOf, knodeGame: VAULT, histBudget: 20 }));
+  assert.ok(asked.filter(([, a]) => a === R[0]).length >= 1 && asked.filter(([, a]) => a === R[0]).every(([, , s]) => s === 2));
+});
+
+test("history: two nodes that disagree add nothing and don't move the saved place", async () => {
+  const histOf = async (n, a) => (n === "main" ? [await trx(0, [burnOp(a)])] : []);
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W },
+    files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 4, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
+  const out = tmp("golf-");
+  const r = await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histBudget: 1 }));
+  assert.ok(r.problems.some((p) => /the two nodes don't agree yet on .*history/.test(p)));
+  assert.equal(Object.values(club(out).wallets).some((f) => f.burn !== undefined), false);
+  assert.equal(club(out).hist, undefined);
+});
+
+test("the publish job: a wallet's history place can't go backwards", async (t) => {
+  try { execFileSync("python3", ["--version"]); } catch { t.skip("no python3 here"); return; }
+  const [shape, history] = checks();
+  const { mid, out } = await finalWeek();
+  edit(mid, "clubhouse.json", (j) => { j.hist = { [P[0]]: 5 }; });
+  edit(out, "clubhouse.json", (j) => { j.hist = { [P[0]]: 7 }; });
+  assert.match(py([shape, out], END + 22 * H), /golf files ok/);
+  assert.match(py([history, out, mid], END + 22 * H), /golf history ok/);
+  const back = copyDir(out); edit(back, "clubhouse.json", (j) => { j.hist = { [P[0]]: 4 }; });
+  assert.throws(() => py([history, back, mid], END + 22 * H), /history can't be read backwards/);
+  const bad = copyDir(out); edit(bad, "clubhouse.json", (j) => { j.hist = { [P[0]]: -1 }; });
+  assert.throws(() => py([shape, bad], END + 22 * H), /clubhouse.json: hist/);
+});
+
+test("history (Repo Lens #J-13 J13-2): two nodes agree when what Golf reads agrees, however each writes the rest", async () => {
+  const { samePage } = await import(path.resolve(APP, "bot/games/golf.ts"));
+  const e = await trx(7, [burnOp(R[0])]);
+  const t = e.trx.transaction, rc = e.trx.receipt;
+  // Same entry, written another way: fields in another order, an extra "reverted: false", an extra field.
+  const f = { trx: { receipt: { ...rc, reverted: false, rc_used: "123" }, transaction: { operations: t.operations, id: t.id, header: { payer: R[0] } } }, seq_num: "7" };
+  assert.equal(samePage([e], [f]), true);
+  assert.equal(samePage([e], [{ ...f, seq_num: "8" }]), false, "a different seq_num");
+  assert.equal(samePage([e], [{ ...f, trx: { ...f.trx, receipt: { ...rc, reverted: true } } }]), false, "reverted on one node");
+  assert.equal(samePage([e], [await trx(7, [keyOp(R[0])])]), false, "a different operation");
+  assert.equal(samePage([e], []), false, "a missing entry");
+  assert.equal(samePage([{ seq_num: "1", block: { a: 1 } }], [{ block: { b: 2 }, seq_num: "1" }]), true, "block entries: only the seq_num matters");
+});
+
+test("history (Repo Lens #J-13 J13-5): the same node twice is no check, so nothing is read and it's said aloud", async () => {
+  const asked = [];
+  const histOf = async (n, a, seq) => { asked.push(a); return [await trx(0, [burnOp(a)])]; };
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W },
+    files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 4, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
+  const out = tmp("golf-");
+  const r = await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histSame: true }));
+  assert.ok(r.problems.some((p) => /history node and its check node are the same/.test(p)));
+  assert.deepEqual(asked, []);
+  assert.equal(Object.values(club(out).wallets).some((f) => f.burn !== undefined), false);
+});
+
+test("history (Repo Lens #J-13 J13-2): the newest page counts what both nodes show, so a node a block behind isn't a disagreement", async () => {
+  const { newestBoth } = await import(path.resolve(APP, "bot/games/golf.ts"));
+  const e9 = await trx(9, [burnOp(R[0])]), e8 = await trx(8, [keyOp(R[0])]), e7 = await trx(7, [moveOp(vault, R[0])]);
+  // Node 2 hasn't got entry 9 yet: only 8 and 7 count.
+  assert.deepEqual(newestBoth([e9, e8, e7], [e8, e7]).map((e) => e.seq_num), ["8", "7"]);
+  assert.deepEqual(newestBoth([e8, e7], [e9, e8, e7]).map((e) => e.seq_num), ["8", "7"]);
+  // An entry both show but differently: a disagreement.
+  assert.equal(newestBoth([e9, e8], [await trx(9, [keyOp(R[0])]), e8]), null);
+  // Nothing in common: nothing counts, no disagreement.
+  assert.deepEqual(newestBoth([e9], [e7]), []);
+  // In a run: the burn only node 1 shows on its newest page waits; the key both show counts.
+  const pages = { main: [e9, e8], check: [e8] };
+  const histOf = async (n, a, seq, newest) => (a !== R[0] ? [] : newest ? pages[n] : []);
+  const prev = prevWith({ weeks: [W - 1], course: { questions: W - 1, clubhouse: W },
+    files: { "W002.json": { v: 1, week: W - 1, start: M.weekStart(W - 1), end: START, final: true, practice: true, holes: [{ id: "questions", name: "Daily Questions", status: "live", why: "", field: 4, rows: R.map((a, i) => [a, 10 - i, 1, 1]) }], cards: [], notFree: [], check: null } } });
+  const out = tmp("golf-");
+  const r = await run(base({ now: START + DAY, prev, out, histOf, knodeGame: VAULT, histBudget: 20 }));
+  assert.deepEqual(r.problems.filter((p) => /history/.test(p)), []);
+  assert.equal(club(out).wallets[R[0]]["producer-key"], W);
+  assert.equal(club(out).wallets[R[0]].burn, undefined);
+});
