@@ -13,7 +13,7 @@
 //    for the live block strip and block counts only, never for scores.
 // Refused: other methods and paths, branches not listed, anything but .json, "..", a PUT without the right token or
 // with a body that isn't a small, well-formed live file. No keys are kept in this file: LIVE_TOKEN is a Worker secret.
-const BRANCHES = new Set(["games-data", "race-data", "blocks-data", "names-data", "stats-data", "prize-settings"]);
+const BRANCHES = new Set(["games-data", "race-data", "blocks-data", "names-data", "stats-data", "prize-settings", "game-data"]);   // game-data: the question files (KnodeGames2)
 const ORIGIN = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/";
 const TTL = 300;               // seconds a mirrored file is kept
 const LIVE_MAX = 32 * 1024;    // bytes; a real live file is about 3 KB
