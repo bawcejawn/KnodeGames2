@@ -27,7 +27,7 @@ The single source of truth for the next builder is [../HANDOFF.md](../HANDOFF.md
    How it runs: on every pull request, CI (`ci`) runs the fast set (`npm test`) and **Full test suite** (`test-audit.yml`, check `test-audit`, 30–50 minutes) runs the whole suite by itself. `test-audit` must be green on the current head before any bot, kit or payout PR merges.
 
    Still outside both: the bot's own tests in `bot/*.test.ts`. Two in `bot/workflow.test.ts` expect the old hourly timers. HANDOFF item 4 (the bot split) handles them.
-2. **Contract builds are in CI** (`npm run test:hashes`, `contracts/hashes.json`). Four match the chain. Picks source is v2, not yet live: after its upload, set `picks.live` to `source`. Any contract change updates `source` in the same PR. The contracts' own unit tests (`npm run test:contracts`) stop at start-up (`binaryen` RuntimeError, Node 20 and 22): fix that before v6.2.
+2. **Contract builds are in CI** (`npm run test:hashes`, `contracts/hashes.json`). Four match the chain. Picks source is v2, not yet live: after its upload, set `picks.live` to `source`. Any contract change updates `source` in the same PR. The contracts' own unit tests and the upgrade-compatibility tests run in CI on contract changes.
 3. **The bot is still one large file** (`bot/bot.ts`). It is not split into commands yet.
 4. **Games are not on the shared kit yet**, except Fantasy, which already was. Golf, Bracket, Combo, Block X, Race, and Questions still use their old recorders.
 5. **The two new games are not built.** The shape is in [NEXT-GAMES.md](NEXT-GAMES.md): Over/Under, and Knode Games VS.

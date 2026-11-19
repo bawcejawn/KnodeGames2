@@ -18,7 +18,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { Signer } from "koilib";
-import { SimChain } from "../../bot/chain.ts";
+import { SimChain } from "../../../bot/chain.ts";
 
 const OLD = "contracts/vault/test-fixtures/kpred-v5-test-build.wasm";
 // The exact live v6 code (test build of eed38f7c…): this test covers the past v5 → v6 upgrade; v6 → v6.1 is

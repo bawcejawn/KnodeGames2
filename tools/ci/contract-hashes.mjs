@@ -7,13 +7,13 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { useShim } from "./use-protoc-shim.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const hashes = JSON.parse(fs.readFileSync(path.join(root, "contracts/hashes.json"), "utf8"));
 const contracts = Object.keys(hashes).filter((k) => k !== "_" && k !== "emergency");
 const names = process.argv.slice(2).length ? process.argv.slice(2) : contracts;
 const win = process.platform === "win32";
-const shim = path.join(root, "tools/ci/protoc-stdin-shim.cjs");
 
 // Each contract is installed on its own (not as a workspace): the contract builder runs its helpers from
 // ./node_modules/.bin in the contract folder, and each folder pins its own toolchain in package-lock.json.
@@ -21,20 +21,7 @@ const shim = path.join(root, "tools/ci/protoc-stdin-shim.cjs");
 const run = (cwd, args) => spawnSync("npm", [...args, "--workspaces=false"], { cwd, shell: win, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 const sha = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 
-// Repo Lens #L-3 I-1: run the builder's protoc plugins through the stdin shim (no retries needed). The wrapper calls
-// each plugin's own, unchanged bin file.
-const PLUGINS = ["koinos-abi-proto-gen", "as-proto-gen", "koinos-as-gen"];
-function useShim(dir) {
-  const bin = path.join(dir, "node_modules/.bin");
-  for (const p of PLUGINS) {
-    const link = path.join(bin, p);
-    const real = fs.realpathSync(link); // node_modules/@koinos/<package>/bin/<p>
-    const wrapper = `#!/usr/bin/env node\nrequire(${JSON.stringify(shim)}).run(${JSON.stringify(real)});\n`;
-    fs.rmSync(link, { force: true });
-    fs.writeFileSync(link, wrapper, { mode: 0o755 });
-    if (win) { const js = path.join(bin, `${p}.shim.cjs`); fs.writeFileSync(js, wrapper); fs.writeFileSync(`${link}.cmd`, `@node "${js}" %*\r\n`); }
-  }
-}
+// Repo Lens #L-3 I-1: the builder's protoc plugins run through the stdin shim (tools/ci/use-protoc-shim.mjs).
 
 let failed = 0;
 const rows = [];
