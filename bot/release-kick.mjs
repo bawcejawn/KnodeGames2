@@ -39,7 +39,7 @@ const DRY = process.argv.includes("--dry-run");
 const AT = (() => { const i = process.argv.indexOf("--at"); return i > 0 ? Date.parse(process.argv[i + 1]) : NaN; })();
 
 const API = process.env.HEAL_GITHUB_API || "https://api.github.com";
-const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames";
+const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames2";
 const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR;
 // Offsets from each round's release time.
 const EARLY_FROM = -10 * MIN, EARLY_TO = -2 * MIN;

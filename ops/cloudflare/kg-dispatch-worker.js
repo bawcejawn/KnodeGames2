@@ -25,7 +25,7 @@
 // mistyped trigger shows as a failed run in Cloudflare instead of doing nothing quietly.
 // The only secret is GH_DISPATCH_TOKEN, a Worker secret (a fine-grained GitHub token for this one repository with
 // "Actions: Read and write" and nothing else). It is never in this file, never logged, never sent anywhere but GitHub.
-const REPO = "bawcejawn/KnodeGames";
+const REPO = "bawcejawn/KnodeGames2";
 export const JOBS = {
   "22 * * * *": [{ workflow: "vhp-ruler.yml", windowMin: 30 }],
   "41 * * * *": [{ workflow: "race.yml", windowMin: 30 }],

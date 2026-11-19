@@ -24,7 +24,7 @@ This Worker checks whether the ruler's data job, the two recorders and the race'
 **1. Make the GitHub token**
 1. Go to github.com → your picture → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
 2. **Name:** `kg-dispatch`. **Expiration:** 90 days. Put a calendar reminder 1 week before it expires.
-3. **Repository access:** "Only select repositories" → `bawcejawn/KnodeGames`.
+3. **Repository access:** "Only select repositories" → `bawcejawn/KnodeGames2` (since cutover, Sun 22 Nov 2026: the Worker is `kg-dispatch-2`; the old `kg-dispatch` stays, triggers off, for rollback).
 4. **Permissions:** **Actions: Read and write**. Leave everything else at "No access". GitHub adds Metadata: Read by itself.
 5. **Generate**, then copy the token. You'll paste it once, in step 2.4, and nowhere else.
 

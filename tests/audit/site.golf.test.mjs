@@ -31,8 +31,8 @@ test("golf.js builds nothing from HTML, sends nothing and stores nothing", () =>
   assert.doesNotMatch(js, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
   assert.doesNotMatch(js, /localStorage|sessionStorage|indexedDB|document\.cookie/);
   assert.doesNotMatch(js, /\.send\(|signTransaction|method:\s*"POST"/);
-  assert.match(js, /const DATA = "https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/games-data\/golf\/"/);
-  assert.ok(csp(html).includes("https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/"), "the page may read games-data");
+  assert.match(js, /const DATA = "https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\/golf\/"/);
+  assert.ok(csp(html).includes("https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/"), "the page may read games-data");
 });
 
 test("every element the script uses exists once in the page", () => {
