@@ -122,3 +122,38 @@ test("site-limits command passes its flags on", () => {
   const src = fs.readFileSync(new URL("../../bot/sponsor.ts", import.meta.url), "utf8");
   assert.ok(src.includes('case "site-limits": return siteLimits(send, a);'));
 });
+
+// Vault V-294-1 (D-294): nothing the page asks for may be above selfPayMin (25 Mana).
+import { checkSelfPay } from "../../bot/sponsor.ts";
+const edit = (f: string, fn: (d: any) => void) => { const d = JSON.parse(fs.readFileSync(f, "utf8")); fn(d); fs.writeFileSync(f, JSON.stringify(d, null, 2) + "\n"); };
+
+test("V-294-1: checkSelfPay accepts exactly selfPayMin and refuses one unit above (limit, row, missing selfPayMin)", () => {
+  const sp = { selfPayMin: "2500000000", rcLimitOther: "2500000000" };
+  assert.doesNotThrow(() => checkSelfPay(sp, [{ name: "a", max_mana: "2500000000" }]));
+  assert.throws(() => checkSelfPay({ ...sp, rcLimitOther: "2500000001" }), /more than selfPayMin/);
+  assert.throws(() => checkSelfPay(sp, [{ name: "a", max_mana: "2500000001" }]), /a would ask for .* more than selfPayMin/);
+  assert.throws(() => checkSelfPay({ rcLimitOther: "1" }), /No selfPayMin/);
+});
+
+test("V-294-1: site-limits refuses an rcLimitOther above selfPayMin, with or without --send, and writes nothing", async () => {
+  for (const send of [false, true]) await inTemp(async (_, raw) => {
+    edit("game-data/deployment.json", (d) => { d.sponsor.rcLimitOther = "2600000000"; });
+    const before = [raw("game-data/deployment.json"), raw("desk-data/deployment.json")];
+    await assert.rejects(() => siteLimits(send, FLAGS, chain), /more than selfPayMin/);
+    assert.deepEqual([raw("game-data/deployment.json"), raw("desk-data/deployment.json")], before);
+  });
+});
+
+test("V-294-1: site-limits refuses a row above selfPayMin (a 26 Mana row, with the chain cap raised to 30)", async () => {
+  await inTemp(async (_, raw) => {
+    edit("sponsor-data/mana-limits.json", (d) => { d.rows[0].max_mana = "2600000000"; });
+    const before = raw("game-data/deployment.json");
+    const big = async () => ({ max_mana_per_tx: "3000000000", mana_caps: [] });
+    await assert.rejects(() => siteLimits(true, [], big), /more than selfPayMin/);
+    assert.equal(raw("game-data/deployment.json"), before);
+  });
+});
+
+test("V-294-1: the real files pass (selfPayMin 25, rcLimitOther 2.4)", async () => {
+  await inTemp(async () => { await siteLimits(false, FLAGS, chain); });
+});

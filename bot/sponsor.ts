@@ -704,6 +704,15 @@ async function currentChainConfig(): Promise<any> {
   const { rpc } = knode(); const address = readJson(STATE)?.address ?? PINNED_MAINNET.sponsor;
   return configOn(rpc, address);
 }
+/** Vault V-294-1 (D-294): the most Mana the page may ask for (rcLimitOther, every row, and so every batch) must stay at or
+ *  below selfPayMin, so a wallet that pays for itself always holds enough for the limit it sends. Refused otherwise. */
+export function checkSelfPay(sponsor: any, rows: { name: string; max_mana: string | bigint }[] = []) {
+  const num = (v: any) => (/^[0-9]{1,16}$/.test(String(v ?? "")) ? BigInt(v) : null);
+  const min = num(sponsor?.selfPayMin), other = num(sponsor?.rcLimitOther);
+  if (min === null) throw new Error(`No selfPayMin in ${GAME_DEP}: the limits can't be checked against it. Nothing was written.`);
+  if (other !== null && other > min) throw new Error(`rcLimitOther is ${toMana(other)} Mana, more than selfPayMin ${toMana(min)} (D-294). Nothing was written.`);
+  for (const r of rows) if (BigInt(r.max_mana) > min) throw new Error(`${r.name} would ask for ${toMana(BigInt(r.max_mana))} Mana, more than selfPayMin ${toMana(min)} (D-294). Nothing was written.`);
+}
 /** Step 1 of a limits change (review L1): the website gets, for each action, the lower of the sponsor's current limit
  *  and the new one, so whatever the page asks for is accepted before and after the chain changes. */
 /** (Exported, with the chain read as a parameter, for the tests: Repo Lens R3-2.1.) */
@@ -711,6 +720,7 @@ export async function siteLimits(send: boolean, a: string[] = [], chain: () => P
   const cur = await chain();
   const perTx = BigInt(cur.max_mana_per_tx && cur.max_mana_per_tx !== "0" ? cur.max_mana_per_tx : units(DEFAULT_CAPS.perTx));
   const rows = transitionRows(cur.mana_caps ?? [], readLimits().rows, perTx);
+  checkSelfPay(readJson(GAME_DEP)?.sponsor, rows);
   for (const r of rows) log(`  ${r.name.padEnd(32)} the website will ask for ${toMana(r.max_mana)} Mana`);
   // D-211 (pick batching), step 2: the batch numbers. Without --batch-* flags the batch block is left as it is.
   const batch = batchFromFlags(a, readJson(GAME_DEP)?.sponsor);
