@@ -38,6 +38,8 @@ const dayFile = (rulerFrom, mode, targets) => ({ v: 1, week: 4, day: 1, rulerFro
 const index = (rulerFrom) => ({ v: 1, updated: "2026-11-18T00:00:00.000Z", weeks: [4], contract: null, game: 2, prizesFromWeek: null, rulerFrom });
 const pubWith = (extra = {}) => { const p = tmp(); write(p, "W004.json", weekFile); for (const [k, v] of Object.entries(extra)) write(p, k, v); return p; };
 
+// Repo Lens #R3-1 R3-1.1: a fallback is made only for a target an EARLIER run already saw waiting. This is that earlier run.
+const sawWaiting = (t, now) => BR.entryFor(null, t, 100, now, null, true);
 const t0 = { round: 1, height: 5000000, time: Date.parse("2026-11-23T00:00Z"), signer: "1BIG" };
 const BIGLINE = "1BIG";
 
@@ -45,7 +47,7 @@ test("the 48-hour fallback: before 48 hours the target just waits; from 48 hours
   const w = BR.entryFor(null, t0, 100, t0.time + 48 * H - 1, null, true);
   assert.equal(w.void, false); assert.equal(w.card, null); assert.equal(BR.isFallback(w), false); assert.match(w.note, /^not yet/);
   for (const age of [48 * H, 60 * H, 3 * DAY, 3 * DAY + 5 * H, 9 * DAY]) {
-    const e = BR.entryFor(null, t0, 100, t0.time + age, null, true);
+    const e = BR.entryFor(null, t0, 100, t0.time + age, sawWaiting(t0, t0.time + H), true);
     assert.equal(BR.isFallback(e), true, "age " + age / H + " h");
     assert.deepEqual([e.card, e.void, e.points, e.why], [null, false, 0, BR.FALLBACK_WHY]);
     assert.ok(e.note.length < 400 && !/^not yet/.test(e.note), "the note is short and is reported by the recorder");
@@ -61,7 +63,7 @@ test("shadow weeks (fallback off) keep the old behaviour: waiting, then a 3-day 
 });
 
 test("a fallback entry is final: kept as published even when the ruler's data arrives later", () => {
-  const fb = BR.entryFor(null, target, 100, T_X + 50 * H, null, true);
+  const fb = BR.entryFor(null, target, 100, T_X + 50 * H, sawWaiting(target, T_X + H), true);
   assert.equal(BR.isFallback(fb), true);
   const again = BR.entryFor(R.ledger(timeline()), target, 100, T_X + 70 * H, fb, true);
   assert.deepEqual(again, fb);
@@ -79,7 +81,7 @@ test("a void target stays void, never a fallback", () => {
 });
 
 test("ruledPoints: a fallback entry scores the pick's own old-rule points; without them it is not scored", () => {
-  const fb = BR.entryFor(null, t0, 100, t0.time + 50 * H, null, true);
+  const fb = BR.entryFor(null, t0, 100, t0.time + 50 * H, sawWaiting(t0, t0.time + H), true);
   assert.equal(BR.ruledPoints(fb, BIGLINE, 250), 250);
   assert.equal(BR.ruledPoints(fb, "1OTHER", 0), 0, "a wrong pick has 0 old points");
   assert.equal(BR.ruledPoints(fb, BIGLINE), undefined);
@@ -100,7 +102,7 @@ test("the recorder passes the fallback only for ON weeks", () => {
 });
 
 // ── the publish job's twin check (games.yml) ──
-const fbEntry = (age) => BR.entryFor(null, target, 100, T_X + age, null, true);
+const fbEntry = (age) => BR.entryFor(null, target, 100, T_X + age, sawWaiting(target, T_X + H), true);
 
 test("publish: an ON week's fallback entry, 48 hours after its block, goes through", () => {
   const e = fbEntry(48 * H), inc = tmp(); write(inc, "X004-1.json", dayFile(4, "on", [e]));

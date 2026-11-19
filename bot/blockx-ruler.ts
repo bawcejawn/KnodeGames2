@@ -157,7 +157,7 @@ export function entryFor(L: any, t: { round: number; height: number; time: numbe
   if (t.void || !t.signer) return { ...base, void: true, why: "the target itself is void (no signer recorded)" };
   const late = now - t.time >= RULER_WAIT_MS;
   // The 48-hour fallback (ON weeks only: the caller passes fallback = true): never reached by the 3-day void below.
-  const old48 = fallback && now - t.time >= RULER_FALLBACK_MS;
+  const old48 = fallback && now - t.time >= RULER_FALLBACK_MS && !!old && !old.card && old.void !== true;   // Repo Lens #R3-1 R3-1.1: only a target an EARLIER run already saw waiting
   // Repo Lens #G-49 G49-1: the 3-day void's note doesn't start "not yet", so the recorder reports it (and alerts in an ON week).
   const wait = (note: string) => (old48 ? { ...base, note: `the ruler couldn't score this target within 48 hours (${note}): scored the old way`.slice(0, 380), why: FALLBACK_WHY } : late ? { ...base, void: true, note: `the ruler couldn't score this target within 3 days (${note})`, why: "the ruler couldn't score this target within 3 days: no pick on it counts" } : { ...base, note });
   if (!L) return wait("not yet: the ruler's data isn't available this run");
