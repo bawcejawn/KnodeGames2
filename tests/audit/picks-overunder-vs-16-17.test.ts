@@ -5,18 +5,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as T from "../../bot/picks.ts";
 
-const want = (id: number, name: string) => ({
+const want = (id: number, name: string, round_size: string) => ({
   id, name, kind: 3, list_size: 0, number_min: "0", number_max: "18446744073709551615", lock_mode: 2,
-  round_size: "86400000", round_offset: "0", lead: "300000", ahead: "172800000",
+  round_size, round_offset: "0", lead: "300000", ahead: "172800000",
   max_picks_per_day: 20, max_changes: 2, enabled: true,
 });
 
-test("game 16 sends exactly Over Under's D-290 values", () => {
-  assert.deepEqual(T.buildGameConfig(T.OVERUNDER_GAME), want(16, "Over Under"));
+test("game 16 sends exactly Over Under's values (D-290; D-296: 12-hour rounds, two numbers a day)", () => {
+  assert.deepEqual(T.buildGameConfig(T.OVERUNDER_GAME), want(16, "Over Under", "43200000"));
 });
 
 test("game 17 sends exactly Knode Games VS's D-290 values", () => {
-  assert.deepEqual(T.buildGameConfig(T.VS_GAME), want(17, "Knode Games VS"));
+  assert.deepEqual(T.buildGameConfig(T.VS_GAME), want(17, "Knode Games VS", "86400000"));
 });
 
 test("number_max is exactly 2^64 − 1, as a string, with nothing rounded", () => {
@@ -35,8 +35,23 @@ test("both are ones the mainnet tool registers, each once", () => {
   assert.equal(new Set(ids).size, ids.length, "no game id twice");
 });
 
-test("rounds: one a UTC day, locking 5 minutes before 00:00 UTC, open 2 days ahead", () => {
-  const [r] = T.timeRounds(T.OVERUNDER_GAME, Date.parse("2026-11-24T12:00:00Z"));
+test("Over Under: day N's number A is round 2N (target 00:00 UTC), number B round 2N − 1 (12 hours earlier)", () => {
+  const rs = T.timeRounds(T.OVERUNDER_GAME, Date.parse("2026-11-24T00:00:00Z"), 3);
+  const day = 20782;                                   // Wed 25 Nov 2026
+  const B = rs.find((x) => x.round === 2 * day - 1)!, A = rs.find((x) => x.round === 2 * day)!;
+  assert.equal(B.target, "2026-11-24T12:00:00.000Z");
+  assert.equal(B.locks, "2026-11-24T11:55:00.000Z");
+  assert.equal(B.opens, "2026-11-22T12:00:00.000Z");
+  assert.equal(A.target, "2026-11-25T00:00:00.000Z");
+  assert.equal(A.locks, "2026-11-24T23:55:00.000Z");
+  assert.equal(A.opens, "2026-11-23T00:00:00.000Z");
+  assert.ok(Date.parse(B.locks) < Date.parse("2026-11-25T00:00:00Z") && Date.parse(A.locks) < Date.parse("2026-11-25T00:00:00Z"), "both lock before the day starts");
+  // the worst case per wallet per day: 3 open days × 2 numbers × (1 pick + 2 changes) = 18 ≤ 20
+  assert.ok(3 * 2 * (1 + T.OVERUNDER_GAME.maxChanges) <= T.OVERUNDER_GAME.picksPerDay);
+});
+
+test("VS: one round a UTC day, locking 5 minutes before 00:00 UTC, open 2 days ahead", () => {
+  const [r] = T.timeRounds(T.VS_GAME, Date.parse("2026-11-24T12:00:00Z"));
   assert.equal(r.round, 20782, "Wed 25 Nov 2026 is day 20782");
   assert.equal(r.target, "2026-11-25T00:00:00.000Z");
   assert.equal(r.locks, "2026-11-24T23:55:00.000Z");
@@ -60,7 +75,7 @@ test("an announcement with any other value is refused at apply", () => {
     const ok: any = T.buildGameConfig(g);
     assert.equal(T.pendingProblem(ok, g), null);
     for (const [k, v] of [["number_max", "18446744073709551614"], ["number_max", "18446744073709552000"], ["max_changes", 3],
-      ["lead", "600000"], ["ahead", "604800000"], ["max_picks_per_day", 10], ["round_size", "43200000"], ["list_size", 1], ["kind", 1]] as const)
+      ["lead", "600000"], ["ahead", "604800000"], ["max_picks_per_day", 10], ["round_size", g.id === 16 ? "86400000" : "43200000"], ["list_size", 1], ["kind", 1]] as const)
       assert.ok(T.pendingProblem({ ...ok, [k]: v }, g), `${g.id}: ${k} = ${v} must be refused`);
   }
 });

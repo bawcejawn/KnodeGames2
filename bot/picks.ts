@@ -125,13 +125,18 @@ export const SURVIVOR_GAME = Object.freeze({ id: 3, name: "Survivor", kind: 1, l
  *  (claude/newgames/DESIGN-OVERUNDER-VS-2026-11-19.md §2): a NUMBER game whose pick is one packed 64-bit number a UTC day
  *  (Over Under: 2 bits a producer row; VS: 1 bit a matchup), so the range is the whole u64, 0 … 2^64 − 1. That is above
  *  JavaScript's safe integers, so number_max is kept as a decimal STRING and checked with BigInt, never as a Number.
- *  TIME-locked, one round a UTC day (target 00:00 UTC), locking 5 minutes before and opening 2 days ahead; 20 picks a day,
- *  2 changes per pick. The SHAPE (id, kind, list_size, number range, lock_mode, round_size, round_offset) never changes. */
+ *  TIME-locked (Over Under: 12-hour rounds, two numbers a day; VS: one round a UTC day), locking 5 minutes before each
+ *  target and opening 2 days ahead; 20 picks a day, 2 changes per pick. The SHAPE (id, kind, list_size, number range, lock_mode, round_size, round_offset) never changes. */
 export const U64_MAX = "18446744073709551615";
-const packedDayGame = (id: number, name: string) => Object.freeze({ id, name, kind: 3, packed: true, lockMode: 2, round: DAY_MS, offset: 0,
+const packedGame = (id: number, name: string, round: number) => Object.freeze({ id, name, kind: 3, packed: true, lockMode: 2, round, offset: 0,
   lead: 5 * 60000, ahead: 2 * DAY_MS, numberMin: "0", numberMax: U64_MAX, picksPerDay: 20, maxChanges: 2 });
-export const OVERUNDER_GAME = packedDayGame(16, "Over Under");
-export const VS_GAME = packedDayGame(17, "Knode Games VS");
+/** Over Under: TWO numbers a UTC day (D-296, 64 rows; New Games' TO-VAULT-PICKS-16-17-SHAPE-2026-11-19.md), so 12-hour
+ *  Picks rounds. Day N's number A is round 2N (target = the day's start), number B is round 2N − 1 (target 12 hours
+ *  earlier), so B opens and locks 12 hours before A; both lock before the day starts. 20 picks a day covers the worst
+ *  case (3 open days × 2 numbers × (1 pick + 2 changes) = 18). */
+export const OVERUNDER_GAME = packedGame(16, "Over Under", DAY_MS / 2);
+/** Knode Games VS: ONE number a UTC day (one bit a matchup, up to 64), day N = round N. */
+export const VS_GAME = packedGame(17, "Knode Games VS", DAY_MS);
 const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME, OVERUNDER_GAME, VS_GAME];
 /** The picks per wallet per day and changes per pick the Picks contract allows at most. */
 const MAX_PICKS_PER_DAY = 50, MAX_CHANGES = 50;
