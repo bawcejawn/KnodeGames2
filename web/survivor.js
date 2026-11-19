@@ -10,7 +10,7 @@
  * A day's points are the change in a player's season standing, so a player's lives, days and score come straight from
  * the published points (math.js decodeStanding): the page never re-scores a day. Everything on screen is built with
  * textContent: no HTML strings. */
-import * as S from "../games/survivor/math.js";
+import * as S from "./games/survivor/math.js";
 
 const isAddr = (a) => typeof a === "string" && /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(a);
 const pad3 = (w) => String(w).padStart(3, "0");
@@ -123,6 +123,15 @@ export function seasonView(weeks) {
   return { players: [...P.values()], decided, days: dayList };
 }
 
+/** The play days a pick can be offered for at time `t` (ms): only season play days (so nothing before Season 1's day 1,
+ *  Mon 30 Nov 2026, even while the contract already takes picks for earlier days), open on the contract (7 days ahead,
+ *  locking 5 minutes before the day) and more than `margin` ms before the lock. The page's own list (openDays). */
+export function pickDays(t, margin = 2 * 60000) {
+  const out = [];
+  for (let d = (S.dayNo(t) + 1) * S.DAY; d - t <= S.AHEAD_MS; d += S.DAY) if (S.isOpen(d, t) && S.seasonDayOf(d) && S.lockTime(d) - t > margin) out.push(d);
+  return out;
+}
+
 /** One board's places (math.js rank: lasted longest, then lives, then total; equal on all three share a place). */
 export const placesOf = (players, board) => S.rank(players.filter((x) => x.board === board));
 
@@ -160,7 +169,6 @@ function start() {
   // The chain's clock decides the lock: the page keeps the largest forward difference it has seen (Repo Lens SV-A21, S3-12).
   let skew = 0;
   const now = () => Date.now() + skew;
-  const todayStart = () => S.dayNo(now()) * S.DAY;
 
   let view = null;                 // seasonView of the current (or last) season
   let viewSeason = null;           // its number
@@ -235,11 +243,7 @@ function start() {
   }
 
   /** The play days a pick can be made for now (open on the contract, more than 2 minutes before the lock). */
-  function openDays() {
-    const t = now(), out = [];
-    for (let d = todayStart() + S.DAY; d - t <= S.AHEAD_MS; d += S.DAY) if (S.isOpen(d, t) && S.seasonDayOf(d) && S.lockTime(d) - t > MARGIN) out.push(d);
-    return out;
-  }
+  function openDays() { return pickDays(now(), MARGIN); }
   /** The season's play days up to the last open one. */
   function seasonDaysFor(season) { return S.seasonDays(season).map((x) => x.day); }
 

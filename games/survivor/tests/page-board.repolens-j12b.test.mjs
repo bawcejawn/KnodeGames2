@@ -3,7 +3,7 @@
 // `if (wk === weeks[0])` passes every other test; this one fails. Put in games/survivor/tests/.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-const { seasonView } = await import("../../../web/survivor.js");
+const { seasonView } = (await import("./load-page.mjs")).page;
 
 const A = "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", C = "1CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
 // [wallet, ?, peak stake, voided], as the kit's week file players; min 1 VHP in base units.

@@ -15,7 +15,8 @@ import { at, HOUR } from "../../../kit/testing/fake-clock.ts";
 import { makeGame, settingsFor } from "../recorder.ts";
 import * as S from "../math.js";
 // @ts-ignore: the page is plain JavaScript (an ES module; its screen code runs only with a document)
-import { decodePart, weekFromParts, weekFromFile, seasonView, placesOf } from "../../../web/survivor.js";
+import { page } from "./load-page.mjs";
+const { decodePart, weekFromParts, weekFromFile, seasonView, placesOf } = page;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const WEEK = 2;
@@ -144,7 +145,7 @@ test("page: a day that didn't count (a fallback round) shows as skipped and chan
 test("page source: built with textContent (no HTML strings), the rules come from games/survivor/math.js, no old files", () => {
   const js = fs.readFileSync(path.join(ROOT, "web/survivor.js"), "utf8"), html = fs.readFileSync(path.join(ROOT, "web/survivor.html"), "utf8");
   assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write/.test(js), "no HTML strings");
-  assert.ok(/import \* as S from "\.\.\/games\/survivor\/math\.js"/.test(js), "the page loads games/survivor/math.js (web/../games/: the repo path, and the site root once the build copies games/)");
+  assert.ok(/import \* as S from "\.\/games\/survivor\/math\.js"/.test(js), "the page loads ./games/survivor/math.js (the site build copies only ./games/ imports, Repo Lens L7c-1)");
   assert.ok(!/survivor-math\.js/.test(html) && /<script type="module" src="survivor\.js"><\/script>/.test(html));
   assert.ok(!/fields\.json|S0\d\d\.json/.test(js), "no reads of the old recorder's files");
   assert.ok(/https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//.test(html), "the CSP allows the games-data branch");
