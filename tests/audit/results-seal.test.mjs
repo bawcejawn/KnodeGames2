@@ -67,7 +67,7 @@ function publish(own, staged, env, parentFiles) {
     const blob = execFileSync("git", ["hash-object", "-w", "--stdin"], { cwd: work, input: t, encoding: "utf8" }).trim();
     git("update-index", "--add", "--cacheinfo", `100644,${blob},${p}`);
   }
-  const r = spawnSync("bash", ["-e", "-c", `parent=${JSON.stringify(parent)}\n${SEAL}`], { cwd: work, encoding: "utf8", env: { ...process.env, IN, RUNNER_TEMP: tmp, ...env } });
+  const r = spawnSync("bash", ["-e", "-c", `parent=${JSON.stringify(parent)}\n${SEAL}`], { cwd: work, encoding: "utf8", env: { ...process.env, GITHUB_SHA: "", SEAL_DEPLOYMENT_URL: "", IN, RUNNER_TEMP: tmp, ...env } });   // I-5: no outside fetch unless a test asks
   const files = Object.fromEntries(git("ls-files").split("\n").filter(Boolean).map((p) => [p, execFileSync("git", ["show", `:${p}`], { cwd: work, encoding: "utf8" })]));
   return { r, files, tmp };
 }
@@ -144,4 +144,43 @@ test("L2-1: a new results file this run writes (not on the branch yet) is sealed
   const { r, files } = publish({ "vault/W5.json": W5 }, { "vault/W5.json": W5 }, { RESULTS_SEAL_KEY: k.pem, SEAL_BRANCH: "race-data" }, { "races.json": "{}\n" });
   assert.equal(r.status, 0, r.stderr);
   assert.ok("vault/W5.json.seal" in files);
+});
+
+// ── Repo Lens I-5 / I-4 (audit AB-058 follow-ups) ──
+test("I-5: without the secret, a deployment.json that has resultsSealKey stops the publish; without the key (or unreadable) it warns as before", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "seal-dep-"));
+  const withKey = path.join(dir, "with.json"), without = path.join(dir, "without.json");
+  fs.writeFileSync(withKey, JSON.stringify({ vaultGames: {}, resultsSealKey: "MCowBQYDK2VwAyEA" }, null, 2));
+  fs.writeFileSync(without, JSON.stringify({ vaultGames: {}, resultsSealKey: "" }, null, 2));
+  const own = { "vault/W5.json": W5 };
+  const stop = publish(own, own, { RESULTS_SEAL_KEY: "", SEAL_BRANCH: "race-data", SEAL_DEPLOYMENT_URL: `file://${withKey}` });
+  assert.notEqual(stop.r.status, 0, "publish stopped");
+  assert.match(stop.r.stdout, /::error::deployment\.json has resultsSealKey, but the RESULTS_SEAL_KEY secret is not set/);
+  for (const url of [`file://${without}`, `file://${path.join(dir, "missing.json")}`, ""]) {
+    const go = publish(own, own, { RESULTS_SEAL_KEY: "", SEAL_BRANCH: "race-data", SEAL_DEPLOYMENT_URL: url });
+    assert.equal(go.r.status, 0, `${url || "no URL"}: goes on`);
+    assert.match(go.r.stdout, /::warning::RESULTS_SEAL_KEY is not set/);
+    assert.ok(!Object.keys(go.files).some((p) => p.endsWith(".seal")));
+  }
+});
+
+test("I-5: with the secret, deployment.json isn't fetched at all (the seal path is unchanged)", () => {
+  const k = key(), own = { "vault/W5.json": W5 };
+  const r = publish(own, own, { RESULTS_SEAL_KEY: k.pem, SEAL_BRANCH: "race-data", SEAL_DEPLOYMENT_URL: "file:///nonexistent/never-read.json" });
+  assert.equal(r.r.status, 0);
+  assert.ok("vault/W5.json.seal" in r.files);
+});
+
+test("I-5: in a job, the file read is this run's own commit of game-data/deployment.json", () => {
+  assert.match(SEAL, /https:\/\/raw\.githubusercontent\.com\/\$\{GITHUB_REPOSITORY\}\/\$\{GITHUB_SHA\}\/game-data\/deployment\.json/);
+  assert.match(SEAL, /curl -fsS --max-time 20/);
+});
+
+test("I-4: every job that reads RESULTS_SEAL_KEY runs only on main", () => {
+  for (const [f, [job]] of Object.entries(JOBS)) {
+    const y = fs.readFileSync(path.join(ROOT, ".github/workflows", f), "utf8");
+    const start = y.indexOf(`\n  ${job}:\n`), rest = y.slice(start + 1), next = rest.slice(1).search(/\n  [a-z][a-z0-9_-]*:\n/);
+    const head = (next < 0 ? rest : rest.slice(0, next + 1)).split("\n").slice(0, 12).join("\n");
+    assert.match(head, /\n    if: \$\{\{[^\n]*github\.ref == 'refs\/heads\/main'[^\n]*\}\}/, `${f} ${job}: gated on main`);
+  }
 });
