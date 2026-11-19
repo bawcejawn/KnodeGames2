@@ -88,3 +88,13 @@ test("AB-064: the wait the pages state matches the contracts (Picks 48 h, Race h
   const race = fs.readdirSync(path.join(ROOT, "contracts/race/assembly")).filter((f) => f.endsWith(".ts")).map((f) => read(`contracts/race/assembly/${f}`)).join("\n");
   assert.doesNotMatch(race, /schedule_upgrade|timelock/i);
 });
+
+test("J18-5: every page tells the browser to send only the site's origin to other sites (no ?a= wallet in Referer)", () => {
+  const pages = fs.readdirSync(path.join(ROOT, "web")).filter((f) => f.endsWith(".html"));
+  assert.ok(pages.length >= 20);
+  for (const f of pages) {
+    const html = read(`web/${f}`);
+    assert.equal((html.match(/<meta name="referrer" content="strict-origin-when-cross-origin">/g) || []).length, 1, f);
+    assert.ok(html.indexOf('name="referrer"') < html.indexOf("<script"), `${f}: before any script`);
+  }
+});
