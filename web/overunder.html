@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <!-- Only these sources may run scripts, load data or be framed. 'unsafe-eval' is needed by koilib (its protobuf
        encoder builds functions at run time); CDN scripts are pinned by their integrity hash. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/ https://koinos.armana.io https://api.koinos.io https://api.koinosblocks.com https://raw.githubusercontent.com/bawcejawn/KnodeGames/blocks-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/names-data/ https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/long@5.3.2/umd/index.js https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/ https://koinos.armana.io https://api.koinos.io https://api.koinosblocks.com https://raw.githubusercontent.com/bawcejawn/KnodeGames/blocks-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/names-data/ https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Over/Under · Over or under on every Koinos block producer</title>
   <!-- seo:start (written by tools/site-seo.mjs; edit there) -->
@@ -102,6 +102,11 @@
         <tbody id="ou-rows"></tbody>
       </table>
       <p class="ou-check" id="ou-check" role="status"></p>
+      <div class="ou-ask" id="ou-ask" role="alertdialog" aria-labelledby="ou-ask-text" hidden>
+        <p id="ou-ask-text"></p>
+        <button type="button" class="btn" id="ou-ask-yes">Change it</button>
+        <button type="button" class="btn" id="ou-ask-no">Keep my pick</button>
+      </div>
       <div class="ou-actions">
         <button type="button" class="btn" id="ou-send" hidden>Send my picks</button>
         <button type="button" class="btn" id="ou-reset" hidden>Undo my edits</button>
@@ -119,7 +124,7 @@
       <summary>How it works</summary>
       <div>
         <p><b>The roster and the lines.</b> The roster for each week comes out on Friday 00:00 UTC, a day before the first picks open, and never changes. It lists the producers that have the ruler's entry (not in ramp-up) and are inside the ruler's VHP range, at most 64. Each has a line: the Ruler's expected blocks for it, rounded to a half block (28.5, 29.5, …). Nobody types a line. The page checks the roster against its own checksum before it shows a row.</p>
-        <p><b>Your pick.</b> Over means you think the producer will be credited with more blocks than its line that UTC day; Under means fewer. Your rows for a day are two numbers on the Koinos chain (rows 1 to 32, rows 33 to 64), sent in one approval. Blank rows are no pick. Picks open 2 days ahead. Rows 1 to 32 lock 5 minutes before the day starts; rows 33 to 64 lock 12 hours earlier.</p>
+        <p><b>Your pick.</b> Over means you think the producer will be credited with more blocks than its line that UTC day; Under means fewer. Your rows for a day are two numbers on the Koinos chain (rows 1 to 32, rows 33 to 64), usually sent in one approval (the page says so if your wallet needs two). Blank rows are no pick. Picks open 2 days ahead. Rows 1 to 32 lock 5 minutes before the day starts; rows 33 to 64 lock 12 hours earlier.</p>
         <p><b>Changes.</b> After your first send you can change a day's picks up to 2 more times before the lock. Every change is paid with your own Mana, not the free sponsor. A played day can't be re-picked, and no pick is ever given back.</p>
         <p><b>Points.</b> 1 point for each row you called right. A producer that is void that day (its VHP left the ruler's range) is skipped: no win, no loss. A count exactly on the line is skipped too. Sunday is a fun round: it counts on Today and All time only.</p>
         <p><b>Prizes.</b> The Free play board pays 2 VHP for first and 1 VHP for second each week. Wallets with at least 1 VHP staked in Over/Under that week play on the Staked board when staking is on. Weekly boards; All time is bragging rights.</p>
@@ -179,6 +184,8 @@
   </footer>
 
   <script src="data-source.js"></script>
+  <!-- long first: koilib writes a uint64 (a pick number up to 2^64 - 1) through it; without it a number above 2^53 is rounded (RL-5 R5-1). -->
+  <script src="https://cdn.jsdelivr.net/npm/long@5.3.2/umd/index.js" integrity="sha384-znlAi1SoS2W+wGJTW+I+XtwylQSB1jQnBdFxeoyXf1WhdeWQwPI8Ja6LDEQhJlKs" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js" integrity="sha384-IAL9o3r4bQJvWhvszkorFINY2ct4LBA/LvyXE9NSOPCyYB25BsFV12JITA7Gxbk6" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js" integrity="sha384-WOeNFfSdOron0s4x9jdzLtA7Ic7RSqZCXZAaeQd6HRL6WezQp0KAtIF2XSa+11TL" crossorigin="anonymous"></script>
   <script src="guest.js"></script>

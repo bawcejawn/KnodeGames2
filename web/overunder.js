@@ -8,8 +8,9 @@
  * and your picks from the Picks contract. It sends up to two numbers a day (Picks game 16, 12-hour rounds, D-296): number A
  * holds rows 0 to 31, number B rows 32 to 63; two bits a row in roster order, 01 Over, 10 Under, 00 blank. Both go in one
  * approval (a batch). Number B closes 12 hours before number A. The rules and the number's layout are games/overunder/math.js, the same
- * file the recorder uses. Everything on screen is built with textContent: no HTML strings. */
+ * file the recorder uses. Picks go out only through the shared "Send my picks" card (js/lib/send-picks.js, D-255/D-278). Everything on screen is built with textContent: no HTML strings. */
 import * as F from "./games/overunder/math.js";
+import * as SP from "./js/lib/send-picks.js";
 
 const $ = (id) => document.getElementById(id);
 if (typeof document !== "undefined" && $("ou-rows")) start();
@@ -18,7 +19,7 @@ function start() {
   "use strict";
   const lib = window.koilib || window.koinos || window;
   const ROOT = new URL("./", location.href);
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/overunder/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/overunder/";
   const RPC = ["https://koinos.armana.io", "https://api.koinosblocks.com"];
   const DAY = F.DAY, LEAD = F.LEAD, AHEAD = F.AHEAD, GAME = F.GAME;
   let GENESIS = window.KWeeks ? window.KWeeks.GENESIS_MS : 1792368000000, WEEK = 7 * DAY;
@@ -86,15 +87,16 @@ function start() {
   const rosterOf = (d) => files.rosters.get(weekOf(d * DAY)) || null;
 
   // ── your picks (Picks contract) ──
-  /** { number, changes } of your saved pick for a day, or null. */
+  /** { number, changes } of your saved pick for one of a day's two numbers, or null when there is none. A failed read
+   *  THROWS: it is never read as "no pick" (RL-5 R5-3), so a player who has a pick is never offered the first-pick path. */
   async function getPick(d, h = 0) {
     const who = me();
     if (!who || !picks) return null;
-    try {
-      const x = await picks.functions.get_pick({ game: GAME, round: String(F.pickRoundOf(d * DAY, h)), player: who });
-      const p = x.result && x.result.pick;
-      return p && p.number != null && (String(p.number) !== "0" || Number(p.changes || 0) > 0) ? { number: String(p.number), changes: Number(p.changes || 0) } : null;
-    } catch { return null; }
+    const x = await picks.functions.get_pick({ game: GAME, round: String(F.pickRoundOf(d * DAY, h)), player: who });
+    const p = x && x.result && x.result.pick;
+    if (!p) return null;
+    const number = p.number == null ? "0" : String(p.number), changes = Number(p.changes || 0);
+    return Number(p.time || 0) > 0 || number !== "0" || changes > 0 ? { number, changes } : null;
   }
   /** The days you can pick for now: opened (2 days ahead), not locked (a minute to spare), in a week whose roster is out. */
   function openDays(now = Date.now()) {
@@ -104,10 +106,11 @@ function start() {
   }
   const nextDay = (now = Date.now()) => { let d = dayNo(now); while (lockOfHalf(d, 0) - now < 60000) d++; return d; };
 
-  let st = { open: [], sel: null, saved: new Map(), now: 0 };           // saved: day → [number A's { number, changes } or null, number B's or null]
+  let st = { open: [], sel: null, saved: new Map(), unread: new Set(), now: 0 };           // saved: day → [number A's { number, changes } or null, number B's or null]
   let draft = new Map();                                                  // day → { address: "over" | "under" }
-  let sending = false, armed = false;
+  let sending = false;
   const draftOf = (d) => draft.get(d) || {};
+  const batchOk = () => !!(W && typeof W.batchReady === "function" && W.batchReady());     // two new numbers go in one approval only when the sponsor's batch numbers are out
   const savedChoices = (d) => { const s = st.saved.get(d), r = rosterOf(d); return s && r ? { ...(s[0] ? F.decodePick(r, s[0].number, 0) : {}), ...(s[1] ? F.decodePick(r, s[1].number, 1) : {}) } : {}; };
   const halfOf = (r, ch, h) => Object.fromEntries(r.rows.slice(h * F.HALF, h * F.HALF + F.HALF).filter((x) => ch[x.a]).map((x) => [x.a, ch[x.a]]));
   const sameChoices = (a, b) => { const ka = Object.keys(a), kb = Object.keys(b); return ka.length === kb.length && ka.every((k) => a[k] === b[k]); };
@@ -118,8 +121,11 @@ function start() {
 
   async function refresh() {
     const now = Date.now(), open = openDays(now);
-    st = { open, sel: open.includes(st.sel) ? st.sel : open[0] ?? null, saved: new Map(), now };
-    if (me() && picks) await Promise.all(open.map(async (d) => { const r = rosterOf(d), s = await Promise.all(halvesOf(r).map((h) => getPick(d, h))); if (s.some(Boolean)) st.saved.set(d, [s[0] || null, s[1] || null]); }));
+    st = { open, sel: open.includes(st.sel) ? st.sel : open[0] ?? null, saved: new Map(), unread: new Set(), now };
+    if (me() && picks) await Promise.all(open.map(async (d) => {
+      try { const r = rosterOf(d), s = await Promise.all(halvesOf(r).map((h) => getPick(d, h))); if (s.some(Boolean)) st.saved.set(d, [s[0] || null, s[1] || null]); }
+      catch { st.unread.add(d); }                                          // couldn't read: nothing is sent for that day (R5-3)
+    }));
     for (const d of open) if (!draft.has(d)) draft.set(d, { ...savedChoices(d) });
     render();
   }
@@ -130,14 +136,14 @@ function start() {
     if (!r || isLocked(d, Math.floor(r.rows.findIndex((x) => x.a === a) / F.HALF))) return;       // a locked number can't be changed
     const cur = { ...draftOf(d) };
     if (cur[a] === c) delete cur[a]; else cur[a] = c;
-    draft.set(d, cur); armed = false; render();
+    draft.set(d, cur); render();
   }
   function render() { renderPlan(); renderSheet(); renderLeague(); }
   function renderPlan() {
     const box = $("ou-plan");
     box.hidden = st.open.length < 2;
     box.replaceChildren(el("span", { class: "lbl", text: "Day:" }), ...st.open.map((d) => el("button", { type: "button", "aria-pressed": String(d === st.sel),
-      onclick: () => { st.sel = d; armed = false; render(); } }, el("span", { class: "d", text: dayLabel(d) }), el("span", { class: "s", text: st.saved.has(d) ? "picks sent" : dirty(d) ? "not sent" : "no picks" }))));
+      onclick: () => { st.sel = d; render(); } }, el("span", { class: "d", text: dayLabel(d) }), el("span", { class: "s", text: st.saved.has(d) ? "picks sent" : dirty(d) ? "not sent" : "no picks" }))));
   }
   function waitText() {
     const w = weekOf(nextDay() * DAY), t = weekStart(w) - 3 * DAY;
@@ -166,14 +172,21 @@ function start() {
     const n = Object.keys(cur).length, isChange = hs.some((h) => halfDirty(d, h) && !!(saved && saved[h]));
     let msg = "", ok = false;
     if (!me()) msg = "Connect a wallet to send picks.";
+    else if (st.unread.has(d)) msg = "Couldn't read your pick for this day. Try again in a moment. Nothing is sent until it reads.";
     else if (!dirty(d)) msg = saved ? "These are your saved picks." : "Tap Over or Under on any rows. A row you leave blank is no pick.";
     else if (hs.some((h) => halfDirty(d, h) && isLocked(d, h))) msg = "Some rows you changed have locked (rows 33 to 64 lock 12 hours before the others). Reset to go back to your saved picks.";
     else if (isChange && changesLeft <= 0) msg = "You have used both changes for this day. Your saved picks stand.";
     else if (n === 0 && !saved) msg = "Choose at least one row.";
-    else { ok = true; msg = isChange ? `This is change ${saved.changes + 1} of ${F.MAX_CHANGES} for this day, paid with your own Mana (not free). ${n} row${n === 1 ? "" : "s"}.` : `${n} row${n === 1 ? "" : "s"}, sent in one approval${hs.length > 1 ? " (two numbers, one batch)" : ""}. The first send is free (the Knode Mana sponsor pays).`; }
+    else {
+      ok = true;
+      const rows = `${n} row${n === 1 ? "" : "s"}`, fresh = hs.filter((h) => halfDirty(d, h) && !(saved && saved[h])).length, chg = hs.filter((h) => halfDirty(d, h) && !!(saved && saved[h])).length;
+      const approvals = (fresh > 1 ? (batchOk() ? 1 : fresh) : fresh) + chg;
+      msg = (chg ? `This is a change (${changesUsed(d) + 1} of ${F.MAX_CHANGES} for this day): it is paid with your own Mana, not free, and goes out on its own. ` : "A first pick is free: the Knode Mana sponsor pays. ")
+        + `${rows}. ` + (approvals > 1 ? `Your wallet will ask you to approve ${approvals} times${fresh > 1 && !batchOk() ? " (it can't batch the two numbers right now)" : ""}.` : "Your wallet will ask you to approve once.");
+    }
     $("ou-check").textContent = msg; $("ou-check").className = "ou-check" + (ok ? " ok" : "");
     $("ou-send").disabled = sending || !picks || !ok;
-    $("ou-send").textContent = !me() ? "Connect to send" : armed ? "Tap again to confirm the change" : isChange ? "Change my picks" : "Send my picks";
+    $("ou-send").textContent = !me() ? "Connect to send" : isChange ? "Change my picks" : "Send my picks";
     $("ou-reset").hidden = !dirty(d);
     $("ou-saved").textContent = saved ? `Saved on chain for this day: ${Object.keys(savedChoices(d)).length} rows, ${changesLeft} change${changesLeft === 1 ? "" : "s"} left.` : "";
     $("ou-roster").textContent = `Roster id ${r.id}, from the ruler card of ${r.cardRound}. Published once for ${WL(weekOf(d * DAY))}; it never changes.`;
@@ -190,32 +203,57 @@ function start() {
   };
   async function confirmPick(d, sent) {
     for (let t = 0; t < 10; t++) {
-      const got = await Promise.all(sent.map((x) => getPick(d, x.h)));
-      if (sent.every((x, i) => got[i] && got[i].number === x.number)) return true;
+      try {
+        const got = await Promise.all(sent.map((x) => getPick(d, x.h)));
+        if (sent.every((x, i) => got[i] && got[i].number === x.number)) return true;
+      } catch { /* try again */ }
       await new Promise((r) => setTimeout(r, 3000));
     }
     return false;
   }
+  /** "Your pick this round is X. Change it to Y?" (the shared card's question, D-255): resolves true for Change. */
+  function ask(lines) {
+    return new Promise((done) => {
+      const box = $("ou-ask"), yes = $("ou-ask-yes"), no = $("ou-ask-no");
+      $("ou-ask-text").replaceChildren(...lines.map((l) => el("span", { class: "ou-ask-l", text: l })));
+      const finish = (v) => () => { box.hidden = true; yes.onclick = no.onclick = null; done(v); };
+      yes.onclick = finish(true); no.onclick = finish(false);
+      box.hidden = false; no.focus();
+    });
+  }
+  const sumOf = (n) => { const o = [...Object.values(F.decodePick({ rows: Array.from({ length: F.HALF }, (_, i) => ({ a: String(i) })) }, n, 0))]; return `${o.filter((x) => x === "over").length} Over, ${o.filter((x) => x === "under").length} Under`; };
   async function send() {
     if (!me()) { if (W && W.connect) W.connect(); else say("Connect a wallet first."); return; }
     const d = st.sel, r = rosterOf(d);
     if (d == null || !r || sending || !picks || !dirty(d)) return;
-    const saved = st.saved.get(d) || [], hs = halvesOf(r).filter((h) => halfDirty(d, h));
+    const hs = halvesOf(r).filter((h) => halfDirty(d, h));
     if (!hs.length) return;
-    const isChange = hs.some((h) => !!saved[h]);                              // any change makes the whole send paid by your own Mana (D-278)
-    if (isChange && !armed) { armed = true; render(); return; }               // a change costs your own Mana and one of 2: ask twice
-    if (isChange && W.kind === "guest") { $("ou-check").textContent = "Connect a wallet to change a pick."; armed = false; return; }
-    if (hs.some((h) => isLocked(d, h))) { say("Some of those rows have locked. Reset and try again."); await refresh(); return; }
-    const sent = hs.map((h) => ({ h, number: F.encodePick(r, draftOf(d), h) }));
-    sending = true; armed = false; render();
-    say(W.kind === "guest" ? "Saving your picks…" : `Confirm in ${W.label ? W.label() : "your wallet"}: ${dayLabel(d)}`);
+    sending = true; render();
     try {
-      const ops = [];
-      for (const x of sent) ops.push((await picks.functions.pick({ player: me(), game: GAME, round: String(F.pickRoundOf(d * DAY, x.h)), producers: [], number: x.number }, { onlyOperation: true })).operation);
-      const opts = isChange ? { ownMana: true } : {};
-      const id = ops.length > 1 && W.sendBatch ? (await W.sendBatch(`Over/Under picks for ${dayLabel(d)}`, ops, opts)).id : await W.send(`Over/Under picks for ${dayLabel(d)}`, ops, opts);
+      // 1. Read your pick for each number NOW, strictly: a failed read sends nothing (R5-3), never "no pick".
+      let now;
+      try { now = await Promise.all(hs.map((h) => getPick(d, h))); }
+      catch { say("Couldn't read your pick, try again."); return; }
+      // 2. The shared card plans it: new picks (sponsored, batched when possible), changes (own Mana, alone), refusals.
+      const items = [], sent = [];
+      for (let i = 0; i < hs.length; i++) {
+        const h = hs[i], number = F.encodePick(r, draftOf(d), h), key = `${GAME}:${F.pickRoundOf(d * DAY, h)}`;
+        const { operation } = await picks.functions.pick({ player: me(), game: GAME, round: String(F.pickRoundOf(d * DAY, h)), producers: [], number }, { onlyOperation: true });
+        items.push({ key, label: `Over/Under ${h ? "rows 33 to 64" : "rows 1 to 32"} for ${dayLabel(d)}`, op: operation, existing: now[i] ? now[i].number : null, wanted: number, open: !isLocked(d, h), h });
+        sent.push({ h, number });
+      }
+      const p = SP.plan(items, { maxChanges: F.MAX_CHANGES, changesUsed: Object.fromEntries(items.map((it, i) => [it.key, now[i] ? now[i].changes : 0])) });
+      if (p.refused.length) { say(p.refused.map((x) => `${x.label}: not sent (${x.why === "locked" ? "that number has locked" : x.why}).`).join(" ")); await refresh(); return; }
+      if (p.same.length && !p.fresh.length && !p.changes.length) { say("That is already your pick."); return; }
+      const cannot = (lines) => { say(lines.join(" ")); return Promise.resolve(); };
+      if (!(await SP.confirm(p, ask, sumOf, { guest: W.kind === "guest", cannot }))) { if (p.changes.length && W.kind !== "guest") say("Kept your pick. Nothing was sent."); return; }
+      if (p.fresh.length > 1 && !batchOk()) say("Your wallet will ask you to approve each number separately (it can't batch them right now).");
+      else say(W.kind === "guest" ? "Saving your picks…" : `Confirm in ${W.label ? W.label() : "your wallet"}: ${dayLabel(d)}`);
+      const res = await SP.send(W, p, { label: `Over/Under picks for ${dayLabel(d)}`, stillOpen: (it) => !isLocked(d, it.h) });
+      if (!res.sent && !res.changed) throw new Error("locked");
       say("Sent. Checking the chain…");
-      const ok = await confirmPick(d, sent);
+      const ok = await confirmPick(d, sent.filter((x) => p.fresh.concat(p.changes).some((it) => it.h === x.h)));
+      const id = res.ids[res.ids.length - 1];
       say(ok ? `Saved. You can change it until ${when(lockOf(d, r))} (${F.MAX_CHANGES} changes).` : `Sent${id ? ` (${String(id).slice(0, 12)}…)` : ""}, not seen yet. It usually shows within a minute.`);
     } catch (e) { say(why(e)); }
     finally { sending = false; await refresh(); }
@@ -246,7 +284,7 @@ function start() {
 
   // ── start ──
   $("ou-send").addEventListener("click", send);
-  $("ou-reset").addEventListener("click", () => { const d = st.sel; draft.set(d, { ...savedChoices(d) }); armed = false; render(); });
+  $("ou-reset").addEventListener("click", () => { const d = st.sel; draft.set(d, { ...savedChoices(d) }); render(); });
   (async () => {
     try { await setupNet(); await loadFiles(); await refresh(); say(picks ? "" : "Over/Under isn't live yet: its Picks game hasn't been added. You can read the rules below."); }
     catch (e) { say(`Couldn't load: ${String((e && e.message) || e).slice(0, 120)}`); }
