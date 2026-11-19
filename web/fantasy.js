@@ -437,7 +437,8 @@ function start() {
     const p = SP.plan([{ key: `${game}:${round}`, label, op: operation, existing, wanted, open: open() }]);
     if (p.refused.length) throw new Error("locked");
     if (p.same.length) throw new Error("already your pick");
-    if (!(await SP.confirm(p, ask(title), nameOf))) return null;
+    const cannot = (lines) => new Promise((done) => { pop("info", title, lines, [okBtn("OK")]); asking = done; });
+    if (!(await SP.confirm(p, ask(title), nameOf, { guest: W.kind === "guest", cannot }))) return null;
     pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [p.changes.length ? "A change: paid with your own Mana." : "Free: the Knode Mana sponsor pays the Mana."]);
     return SP.send(W, p, { label, stillOpen: open });
   }

@@ -14,11 +14,16 @@
  *   if (await SP.confirm(p, ask)) await SP.send(W, p, { label, stillOpen });
  */
 
-/** Same pick? Arrays compare in order; anything else as text. */
+/** Same pick? Arrays compare in order; whole numbers (a packed pick, Picks kind 3: 0 to 2^64-1, D-284) by value, so
+ *  "07" and "7" are the same pick; anything else as text. */
+const WHOLE = /^\d{1,20}$/;
+const one = (x, y) => (WHOLE.test(String(x)) && WHOLE.test(String(y)) ? BigInt(x) === BigInt(y) : String(x ?? "") === String(y ?? ""));
 export function samePick(a, b) {
-  if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => String(x) === String(b[i]));
-  return String(a ?? "") === String(b ?? "");
+  if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => one(x, b[i]));
+  return one(a, b);
 }
+/** What a guest sees instead of a Change button (D-278: a change uses the player's own Mana; a guest wallet has none). */
+export const GUEST_CHANGE = "A guest wallet can't change a pick (a change uses your own Mana). Connect Kondor or KOIN Vault to change a pick.";
 const hasPick = (x) => x !== null && x !== undefined && x !== "" && !(Array.isArray(x) && x.length === 0);
 
 /** Split what the player asked for into new picks, changes, no-ops and refusals.
@@ -54,9 +59,12 @@ export function confirmLines(p, name) {
 }
 
 /** Ask the player when anything changes; new picks alone need no extra question (the wallet still asks to sign).
- *  ask(lines) resolves true to go on. */
-export async function confirm(p, ask, name) {
+ *  ask(lines) resolves true to go on. name(pick) shows a pick: a producer's name, or the game's decode of a packed
+ *  number (math.js). opts.guest: the wallet is a guest, so a change can't be made: opts.cannot(lines) is shown instead
+ *  (no Change button) and nothing is sent. */
+export async function confirm(p, ask, name, opts = {}) {
   if (!p.changes.length) return p.fresh.length > 0;
+  if (opts.guest) { if (typeof opts.cannot === "function") await opts.cannot([...confirmLines(p, name).filter((l) => !/own Mana/.test(l)), GUEST_CHANGE]); return false; }
   return !!(await ask(confirmLines(p, name)));
 }
 
@@ -66,7 +74,7 @@ export async function confirm(p, ask, name) {
 export async function send(W, p, opts = {}) {
   const label = opts.label || "Your picks";
   const stillOpen = typeof opts.stillOpen === "function" ? opts.stillOpen : () => true;
-  if (p.changes.length && W.kind === "guest") throw new Error("A change is paid with your own Mana, and a guest wallet has none. Connect Kondor or KOIN Vault to change a pick; picks you haven't made yet stay free.");
+  if (p.changes.length && W.kind === "guest") throw new Error(GUEST_CHANGE);
   const res = { sent: 0, changed: 0, skipped: 0, ids: [] };
   const fresh = p.fresh.filter((it) => stillOpen(it));
   res.skipped += p.fresh.length - fresh.length;

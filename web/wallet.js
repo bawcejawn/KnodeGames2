@@ -577,7 +577,7 @@
       if (id !== W.chainId) throw new Error("The network node reports a different chain than Knode Games runs on. Nothing was signed.");
     }
     // D-278: a pick change is never paid by the Knode Mana sponsor. A guest wallet has no Mana of its own, so it can't send one.
-    if (opts.noSponsor && W.kind === "guest") throw new Error("A change is paid with your own Mana, and a guest wallet has none. Connect Kondor or KOIN Vault to change a pick. Nothing was sent.");
+    if (opts.noSponsor && W.kind === "guest") throw new Error("A guest wallet can't change a pick (a change uses your own Mana). Connect Kondor or KOIN Vault to change a pick. Nothing was sent.");
     if (W.kind === "guest") { if (!guestOn()) throw new Error("Guest play is paused for now. Connect Kondor or KOIN Vault to play."); return sendGuest(label, ops, opts); }
     return W.kind === "vault" ? sendVault(label, ops, opts) : sendKondor(label, ops, opts);
   }
@@ -859,6 +859,9 @@
     open(h("h3", {}, `Approve in KOIN Vault`), h("p", {}, `“${label}”. Open KOIN Vault, check the details and approve with your fingerprint or face, then come back here.`),
       h("a", { class: "kw-go", href: VAULT + "/", target: "_blank", rel: "noopener noreferrer", referrerpolicy: "no-referrer" }, "Open KOIN Vault"), status,
       h("p", {}, req.funding && req.funding.payer === "sponsor" ? "Mana for this one is covered by KOIN Vault." : "This uses your wallet's own Mana (from the KOIN it holds)."),
+      // D-278: the Knode Mana sponsor is never part of a KOIN Vault send (this path never calls sponsorFor), so a change
+      // sent here is never paid by Knode. KOIN Vault alone decides its own funding ("auto").
+      opts.noSponsor ? h("p", {}, "This is a change to a pick: Knode's Mana sponsor doesn't pay for it.") : null,
       opts.ownMana ? h("p", { class: "kw-warn" }, "This one must be paid with your own Mana (or KOIN Vault's), not the game's: right now a claim the game pays for could run out of Mana and fail. The page can't check who KOIN Vault charges. If KOIN Vault shows the game contract as the payer, reject it and claim later.") : null);
     let stop = false; onClose = () => { stop = true; };
     const until = Math.min(req.expiresAt || Infinity, Date.now() + 10 * 60000);

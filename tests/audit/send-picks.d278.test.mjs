@@ -86,7 +86,7 @@ test("D-278: a change goes alone with noSponsor, never in the batch; new picks k
 test("D-278: a guest can't change a pick (no Mana of its own): refused before anything is signed", async () => {
   const W = fakeWallet("guest");
   const p = SP.plan([{ key: "a", op: op(1), existing: null, wanted: ["x"] }, { key: "c", op: op(3), existing: ["y"], wanted: ["x"] }]);
-  await assert.rejects(SP.send(W, p), /guest wallet has none/);
+  await assert.rejects(SP.send(W, p), /guest wallet can't change a pick/);
   assert.equal(W.calls.length, 0, "nothing sent, not even the new pick");
   const fresh = SP.plan([{ key: "a", op: op(1), existing: null, wanted: ["x"] }]);
   await SP.send(W, fresh);
@@ -136,6 +136,44 @@ test("D-278: KWallet send refuses noSponsor for a guest, and sendBatch refuses a
   assert.ok(sendSrc.indexOf("opts.noSponsor && W.kind") < sendSrc.indexOf("return sendGuest"), "refused before the guest path");
   assert.match(fnSrc("sendBatch"), /if \(opts\.noSponsor\) throw/);
   assert.match(fnSrc("sendKondor"), /let sp = !opts\.gamePays && !opts\.noSponsor \? sponsorFor\(ops\) : null;/);
+});
+
+test("D-278: the KOIN Vault path never asks the Knode sponsor, so a change sent there is never sponsored by Knode", () => {
+  const v = fnSrc("sendVault");
+  assert.doesNotMatch(v, /sponsorFor\(/, "sendVault never picks the Knode sponsor");
+  assert.doesNotMatch(v, /1ByDDSBUzy5zkRceELc54Jh8i41yNRoKt8|W\.sponsor\b/, "no Knode sponsor address in the request");
+  assert.match(v, /operations, mana: "auto"/, "KOIN Vault decides its own funding");
+  assert.match(v, /opts\.noSponsor \? h\("p", \{\}, "This is a change to a pick: Knode's Mana sponsor doesn't pay for it\."\)/);
+  // The only callers of sponsorFor are the guest and Kondor paths (the guest refuses noSponsor before it).
+  const callers = [...w.matchAll(/(?<!function )sponsorFor\(ops\)/g)].length;
+  assert.equal(callers, 2);
+});
+
+test("D-278 guest: no Change button; the card shows the connect note and sends nothing", async () => {
+  const p = SP.plan([{ key: "a", label: "Day 3", op: op(1), existing: ["y"], wanted: ["x"] }]);
+  let shown = null, asked = 0;
+  const go = await SP.confirm(p, () => { asked++; return true; }, null, { guest: true, cannot: (l) => { shown = l; } });
+  assert.equal(go, false);
+  assert.equal(asked, 0, "never asked to change");
+  assert.equal(shown.at(-1), "A guest wallet can't change a pick (a change uses your own Mana). Connect Kondor or KOIN Vault to change a pick.");
+  assert.match(shown[0], /your pick this round is y/);
+});
+
+test("D-284: a packed pick (Picks kind 3, one number 0 to 2^64-1) plans, shows through the game's decode, and sends alone as a change", async () => {
+  const MAX = "18446744073709551615";
+  const decode = (n) => `decoded(${BigInt(n).toString(16)})`;
+  assert.equal(SP.plan([{ key: "a", op: op(1), existing: "0", wanted: "0" }]).same.length, 1, "0 is a real pick");
+  assert.equal(SP.plan([{ key: "a", op: op(1), existing: "07", wanted: "7" }]).same.length, 1, "by value");
+  const p = SP.plan([{ key: "16:20410", label: "Over/Under", op: op(1), existing: MAX, wanted: "5" }], { maxChanges: 2, changesUsed: { "16:20410": 1 } });
+  assert.equal(p.changes.length, 1);
+  const lines = SP.confirmLines(p, decode);
+  assert.match(lines[0], /your pick this round is decoded\(ffffffffffffffff\)\. Change it to decoded\(5\)\? This uses 1 of your 1 change left\./);
+  assert.equal(SP.plan([{ key: "k", op: op(1), existing: "1", wanted: "2" }], { maxChanges: 2, changesUsed: { k: 2 } }).refused[0].why, "no changes left");
+  const W = fakeWallet();
+  await SP.send(W, p);
+  assert.deepEqual(W.calls.map((c) => [c.how, c.opts.noSponsor]), [["send", true]]);
+  const fresh = SP.plan([{ key: "a", op: op(1), existing: null, wanted: "0" }]);
+  assert.equal(fresh.fresh.length, 1, "no pick on chain (null) is new, even when the new pick is 0");
 });
 
 // ── game:check (D-256) ──
