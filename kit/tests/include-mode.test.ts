@@ -29,7 +29,7 @@ function fixture() {
 function glue(dataDir: string, files: Record<string, unknown>) {
   const w = fs.mkdtempSync(path.join(os.tmpdir(), "kit-inc-g3-"));
   for (const d of ["code", "in/inputs", "pub/inputs"]) fs.mkdirSync(path.join(w, d), { recursive: true });
-  fs.copyFileSync(path.join(ROOT, "vhp_ruler.py"), path.join(w, "code", "vhp_ruler.py"));
+  fs.copyFileSync(path.join(ROOT, "ruler", "vhp_ruler.py"), path.join(w, "code", "vhp_ruler.py"));
   fs.writeFileSync(path.join(w, "code", "kit_cards.py"), KIT_CARDS_PY);
   for (const [k, v] of Object.entries(files)) fs.writeFileSync(path.join(w, "in", k), JSON.stringify(v));
   execFileSync("python3", ["-I", "-B", path.join(w, "code", "kit_cards.py"), dataDir, path.join(w, "in"), path.join(w, "pub"), path.join(w, "out.json")], { encoding: "utf8" });
@@ -113,7 +113,7 @@ test("KG parts v1: the publish job's Python rebuild finds a parts week's cards i
   const wk = encoded.find((e: any) => e.part === "wk")!;
   const w = fs.mkdtempSync(path.join(os.tmpdir(), "kit-parts-py-"));
   for (const d of ["code", "in/W006", "pub"]) fs.mkdirSync(path.join(w, d), { recursive: true });
-  fs.copyFileSync(path.join(ROOT, "vhp_ruler.py"), path.join(w, "code", "vhp_ruler.py"));
+  fs.copyFileSync(path.join(ROOT, "ruler", "vhp_ruler.py"), path.join(w, "code", "vhp_ruler.py"));
   fs.writeFileSync(path.join(w, "code", "kit_cards.py"), KIT_CARDS_PY);
   fs.writeFileSync(path.join(w, "in", "W006", wk.name), wk.text);
   execFileSync("python3", ["-I", "-B", path.join(w, "code", "kit_cards.py"), dir, path.join(w, "in"), path.join(w, "pub"), path.join(w, "out.json")], { encoding: "utf8" });

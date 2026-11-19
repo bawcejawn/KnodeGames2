@@ -17,7 +17,8 @@ function scratch(mutYml = (y) => y) {
   const r = fs.mkdtempSync(path.join(os.tmpdir(), "g70-4-")); dirs.push(r);
   fs.mkdirSync(path.join(r, ".github/workflows"), { recursive: true }); fs.mkdirSync(path.join(r, "tools"));
   fs.copyFileSync(path.join(APP, "tools", "games-ruler-embed.mjs"), path.join(r, "tools", "games-ruler-embed.mjs"));
-  fs.writeFileSync(path.join(r, "vhp_ruler.py"), fs.readFileSync(path.join(APP, "ruler/vhp_ruler.py"), "utf8") + "# a later change\n");
+  fs.mkdirSync(path.join(r, "ruler")); // KnodeGames2: the tool reads ruler/vhp_ruler.py
+  fs.writeFileSync(path.join(r, "ruler", "vhp_ruler.py"), fs.readFileSync(path.join(APP, "ruler/vhp_ruler.py"), "utf8") + "# a later change\n");
   fs.writeFileSync(path.join(r, ".github/workflows/games.yml"), mutYml(fs.readFileSync(path.join(APP, ".github/workflows/games.yml"), "utf8")));
   return r;
 }

@@ -65,7 +65,7 @@ test("Staked / Free play: the same two board names in every game, fixed in board
   assert.match(read("web/board.js"), /const LABELS = Object\.freeze\(\{ staked: "Staked", free: "Free play" \}\)/);
   assert.match(read("web/board.js"), /main: LABELS\.staked, label: LABELS\.free/, "a game can't rename the boards");
   assert.match(read("web/app.js"), /\[\["main", L\.staked\], \["free", L\.free\]\]/, "the question table uses the same names");
-  for (const f of ["race.js", "leaders.js", "games.json"]) assert.doesNotMatch(read(f), /main: "|"main":|VHP players/, `${f}: no per-game board names`);
+  for (const f of ["race.js", "leaders.js", "games.json"]) assert.doesNotMatch(read(`web/${f}`), /main: "|"main":|VHP players/, `${f}: no per-game board names`);
 });
 
 // Block X on the Leaders page (2026-11-03): points stored in hundredths (scale 100, shown with 2 decimals), free medals

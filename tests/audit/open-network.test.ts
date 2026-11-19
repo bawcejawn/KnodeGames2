@@ -59,7 +59,8 @@ test("the How it works page says plainly that anyone can influence results, and 
 });
 
 test("the docs say the same, and explain the exact VHP-swing rule", () => {
-  const md = fs.readFileSync("README.md", "utf8");
+  // KnodeGames2: the full section moved from the README to docs/QUESTIONS.md (the README keeps the short version).
+  const md = fs.readFileSync("docs/QUESTIONS.md", "utf8");
   assert.match(md, /## Open network: anyone can influence the results/);
   assert.match(md, new RegExp(DESK));
   assert.match(md, /block-producer node of its own/);

@@ -2,12 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 
-const js = readFileSync(new URL("../../race.js", import.meta.url), "utf8");
-const html = readFileSync(new URL("../../race.html", import.meta.url), "utf8");
+const js = readFileSync(new URL("../../web/race.js", import.meta.url), "utf8");
+const html = readFileSync(new URL("../../web/race.html", import.meta.url), "utf8");
 
 test("race board: one animal picture per race length, all shipped with the site", () => {
   for (const a of ["rabbit", "horse", "bird", "snake", "turtle"]) {
-    assert.ok(existsSync(new URL(`../../media/animals/${a}.png`, import.meta.url)), a);
+    assert.ok(existsSync(new URL(`../../web/media/animals/${a}.png`, import.meta.url)), a);
     assert.ok(js.includes(a), a);
   }
   assert.match(js, /ANIMAL = \{ 0: "bird", 1: "rabbit", 2: "horse", 3: "snake", 4: "turtle" \}/);

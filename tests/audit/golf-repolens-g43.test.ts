@@ -20,7 +20,7 @@ test("G43-2: the rules header no longer says a missed game is never dropped", ()
 });
 
 // ── the Week 2 apply window (confirmation) ──
-await import(path.resolve("weeks.js"));
+await import(path.resolve("web/weeks.js"));
 const W = (globalThis as any).KWeeks, DAY = 86400000;
 const added = Date.parse("2026-11-12T20:16:00Z");          // Thu 12 Nov 3:16 PM EST (about; the exact eta is in `games`)
 const eta = added + 2 * DAY, expiry = eta + 7 * DAY;

@@ -12,7 +12,7 @@ const read = (f) => {
   const nested = `${APP}/web/${f}`;
   return fs.readFileSync(fs.existsSync(direct) ? direct : nested, "utf8");
 };
-const LIB = "vendor/posthog-1.438.13.js";
+const LIB = "web/vendor/posthog-1.438.13.js";
 const pages = fs.readdirSync(path.join(APP, "web")).filter((f) => f.endsWith(".html"));
 
 test("the PostHog library is the pinned posthog-js 1.438.13 no-external build, byte for byte", () => {
