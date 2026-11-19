@@ -11,6 +11,7 @@
  * the published points (math.js decodeStanding): the page never re-scores a day. Everything on screen is built with
  * textContent: no HTML strings. */
 import * as S from "./games/survivor/math.js";
+import * as SP from "./js/lib/send-picks.js";
 
 const isAddr = (a) => typeof a === "string" && /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(a);
 const pad3 = (w) => String(w).padStart(3, "0");
@@ -375,16 +376,19 @@ function start() {
           }));
         if (!producers.length) sel.disabled = true;
         sel.addEventListener("change", () => { if (sel.value) drafts.set(d, sel.value); else drafts.delete(d); });
-        const btn = el("button", { class: "btn", type: "button", onclick: () => sendPick(d, sel.value) }, mineP ? "Change" : "Pick");
-        if (sending || !mineOk || used >= max || (pick && Number(pick.changes) >= MAX_CHANGES)) btn.disabled = true;
+        const guestChange = !!(mineP && W && W.kind === "guest");   // D-278: a change uses your own Mana; a guest wallet has none
+        if (guestChange) sel.disabled = true;
+        const btn = guestChange ? null : el("button", { class: "btn", type: "button", onclick: () => sendPick(d, sel.value) }, mineP ? "Change" : "Pick");
+        if (btn && (sending || !mineOk || used >= max || (pick && Number(pick.changes) >= MAX_CHANGES))) btn.disabled = true;
         const notes = [];
+        if (guestChange) notes.push(el("div", { class: "bx-now", text: SP.GUEST_CHANGE }));
         const mineWhy = mineP ? blocked.get(mineP) : null;
         if (mineP) notes.push(el("div", { class: `bx-now${mineWhy ? " warn" : ""}`, text: `Your pick: ${nameOf(mineP)}${mineWhy ? ` (${mineWhy}: each producer counts once, so this pick costs a life; change it)` : ""}` }));
         else if (unseen.has(d)) notes.push(el("div", { class: "bx-now warn", text: "Your last pick for this day was sent but never showed on the chain: it didn't count. Pick again." }));
         else if (sd.n > 1 && d === days[0]) notes.push(el("div", { class: "bx-now warn", text: "No pick yet: a day without a pick costs a life." }));
         if (W && W.kind === "guest" && !mineP) notes.push(el("div", { class: "bx-now", text: "Guest picks use the shared free Mana pool, which can run out late in the day: pick early." }));
         notes.push(el("div", { class: "bx-now", text: "A producer with too few blocks on the day isn't in its field (the ruler's minimum), and a pick on it costs a life: pick one that signs steadily." }));
-        cell = el("div", { class: "bx-pick" }, sel, btn, ...notes);
+        cell = el("div", { class: "bx-pick" }, sel, ...(btn ? [btn] : []), ...notes);
       }
       rows.push(el("div", { class: `bx-row${mineP ? " mine" : ""}` }, when, cell));
     }
@@ -409,10 +413,56 @@ function start() {
     modal.hidden = false;
     const b = modal.querySelector("button"); if (b) b.focus();
   }
-  function closeModal() { if (modal) modal.hidden = true; }
+  let asking = null;   // the card's open "change it?" question: any way of closing it (Escape, a click outside) answers "keep"
+  const closeAsk = () => { if (asking) { const a = asking; asking = null; a(false); } };
+  function closeModal() { if (modal) modal.hidden = true; closeAsk(); }
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal && !modal.hidden && !modal.querySelector(".pk-spin")) closeModal(); });
   const okBtn = (text = "Done") => el("button", { class: "btn", type: "button", onclick: closeModal }, text);
 
+  /** The shared card's question (D-255): "your pick this round is X. Change it to Y?" Resolves true for Change. */
+  const askChange = (lines) => new Promise((done) => {
+    const go = (v) => () => { asking = null; closeModal(); done(v); };
+    pickModal("info", "Change your pick for that day?", lines, [el("button", { class: "btn btn-primary", type: "button", onclick: go(true) }, "Change it"), el("button", { class: "btn", type: "button", onclick: go(false) }, "Keep my pick")]);
+    asking = done;
+    const keep = modal.querySelectorAll("button")[1]; if (keep) keep.focus();
+  });
+  /** The card's note when a change can't be sent (a guest wallet, D-278): OK only, no Change button. */
+  const cannotChange = (lines) => new Promise((done) => { pickModal("info", "Change your pick for that day?", lines, [okBtn("OK")]); asking = done; });
+
+  const READ_FAILED = "couldn't check your current pick";
+  /** The pick on chain for that day, read right before the card (R4-2). Any failed read throws: never "no pick". */
+  async function readPick(round, who) {
+    let x;
+    try { x = await picksContract.functions.get_pick({ game: S.GAME_ID, round, player: who }); } catch { throw new Error(READ_FAILED); }
+    if (!x || typeof x !== "object") throw new Error(READ_FAILED);
+    const pk = x.result && x.result.pick, l = pk && pk.producers;
+    return { existing: Array.isArray(l) && l.length ? l[0] : null, used: pk ? Number(pk.changes || 0) : 0 };
+  }
+  /** R4-2.3: the change limit, read from the Picks contract (get_game max_changes), never a copied number. If the read
+   *  fails the card shows no count; the contract still refuses a change past its limit. (MAX_CHANGES, pinned to
+   *  bot/picks.ts SURVIVOR_GAME, only words the page's own notes.) */
+  let chainLimit;
+  async function maxChangesOf() {
+    if (chainLimit !== undefined) return chainLimit;
+    try {
+      const r = await picksContract.functions.get_game({ game: S.GAME_ID });
+      const n = Number(r && r.result && r.result.game && r.result.game.max_changes);
+      if (Number.isInteger(n) && n >= 0) return (chainLimit = n);
+    } catch { /* no count shown */ }
+    return undefined;
+  }
+  /** R4-2.6: who pays the Mana, said by wallet kind. Knode's sponsor never pays for a KOIN Vault user (D-301: KOIN Vault
+   *  decides) and never for a change (D-278). */
+  function manaLine(kind, change) {
+    if (change) return "A change: paid with your own Mana.";
+    if (kind === "vault") return "KOIN Vault decides how the Mana is paid (Knode's Mana sponsor isn't used).";
+    if (kind === "guest") return "Free: Knode's Mana sponsor pays the Mana.";
+    return "A first pick is free: Knode's Mana sponsor pays, unless your wallet has enough Mana of its own (then it uses yours).";
+  }
+
+  /** One pick through the shared Send my picks card (D-255 / D-256 / D-278): Survivor's own checks first, then the card
+   *  reads the pick on chain, asks before a change, sends a first pick as today (the sponsor may pay) and a change alone
+   *  with the player's own Mana; a guest can't change a pick. 5 changes per pick (MAX_CHANGES, the contract's limit). */
   async function sendPick(d, producer) {
     const who = me();
     if (!who || !picksContract || sending || gameChanged) return;
@@ -427,20 +477,32 @@ function start() {
     sending = true; renderDays(true);
     const what = `${nameOf(producer)} for ${dayName(d)} (UTC)`;
     const wallet = W.kind === "guest" ? "your guest wallet" : W.label ? W.label() : "your wallet";
-    pickModal("busy", W.kind === "guest" ? "Sending your pick…" : `Confirm in ${wallet}`, [what, "Free: the Knode Mana sponsor pays the Mana."]);
+    const round = String(S.dayNo(d)), key = `${S.GAME_ID}:${round}`, label = `Survivor pick ${nameOf(producer)} for ${dayName(d)}`;
+    const stillOpen = () => S.lockTime(d) - now() > MARGIN;
     try {
-      const { operation } = await picksContract.functions.pick({ player: who, game: S.GAME_ID, round: String(S.dayNo(d)), producers: [producer], number: "0" }, { onlyOperation: true });
-      const id = await W.send(`Survivor pick ${nameOf(producer)} for ${dayName(d)}`, [operation]);
+      const { operation } = await picksContract.functions.pick({ player: who, game: S.GAME_ID, round, producers: [producer], number: "0" }, { onlyOperation: true });
+      // The card decides "first pick or change" from the chain, read right before it, not from the page's cached list
+      // (R4-2: a failed read stops the send; it is never taken as "no pick").
+      const { existing, used } = await readPick(round, who);
+      const maxChanges = await maxChangesOf();
+      const p = SP.plan([{ key, label, op: operation, existing, wanted: producer, open: stillOpen() }], { maxChanges, changesUsed: { [key]: used } });
+      if (p.refused.length) throw new Error(p.refused[0].why === "no changes left" ? "changed again" : "locked");
+      if (p.same.length) throw new Error("already your pick");
+      if (!(await SP.confirm(p, askChange, nameOf, { guest: W.kind === "guest", cannot: cannotChange }))) return;
+      pickModal("busy", W.kind === "guest" ? "Sending your pick…" : `Confirm in ${wallet}`, [what, manaLine(W.kind, p.changes.length > 0)]);
+      const r = await SP.send(W, p, { label, stillOpen });
+      if (!r.sent && !r.changed) throw new Error("locked");
+      const id = r.ids[0];
       pickModal("busy", "Sent. Checking the chain…", [what]);
       let onChain = false;
       for (let t = 0; t < 10 && !onChain; t++) {
-        try { const x = await picksContract.functions.get_pick({ game: S.GAME_ID, round: String(S.dayNo(d)), player: who }); onChain = !!(x.result && x.result.pick && x.result.pick.producers && x.result.pick.producers[0] === producer); } catch { /* again */ }
+        try { const x = await picksContract.functions.get_pick({ game: S.GAME_ID, round, player: who }); onChain = !!(x.result && x.result.pick && x.result.pick.producers && x.result.pick.producers[0] === producer); } catch { /* again */ }
         if (!onChain) await new Promise((res) => setTimeout(res, 3000));
       }
       drafts.delete(d);
-      { const p = { d, producers: [producer], changes: pick ? Number(pick.changes || 0) + 1 : 0, at: Date.now() }; myPicks.set(d, p); sentPicks.set(`${who}|${d}`, p); unseen.delete(d); mineAt = 0; }
+      { const q = { d, producers: [producer], changes: existing ? used + 1 : 0, at: Date.now() }; myPicks.set(d, q); sentPicks.set(`${who}|${d}`, q); unseen.delete(d); mineAt = 0; }
       if (onChain) pickModal("ok", "Pick confirmed", [el("p", {}, "Your pick: ", el("b", { text: nameOf(producer) }), ` for ${dayName(d)}.`),
-        `It locks at 23:55 UTC the night before (${localTime(S.lockTime(d))} your time). Until then you can change it (up to ${MAX_CHANGES} times).`,
+        `It locks at 23:55 UTC the night before (${localTime(S.lockTime(d))} your time). Until then you can change it (up to ${MAX_CHANGES} times; each change uses your own Mana).`,
         id ? el("p", { class: "ago mono", text: `Transaction ${String(id).slice(0, 18)}…` }) : null].filter(Boolean), [okBtn()]);
       else pickModal("info", "Sent, not seen on the chain yet", ["Your wallet sent it. It usually shows within a minute; this list updates by itself."], [okBtn("OK")]);
     } catch (e) {
@@ -450,6 +512,8 @@ function start() {
         : /used up/i.test(m) ? "Today's picks are used up (changes count). More after 00:00 UTC."
         : /changed again/i.test(m) ? `That pick has been changed ${MAX_CHANGES} times already.`
         : /already your pick/i.test(m) ? "That is already your pick."
+        : m === SP.GUEST_CHANGE ? SP.GUEST_CHANGE
+        : m === READ_FAILED ? "The page couldn't check your current pick on the chain, so nothing was sent. Try again in a moment."
         : /reject|denied|cancel/i.test(m) ? "Cancelled in your wallet. Nothing was sent."
         : `Not sent: ${m.slice(0, 200)}`;
       pickModal(/Cancelled/.test(why2) ? "info" : "bad", /Cancelled/.test(why2) ? "Cancelled" : "Pick not sent", [why2], [okBtn("OK")]);
