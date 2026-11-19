@@ -439,7 +439,7 @@ function start() {
     if (p.same.length) throw new Error("already your pick");
     const cannot = (lines) => new Promise((done) => { pop("info", title, lines, [okBtn("OK")]); asking = done; });
     if (!(await SP.confirm(p, ask(title), nameOf, { guest: W.kind === "guest", cannot }))) return null;
-    pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [p.changes.length ? "A change: paid with your own Mana." : "Free: the Knode Mana sponsor pays the Mana."]);
+    pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [p.changes.length ? "A change: paid with your own Mana." : "A first pick is free: Knode's Mana sponsor pays, unless your wallet has enough Mana of its own (then it uses yours)."]);
     return SP.send(W, p, { label, stillOpen: open });
   }
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal && !modal.hidden && !modal.querySelector(".fx-spin")) closePop(); });

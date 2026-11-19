@@ -577,7 +577,7 @@
       if (id !== W.chainId) throw new Error("The network node reports a different chain than Knode Games runs on. Nothing was signed.");
     }
     // D-278: a pick change is never paid by the Knode Mana sponsor. A guest wallet has no Mana of its own, so it can't send one.
-    if (opts.noSponsor && W.kind === "guest") throw new Error("A guest wallet can't change a pick (a change uses your own Mana). Connect Kondor or KOIN Vault to change a pick. Nothing was sent.");
+    if (opts.noSponsor && W.kind === "guest") throw new Error("A guest wallet can't change a pick (a change uses your own Mana). Connect a wallet to change a pick. Nothing was sent.");
     if (W.kind === "guest") { if (!guestOn()) throw new Error("Guest play is paused for now. Connect Kondor or KOIN Vault to play."); return sendGuest(label, ops, opts); }
     return W.kind === "vault" ? sendVault(label, ops, opts) : sendKondor(label, ops, opts);
   }

@@ -3,7 +3,8 @@
  *  1. Before anything is sent, the player sees "your pick this round" for every pick that already exists on chain,
  *     and confirms the change (a change uses one of the game's max_changes).
  *  2. A round that has locked (or is not open) is never sent: the page asks `open(item)` right before signing.
- *  3. A NEW pick may be paid by the Knode Mana sponsor, as today; several new picks go out together with
+ *  3. A NEW pick may be paid by the Knode Mana sponsor, as today (D-294: only for a wallet under the sponsor's
+ *     selfPayMin and for guests; KWallet reads selfPayMin from game-data/deployment.json "sponsor", the one copy); several new picks go out together with
  *     KWallet.sendBatch (one signature) when the sponsor's measured batch numbers are in deployment.json.
  *  4. A CHANGE is never sponsored (D-278): it goes out alone, paid with the player's own Mana (KWallet's `noSponsor`),
  *     never inside a sponsored batch. A guest wallet (no Mana of its own) can't change a pick; the card says so.
@@ -23,7 +24,7 @@ export function samePick(a, b) {
   return one(a, b);
 }
 /** What a guest sees instead of a Change button (D-278: a change uses the player's own Mana; a guest wallet has none). */
-export const GUEST_CHANGE = "A guest wallet can't change a pick (a change uses your own Mana). Connect Kondor or KOIN Vault to change a pick.";
+export const GUEST_CHANGE = "A guest wallet can't change a pick (a change uses your own Mana). Connect a wallet to change a pick.";
 const hasPick = (x) => x !== null && x !== undefined && x !== "" && !(Array.isArray(x) && x.length === 0);
 
 /** Split what the player asked for into new picks, changes, no-ops and refusals.
@@ -53,7 +54,7 @@ export function confirmLines(p, name) {
     lines.push(`${c.label}: your pick this round is ${show(c.existing, name)}. Change it to ${show(c.wanted, name)}?`
       + (c.changesLeft !== null && c.changesLeft !== undefined ? ` This uses 1 of your ${c.changesLeft} change${c.changesLeft === 1 ? "" : "s"} left.` : " This uses one of your changes for this round."));
   }
-  if (p.changes.length) lines.push("A change is paid with your own Mana (the free Mana sponsor pays only for picks you haven't made yet).");
+  if (p.changes.length) lines.push("A change is paid with your own Mana (Knode's free Mana sponsor pays only for a first pick).");
   for (const r of p.refused) lines.push(`${r.label || "A pick"}: not sent (${r.why === "locked" ? "that round has locked" : r.why}).`);
   return lines;
 }

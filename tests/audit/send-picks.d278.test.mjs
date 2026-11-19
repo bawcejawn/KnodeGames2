@@ -155,7 +155,7 @@ test("D-278 guest: no Change button; the card shows the connect note and sends n
   const go = await SP.confirm(p, () => { asked++; return true; }, null, { guest: true, cannot: (l) => { shown = l; } });
   assert.equal(go, false);
   assert.equal(asked, 0, "never asked to change");
-  assert.equal(shown.at(-1), "A guest wallet can't change a pick (a change uses your own Mana). Connect Kondor or KOIN Vault to change a pick.");
+  assert.equal(shown.at(-1), "A guest wallet can't change a pick (a change uses your own Mana). Connect a wallet to change a pick.");
   assert.match(shown[0], /your pick this round is y/);
 });
 
@@ -174,6 +174,15 @@ test("D-284: a packed pick (Picks kind 3, one number 0 to 2^64-1) plans, shows t
   assert.deepEqual(W.calls.map((c) => [c.how, c.opts.noSponsor]), [["send", true]]);
   const fresh = SP.plan([{ key: "a", op: op(1), existing: null, wanted: "0" }]);
   assert.equal(fresh.fresh.length, 1, "no pick on chain (null) is new, even when the new pick is 0");
+});
+
+test("D-294: one copy of selfPayMin: the wallet reads the sponsor's (game-data/deployment.json), the card and page keep none", () => {
+  assert.match(fnSrc("hasOwnMana"), /const v = sp && sp\.selfPayMin;/);
+  assert.match(fnSrc("sendKondor"), /if \(sp && await hasOwnMana\(sp\)\) \{ sp = null;/, "25+ Mana of its own: the wallet pays");
+  for (const f of ["web/js/lib/send-picks.js", "web/fantasy.js"]) {
+    const src = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    assert.doesNotMatch(src, /selfPayMin|\b25\s*Mana|2500000000\b/, `${f} keeps no copy of the self-pay line`);
+  }
 });
 
 // ── game:check (D-256) ──
