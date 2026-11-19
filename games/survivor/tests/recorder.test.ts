@@ -24,7 +24,7 @@ const WEEK = 2;                                       // Mon 2 – Sat 7 Nov 202
 const W = ["a", "b", "c", "d", "e"].map((c) => "1" + c.repeat(33));
 const [PA, PB, PC, PD, PE] = ["A", "B", "C", "D", "E"].map((c) => "1" + c.repeat(33));
 const cfg = () => kitConfig(loadManifest("survivor", ROOT));
-/** The kit config on the test chain's week (game.json firstWeek is mainnet's week 7). */
+/** The kit config on the test chain's week (game.json firstWeek is mainnet's week 6). */
 const cfgAt = (w = WEEK) => ({ ...cfg(), firstWeek: w });
 /** The first block at or after `ms` on the test chain (what the kit's ctx.blockAt answers). */
 async function blockAt(ms: number) {
@@ -49,8 +49,8 @@ test("manifest: game.json passes the kit's schema, ships building with the free 
 
 test("rounds: none before Season 1 or with no launch set; then Monday to Saturday, Picks round = the UTC day number", () => {
   const span = (w: number) => ({ week: w, start: S.weekStart(w), end: S.weekStart(w + 1) });
-  assert.deepEqual(game.roundsFor(span(6), { now: 0 }), [], "mainnet: nothing before Season 1 (week 7)");
-  assert.equal(game.roundsFor(span(7), { now: 0 })[0].id, "d20261207", "mainnet: Season 1 day 1 is Mon 7 Dec");
+  assert.deepEqual(game.roundsFor(span(5), { now: 0 }), [], "mainnet: nothing before Season 1 (week 6)");
+  assert.equal(game.roundsFor(span(6), { now: 0 })[0].id, "d20261130", "mainnet: Season 1 day 1 is Mon 30 Nov");
   assert.deepEqual(makeGame(null).roundsFor(span(WEEK), { now: 0 }), [], "no launch set: no rounds");
   const rs = makeGame(WEEK).roundsFor(span(WEEK), { now: 0 });
   assert.equal(rs.length, 6);

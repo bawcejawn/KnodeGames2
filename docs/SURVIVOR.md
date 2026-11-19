@@ -8,7 +8,7 @@ An elimination game in Knode Games. Each play day you pick one Koinos block prod
 | Season | Two vault weeks: Monday to Saturday each, **12 play days**. Sundays rest (WEEK_CYCLE) |
 | Scoring | The shared VHP ruler (RULE_VERSION 4, mode A): one ruler card per UTC day |
 | Picks | One a day on the Knode Games Picks contract (game 3). Each day locks at 23:55 UTC the night before and opens 7 days ahead |
-| Seasons | **Season 1: Mon 7 Dec 2026** (vault weeks 7–8), unpaid practice. **Season 2: Mon 21 Dec 2026** (weeks 9–10), the first paid season. Then every 2 weeks (owner, 12 and 14 Nov) |
+| Seasons | **Season 1: Mon 30 Nov 2026** (vault weeks 6–7, D-246), unpaid practice. **Season 2: Mon 14 Dec 2026** (weeks 8–9), the first paid season. Then every 2 weeks (owner, 12 and 14 Nov) |
 | Free prize | **OFF** (D-081, D-082). The Free play board shows standings only |
 | Code | `games/survivor/` (a Shared Game Kit module) and `web/survivor.html` / `web/survivor.js` (the page) |
 | Status | **Built, in review.** One KnodeGames2 PR (D-221); it merges after cutover. Then Repo Lens, Picks registration and the vault steps (below) |
@@ -103,10 +103,10 @@ The old recorder (`bot/games/survivor.ts`, `survivor-math.js`), its testnet kit 
 ## Launch steps (nothing before the Repo Lens GO; each with its dry run first)
 Steps with commands: `docs/SURVIVOR-RUNBOOK.md`.
 1. This PR merges after cutover, on its Repo Lens GO and a green `ci`.
-2. **By Sat 28 Nov:** register game 3 on Picks: kind 1, list_size 1, lock_mode 2, round_size 86,400,000, round_offset 0, lead 300,000, ahead 604,800,000, max_changes 5, 20 picks a day, enabled. Announce, then apply 48 h later, so picks for day 1 (Mon 7 Dec) open on Mon 30 Nov. Add the sponsor allowlist row for game 3 picks.
-3. Free-prize switch OFF for game 3 (`npm run prizes -- off 3`, then `--send`) before week 7.
-4. `SURVIVOR_ENABLED` = true, before Mon 7 Dec 00:00 UTC. Weeks before week 7 are never recorded (`firstWeek`).
+2. **Announce Sun 22 Nov, apply Tue 24 Nov (D-246):** register game 3 on Picks: kind 1, list_size 1, lock_mode 2, round_size 86,400,000, round_offset 0, lead 300,000, ahead 604,800,000, max_changes 5, 20 picks a day, enabled. Announce, then apply 48 h later, so picks for day 1 (Mon 30 Nov) are open from Tue 24 Nov. Add the sponsor allowlist row for game 3 picks.
+3. Free-prize switch OFF for game 3 (`npm run prizes -- off 3`, then `--send`) before week 6 (by Sun 29 Nov 7 PM ET).
+4. `SURVIVOR_ENABLED` = true, before Mon 30 Nov 00:00 UTC (Sun 29 Nov 7 PM ET). Weeks before week 6 are never recorded (`firstWeek`).
 5. `games.json`: Survivor live, menus and sitemap (Hub).
-6. **For Season 2 (by about Sat 12 Dec):** vault `game-add 3 "Survivor" --staked --free --season 2` with **`from_week` = 9** (Season 2's first week; checked twice: a wrong week silently loses the season prize), then `game-apply` 48 h later, inside week 8. Set `SURVIVOR_PRIZES_FROM_WEEK` = 9.
+6. **For Season 2:** vault `game-add 3 "Survivor" --staked --free --season 2`, added **Fri 4 Dec from ~7:15 PM ET** (not earlier) and applied **Mon 7 Dec ~11 AM ET**, inside vault week 7, so it earns from **week 8** (Season 2's first week; the dry run must say week 8: a wrong week silently loses the season prize). Then set `SURVIVOR_PRIZES_FROM_WEEK` = 8. Steps: `docs/SURVIVOR-RUNBOOK.md`.
 
 **No `SURVIVOR_RULER_FROM_WEEK`.** Survivor scores on the ruler from Season 1, its first season ever. The unpaid Season 1 does the job of a shadow week.

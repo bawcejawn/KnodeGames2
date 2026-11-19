@@ -4,7 +4,7 @@
 // RULES (owner decisions 27 Oct – 12 Nov 2026; docs/games/Survivor.md is the plain-language copy)
 // - A season is two vault weeks. It plays Monday to Saturday of each week: 12 play days. Sundays rest (WEEK_CYCLE:
 //   multi-week seasons rest on their Sundays; owner 12 Nov): no pick is due and no life is lost on a Sunday.
-//   Season 1 starts on vault week FIRST_WEEK (7: Mon 7 Dec 2026, owner 14 Nov). Season 1 is unpaid practice and
+//   Season 1 starts on vault week FIRST_WEEK (6: Mon 30 Nov 2026, D-246). Season 1 is unpaid practice and
 //   Season 2 is the first paid season (owner 12 Nov, option C); what pays is decided by the vault registration and
 //   SURVIVOR_PRIZES_FROM_WEEK, never by this file.
 // - One pick a day: the producer you think will NOT land in the day's out-zone. Season day n is Picks contract game 3,
@@ -51,10 +51,10 @@ export const DAY = 86400000;
 export const WEEK = 7 * DAY;
 /** The vault's week 0 starts Mon 19 Oct 2026 00:00 UTC (UTC day 20745); week 4 = Mon 16 Nov 2026 = "Week 1". */
 export const GENESIS = 20745 * DAY;
-/** Season 1's first vault week: week 7 = Mon 7 Dec 2026 (owner, 14 Nov). Season 1 (weeks 7–8) is unpaid practice;
- *  Season 2 (weeks 9–10, from Mon 21 Dec) is the first paid season (the vault's from_week = 9). Must equal game.json
+/** Season 1's first vault week: week 6 = Mon 30 Nov 2026 (D-246; was week 7). Season 1 (weeks 6–7) is unpaid practice;
+ *  Season 2 (weeks 8–9, from Mon 14 Dec) is the first paid season (the vault's from_week = 8). Must equal game.json
  *  firstWeek (a test checks): the kit counts seasons from the first week it records. */
-export const FIRST_WEEK = 7;
+export const FIRST_WEEK = 6;
 export const SEASON_WEEKS = 2;
 export const PLAY_DAYS_PER_WEEK = 6;                       // Monday to Saturday
 export const SEASON_DAYS = SEASON_WEEKS * PLAY_DAYS_PER_WEEK;   // 12

@@ -1,5 +1,5 @@
 // Survivor (TEST FIXTURE): the conformance sample for `npm run game:check -- survivor`. Season 1's first week (vault
-// week 7, Mon 7 – Sat 12 Dec 2026) on the kit's made-up ruler chain (kit/testing/ruler-fixture.ts: five producers, one
+// week 6, Mon 30 Nov – Sat 5 Dec 2026) on the kit's made-up ruler chain (kit/testing/ruler-fixture.ts: five producers, one
 // block every 3 s from block 100,000).
 // - Block 100,000 is 15 days before the week, so every play day's card has its 14 days of history.
 // - Hour 0 is just after the week. Until decide(), the last irreversible block sits just before Saturday ends, so
@@ -12,7 +12,7 @@ import { rulerLedger, P, FROM } from "../../../kit/testing/ruler-fixture.ts";
 import type { Sample } from "../../../kit/testing/conformance.ts";
 
 export const S = "1SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS", F = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-const WEEK = 7, BLOCK = 3000, T_FROM = at(WEEK) - 15 * DAY;      // block FROM's time
+const WEEK = 6, BLOCK = 3000, T_FROM = at(WEEK) - 15 * DAY;      // block FROM's time
 const blockOf = (t: number) => FROM + Math.floor((t - T_FROM) / BLOCK);
 const EXTRA = 8 * 28800;                                           // ledger: 15 + 8 days from FROM, to a day after the week
 const LAST = FROM + 15 * 28800 + EXTRA - 1;

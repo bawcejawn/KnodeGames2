@@ -54,7 +54,7 @@ test("page: reads the kit's parts folders and shows exactly the season math.js p
   };
   const stakedList = [W[0], W[1]];
   const wd = seasonWorld(picks, stakedList), L = R.ledger(timeline());
-  // The test chain is in early November: the season starts on the test's own week (game.json says week 7 on mainnet).
+  // The test chain is in early November: the season starts on the test's own week (game.json says week 6 on mainnet).
   const cfg = { ...kitConfig(loadManifest("survivor", ROOT)), firstWeek: WEEK };
   assert.equal(cfg.parts, "d", "Survivor's week files are KG parts v1 folders (CAPACITY_STANDARD rule 4)");
   const rp = new Replay(makeGame(WEEK) as any, cfg);

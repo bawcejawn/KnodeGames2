@@ -1,6 +1,6 @@
 # Survivor (game 3)
 
-> **Sources:** owner decisions D-020, D-051, D-062, D-068, D-081, D-082, D-095, 12 Nov 2026 (Season 1 option C, Sundays rest, void pick) and 14 Nov 2026 (Season 1 on Mon 7 Dec, the no-card rule, old recorder and testnet kit removed, no testnet season; D-new, numbered by the Library); the repo (`games/survivor/`). **Last updated:** 14 Nov 2026; previous version `../archive/2026-11-04b/games/Survivor.md` and git history.
+> **Sources:** owner decisions D-020, D-051, D-062, D-068, D-081, D-082, D-095, 12 Nov 2026 (Season 1 option C, Sundays rest, void pick) and 14 Nov 2026 (Season 1 on Mon 7 Dec, moved to Mon 30 Nov by D-246 on 18 Nov; the no-card rule, old recorder and testnet kit removed, no testnet season; D-new, numbered by the Library); the repo (`games/survivor/`). **Last updated:** 14 Nov 2026; previous version `../archive/2026-11-04b/games/Survivor.md` and git history.
 > **Legend:** ✅ verified · 💬 from a chat · 👤 owner · ❓ unknown
 
 ## Purpose
@@ -8,7 +8,7 @@ A two-week elimination game: pick one producer a day and avoid the day's unlucki
 
 ## Gameplay
 - **Season:** two vault weeks, Monday to Saturday each: **12 play days**. Sundays rest: no pick, no life lost (WEEK_CYCLE; owner 12 Nov). 👤
-- **Seasons:** Season 1 is **unpaid practice** from **Mon 7 Dec 2026** (vault weeks 7–8); Season 2, the **first paid season**, from Mon 21 Dec (weeks 9–10); then every 2 weeks (owner 12 and 14 Nov). `math.js` `FIRST_WEEK` = 7. 👤
+- **Seasons:** Season 1 is **unpaid practice** from **Mon 30 Nov 2026** (vault weeks 6–7, D-246); Season 2, the **first paid season**, from Mon 14 Dec (weeks 8–9); then every 2 weeks (owner 12 and 14 Nov). `math.js` `FIRST_WEEK` = 6. 👤
 - **Picks:** one producer per play day on the Picks contract, game 3 (round = the UTC day number). Picks open 7 days ahead and lock at 23:55 UTC the night before; up to 5 changes and 20 picks a day. A player joins by picking for day 1. ✅ `math.js`
 - **Scoring:** the shared VHP ruler (RULE_VERSION 4), one ruler card per UTC day, from Season 1 (option C: the old blocks handicap is dropped). A producer's day score is its fpct (luck against its own expected blocks, as a field percentile). ✅ `math.js`
 - **Field:** the card's producers with entry that aren't void. Knode's own producers stay in, disclosed on the page; open market (D-051). 👤
@@ -36,8 +36,8 @@ A two-week elimination game: pick one producer a day and avoid the day's unlucki
 
 ## Dependencies
 - **Shared Game Kit** (`games/survivor/`, D-158): K1 seasons, G7 `ctx.blockAt`, K4 live week, K8 fallback (in the kit); K9 `ctx.decided` for the no-card rule (asked; until then a day with no card stays pending). The vault pin `vaultGames.3.kit` is in the Survivor PR. 💬
-- **Picks contract:** game 3 registration (kind 1, list 1, lock mode 2, round 86,400,000 ms, lead 300,000 ms, ahead 604,800,000 ms, 5 changes, 20 picks a day), by Sat 28 Nov. Not yet registered. ✅
-- **Vault v6** for staked points from week 9; results `games-data:survivor/vault/W<week>.json`. ✅ `vaultGames`
+- **Picks contract:** game 3 registration (kind 1, list 1, lock mode 2, round 86,400,000 ms, lead 300,000 ms, ahead 604,800,000 ms, 5 changes, 20 picks a day): announce Sun 22 Nov, apply Tue 24 Nov (D-246). Not yet registered. ✅
+- **Vault v6** for staked points from week 8; results `games-data:survivor/vault/W<week>.json`. ✅ `vaultGames`
 - **The page** (`web/survivor.html`, `web/survivor.js`): on the kit's files. ✅
 
 ## Current status (14 Nov)
@@ -46,7 +46,7 @@ A two-week elimination game: pick one producer a day and avoid the day's unlucki
 - The old recorder (`bot/games/survivor.ts`, `survivor-math.js`), its testnet kit and their tests are removed (owner 14 Nov). **No testnet season**: Season 1 is the rehearsal (owner 14 Nov). 👤
 
 ## Known issues
-- **I-050:** launch prerequisites (the KnodeGames2 PR, Repo Lens, Picks registration by Sat 28 Nov, the vault steps for week 9).
+- **I-050:** launch prerequisites (the KnodeGames2 PR, Repo Lens, Picks registration by Tue 24 Nov, the vault steps for week 8).
 - **I-051:** the vault can't recompute points from the chain yet.
 - **I-053:** pass-4 questions (mid-season board changes, cheap-wallet gaming of nets or ends), on the kit module.
 - **K9:** until the kit passes `ctx.decided`, a day with no ruler card stays pending instead of being skipped.
@@ -54,7 +54,7 @@ A two-week elimination game: pick one producer a day and avoid the day's unlucki
 ## Future plans
 In order:
 1. The Survivor PR merges after cutover (Repo Lens GO);
-2. Picks registration (by Sat 28 Nov), `SURVIVOR_ENABLED`, `games.json` live;
-3. Season 1 (Mon 7 Dec, practice);
-4. vault `game-add` from week 9, then Season 2 (Mon 21 Dec, first paid);
+2. Picks registration (announce Sun 22, apply Tue 24 Nov), `SURVIVOR_ENABLED`, `games.json` live;
+3. Season 1 (Mon 30 Nov, practice);
+4. vault `game-add` from week 8, then Season 2 (Mon 14 Dec, first paid);
 5. later: the free prize (K3, K5) and a ruler mode for Survivor.

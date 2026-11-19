@@ -1,8 +1,8 @@
 # Survivor: testing (no testnet season)
 
-**Owner, 14 Nov 2026: no testnet season.** The old testnet kit (`bot/survivor-test.ts`, `tools/survivor-testnet/`) only ran the old recorder, which was removed. A real testnet season would take 12 days and push Season 1 past Mon 7 Dec. Instead:
+**Owner, 14 Nov 2026: no testnet season.** The old testnet kit (`bot/survivor-test.ts`, `tools/survivor-testnet/`) only ran the old recorder, which was removed. A real testnet season would take 12 days and push Season 1 past its start. Instead:
 
-1. **Season 1 is the live rehearsal.** It runs on mainnet from Mon 7 Dec 2026 with real picks and real ruler cards, and pays nothing (the vault's `from_week` is Season 2's first week, 9).
+1. **Season 1 is the live rehearsal.** It runs on mainnet from Mon 30 Nov 2026 with real picks and real ruler cards, and pays nothing (the vault's `from_week` is Season 2's first week, 8).
 2. **The code is tested on fake nodes**, through the kit's real recorder and publish check, on the ruler's made-up test chain. Run them on any copy of the repo:
 
 ```powershell

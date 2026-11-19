@@ -26,13 +26,13 @@ const day = (n, scores, voids = []) => {
   return { round: String(n), n, field, out: S.outOf(field, n), void: voids };
 };
 
-test("calendar: Season 1 starts Mon 7 Dec 2026 (vault week 7, owner 14 Nov); nothing before it, and no launch means no season", () => {
-  assert.equal(S.FIRST_WEEK, 7);
-  assert.equal(new Date(S.weekStart(S.FIRST_WEEK)).toISOString(), "2026-12-07T00:00:00.000Z");
-  assert.equal(S.seasonOfWeek(6), null, "before Season 1");
-  assert.deepEqual(S.playDaysOf(6), []);
-  assert.deepEqual(S.seasonOfWeek(9), { season: 2, k: 0, startWeek: 9 }, "Season 2, the first paid one, starts Mon 21 Dec");
-  assert.equal(new Date(S.weekStart(9)).toISOString(), "2026-12-21T00:00:00.000Z");
+test("calendar: Season 1 starts Mon 30 Nov 2026 (vault week 6, D-246); nothing before it, and no launch means no season", () => {
+  assert.equal(S.FIRST_WEEK, 6);
+  assert.equal(new Date(S.weekStart(S.FIRST_WEEK)).toISOString(), "2026-11-30T00:00:00.000Z");
+  assert.equal(S.seasonOfWeek(5), null, "before Season 1");
+  assert.deepEqual(S.playDaysOf(5), []);
+  assert.deepEqual(S.seasonOfWeek(8), { season: 2, k: 0, startWeek: 8 }, "Season 2, the first paid one, starts Mon 14 Dec");
+  assert.equal(new Date(S.weekStart(8)).toISOString(), "2026-12-14T00:00:00.000Z");
   assert.equal(S.seasonOfWeek(10, null), null, "no launch set: no season");
   assert.deepEqual(S.playDaysOf(10, null), []);
   assert.equal(S.seasonDayOf(S.weekStart(10), null), null);

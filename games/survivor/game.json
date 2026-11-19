@@ -22,7 +22,7 @@
   "entry": { "minRounds": 1, "minPoints": 1 },
   "maxRoundPoints": 638975,
   "liveWeek": true,
-  "firstWeek": 7,
+  "firstWeek": 6,
   "parts": "d",
   "vhpData": true
 }
