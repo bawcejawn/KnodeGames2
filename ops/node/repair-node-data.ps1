@@ -6,12 +6,12 @@
   again (the self-heal reports "block store started 5 times in 20 minutes"). A restart doesn't cure it. All three
   nodes hold the same chain, so this copies a healthy node's two databases over the broken node's.
 
-  Run in PowerShell from C:\kprediction, for example to repair the game node from the desk node:
-      powershell -ExecutionPolicy Bypass -File node\repair-node-data.ps1 -Broken game -From desk
+  Run in PowerShell from your KnodeGames2 folder (e.g. C:\knodegames2), for example to repair the game node from the desk node:
+      powershell -ExecutionPolicy Bypass -File ops\node\repair-node-data.ps1 -Broken game -From desk
   -Broken / -From: game (C:\kpred-node), desk (C:\kpred-desk-node) or personal (C:\koinos-personal).
 
   Works whether a node keeps its data in its Windows folder (basedir) or in a Docker volume (after
-  node\move-node-to-volume.ps1: its koinos folder then has a docker-compose.override.yml naming the volume). Between
+  ops\node\move-node-to-volume.ps1: its koinos folder then has a docker-compose.override.yml naming the volume). Between
   two folders it copies with robocopy; when a volume is involved it copies with a small throwaway Linux container.
 
   What it does:
@@ -56,7 +56,7 @@ function Copy-Db($from, $to) {
   & robocopy $from $to /E /MT:16 /R:2 /W:5 /NFL /NDL /NP /NJH | Out-Null
   if ($LASTEXITCODE -ge 8) { throw "Copying $from failed (robocopy code $LASTEXITCODE)" }
 }
-# The node's Docker volume (written by node\move-node-to-volume.ps1 into docker-compose.override.yml), or $null.
+# The node's Docker volume (written by ops\node\move-node-to-volume.ps1 into docker-compose.override.yml), or $null.
 function VolumeOf($dir) {
   $o = Join-Path (Join-Path $dir "koinos") "docker-compose.override.yml"
   if (-not (Test-Path $o)) { return $null }
