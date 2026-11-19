@@ -7,7 +7,8 @@ import fs from "node:fs";
 
 const APP = process.env.APP || ".";
 const pages = fs.readdirSync(`${APP}/web`).filter((f) => f.endsWith(".html"));
-const read = (p) => fs.readFileSync(`${APP}/${p}`, "utf8");
+// Pages are listed by name from web/; other reads already name web/ (KnodeGames2 layout).
+const read = (p) => fs.readFileSync(`${APP}/${p.startsWith("web/") ? p : `web/${p}`}`, "utf8");
 
 test("every page with a tab bar has Games · Stake · Leaders · More and a More sheet with the rest", () => {
   let n = 0;

@@ -1,7 +1,7 @@
 // tests/audit/names.reserved.ns.test.mjs — not run here (static review)
 import { test } from "node:test"; import assert from "node:assert/strict";
 import path from "node:path"; import { fileURLToPath } from "node:url";
-await import(path.join(fileURLToPath(new URL("../..", import.meta.url)), "names.js"));
+await import(path.join(fileURLToPath(new URL("../..", import.meta.url)), "web", "names.js"));
 const R = globalThis.KNames.rules;
 test("N-S-2: Knode/Koinos lookalikes are reserved", () => {
   for (const n of ["K.node Swap", "K-node pool", "Kno de Swap", "Knocle Games", "Koinos Group", "Koinos Support"]) assert.notEqual(R.checkName(n), null, n);
