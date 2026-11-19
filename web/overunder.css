@@ -1,0 +1,26 @@
+/* Over/Under page (small; the shared look is styles.css and board.css). */
+.ou { max-width: 760px; margin: 0 auto; padding: 16px 14px 48px; }
+.ou-hero h1 { margin: 4px 0 6px; font-size: clamp(26px, 6vw, 38px); line-height: 1.1; }
+.ou-kicker { margin: 0; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: 12px; opacity: .7; }
+.ou-lede { margin: 0 0 14px; opacity: .85; }
+.ou-plan { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+.ou-plan .lbl { font-weight: 700; }
+.ou-plan button { display: grid; text-align: left; padding: 6px 10px; border-radius: 10px; border: 1px solid #8884; background: transparent; color: inherit; cursor: pointer; }
+.ou-plan button[aria-pressed="true"] { border-color: currentColor; box-shadow: inset 0 0 0 1px currentColor; }
+.ou-plan .s { font-size: 12px; opacity: .7; }
+.ou-lock { margin: 4px 0 10px; }
+.ou-table { width: 100%; border-collapse: collapse; }
+.ou-table th { text-align: left; font-size: 12px; opacity: .7; padding: 4px 6px; }
+.ou-table td { padding: 8px 6px; border-top: 1px solid #8883; }
+.ou-table td.num { font-variant-numeric: tabular-nums; font-weight: 700; width: 64px; }
+.ou-table tr.on td { background: #8881; }
+.ou-btns { white-space: nowrap; text-align: right; }
+.ou-btns button { min-width: 74px; min-height: 40px; margin-left: 6px; border-radius: 10px; border: 1px solid #8886; background: transparent; color: inherit; font-weight: 700; cursor: pointer; }
+.ou-btns button[aria-pressed="true"].ou-o { background: #1b8a4b; border-color: #1b8a4b; color: #fff; }
+.ou-btns button[aria-pressed="true"].ou-u { background: #b4402b; border-color: #b4402b; color: #fff; }
+.ou-none { padding: 18px 6px; opacity: .8; }
+.ou-check { min-height: 1.4em; margin: 10px 0 6px; }
+.ou-check.ok { font-weight: 600; }
+.ou-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.ou-small { font-size: 12px; opacity: .7; margin: 4px 0; }
+.ou-board { margin-top: 28px; }
