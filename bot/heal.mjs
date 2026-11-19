@@ -60,8 +60,8 @@ const MAX_HEALS = 3, WINDOW_MS = 6 * 3600_000;
 const NAG_MS = 3 * 3600_000;           // repeat an "I can't fix this" email at most every 3 hours
 // Auto-repair (block-store crash loop → copy a healthy node's block data over the broken node's).
 const LOCK = path.join(DIR, "repair.lock");
-const TASK_INFO = path.join(DIR, "heal-task.json");   // written by node\install-heal.ps1 (the task's time limit)
-const REPAIR_SCRIPT = process.env.HEAL_REPAIR_SCRIPT || path.join(ROOT, "node", "repair-node-data.ps1");
+const TASK_INFO = path.join(DIR, "heal-task.json");   // written by ops\node\install-heal.ps1 (the task's time limit)
+const REPAIR_SCRIPT = process.env.HEAL_REPAIR_SCRIPT || path.join(ROOT, "ops", "node", "repair-node-data.ps1");   // ops\node\ in KnodeGames2
 const POWERSHELL = process.env.HEAL_POWERSHELL || "powershell.exe";
 const SOURCE_ORDER = ["desk", "game", "personal"];
 const SOURCE_MAX_BEHIND = 5;            // a source must be this close to the network, two checks in a row

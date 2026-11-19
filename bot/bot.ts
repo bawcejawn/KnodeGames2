@@ -298,6 +298,12 @@ export type Ctx = {
   previousOperator?: Signer;
   /** Set when bot-state.json was not trusted this run and the state started afresh. */
   stateReset?: boolean;
+  /** Repo Lens J16-1: the trusted bot-state.json's checkedUpTo at the start of the run. A question id at or above it
+   *  that matches no question file is held (the run stops, nothing is voided), not voided: it is most likely one this
+   *  bot posted in a run whose publish never landed. Unset when there is no trusted state (first run, state reset). */
+  orphanHoldFrom?: number;
+  /** Ids the owner has OK'd to void anyway (repository variable BOT_VOID_ORPHANS, e.g. "31,32"). */
+  voidOrphansOk?: Set<number>;
 };
 
 const num = (x: any) => Number(x ?? 0);
@@ -429,6 +435,8 @@ export async function tick(ctx: Ctx) {
     }
     if (distrust) { ctx.problems.push(distrust); bs = fresh(); ctx.stateReset = true; }
   }
+  if (raw && !ctx.stateReset && !ctx.noSealKey && Number.isInteger(stored.checkedUpTo)) ctx.orphanHoldFrom = stored.checkedUpTo;
+  ctx.voidOrphansOk ??= new Set(String(process.env.BOT_VOID_ORPHANS ?? "").split(",").map((s) => s.trim()).filter((s) => /^\d+$/.test(s)).map(Number));
   const save = () => {
     if (ctx.dryRun) return;
     const plain = JSON.parse(JSON.stringify({ ...bs, sealedAt: lib }));
@@ -722,6 +730,16 @@ async function scanIds(ctx: Ctx, bs: BotState) {
         log(`  linked on-chain question #${id} to ${hit.q.id}`);
       }
     } else if (!bs.orphans.includes(id)) {
+      // Repo Lens J16-1: a new id with no file at all (not a second copy) since the last trusted state is held, not
+      // voided. Most likely this bot posted it and that run's publish never landed, so the next run started from
+      // older files; voiding would throw away that day's questions. Resolving and posting stop (both scan first; no
+      // void, nothing posted on top), the id stays unchecked, the run ends red, and the owner is told what to do. A stolen operator key is the other cause:
+      // stopping is right then too.
+      if (!hit && ctx.orphanHoldFrom !== undefined && id >= ctx.orphanHoldFrom && !ctx.voidOrphansOk?.has(id)) {
+        const msg = `On-chain question #${id} (params_hash ${String(q?.params_hash ?? "")}) matches no question file, and it is newer than this bot's saved state (checked up to #${ctx.orphanHoldFrom}). HELD, not voided: most likely the last run posted it and its publish failed, so its question file never reached the game-data branch. Fix: put that run's question files back on game-data (the failed run's "game-data" artifact), then run the bot again. Only if the files are truly lost, set the repository variable BOT_VOID_ORPHANS to "${id}" (comma-separated for several) to void it. If the bot did not post it, the operator key may be compromised.`;
+        if (!ctx.problems.includes(msg)) ctx.problems.push(msg);
+        throw new Error(`question #${id} held: no question file (see NEEDS ATTENTION)`);
+      }
       bs.orphans.push(id);
       log(`  ⚠ on-chain question #${id} has no matching local question — it will be resolved as VOID`);
       if (hit) {
