@@ -2,6 +2,10 @@
 name: Picks contract tests
 
 on:
+  push:
+    paths: ["contracts/picks/**", "tools/pbjs-helpers/**", "tools/protoc-pin.cjs", ".github/workflows/picks-test.yml"]
+  pull_request:
+    paths: ["contracts/picks/**", "tools/pbjs-helpers/**", "tools/protoc-pin.cjs", ".github/workflows/picks-test.yml"]
   workflow_dispatch: {}
 
 permissions:
@@ -22,13 +26,15 @@ jobs:
           node-version: 22
       # Exactly the lockfile, with no package install scripts (a compromised package could otherwise run code here).
       - run: npm ci --no-audit --no-fund --ignore-scripts
+      # The build tool's protoc plugins can stop with EAGAIN reading stdin: run them through the shim (Repo Lens #L-3 I-1).
+      - run: node ../../tools/ci/use-protoc-shim.mjs .
       - name: npm test
         run: |
           set -o pipefail
           # protoc's plugin sometimes fails with EAGAIN while it is installing. That is not a test failure.
-          for attempt in 1 2 3; do
+          for attempt in 1 2 3 4 5; do
             if npm test 2>&1 | tee test.log; then exit 0; fi
-            if ! grep -q EAGAIN test.log || [ "$attempt" = 3 ]; then exit 1; fi
+            if ! grep -q EAGAIN test.log || [ "$attempt" = 5 ]; then exit 1; fi
             echo "Build tool hit EAGAIN (attempt $attempt); retrying."
             sleep 5
           done

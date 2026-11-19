@@ -11,10 +11,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { Signer } from "koilib";
-import { SimChain } from "../../bot/chain.ts";
+import { SimChain } from "../../../bot/chain.ts";
 
-const OLD = "desk/test-fixtures/desk-v1-test-build.wasm";
-const NEW = "desk/build/sim/contract.wasm";
+const OLD = "contracts/desk/test-fixtures/desk-v1-test-build.wasm";
+const NEW = "contracts/desk/build/sim/contract.wasm";
 const ABI = JSON.parse(fs.readFileSync("contracts/desk/abi/desk.koilib.json", "utf8"));
 const VHP = 100_000_000n;
 const HOUR = 3_600_000, DAY = 24 * HOUR, T0 = 1_800_000_000_000;

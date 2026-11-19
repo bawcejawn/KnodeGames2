@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 // The chain orders storage keys bytewise; the mock VM's database doesn't (RepoLens fix-check 2, V2-5).
-const { patchDatabase } = createRequire(import.meta.url)("../tools/mockvm-bytewise.cjs");
+const { patchDatabase } = createRequire(import.meta.url)("../../tools/mockvm-bytewise.cjs");
 
 // Runs the contract's tests inside a simulated Koinos chain (no network, no KOIN).
 export default {

@@ -47,6 +47,8 @@ The bot workflow is `bot.yml`. Its jobs already refuse to run unless:
 
 The operator key belongs in an environment named `bot`, with a deployment branch rule of only `main`. Do not put `OPERATOR_WIF` in a normal repository secret.
 
+Each tick starts from the question files and state on the `game-data` branch, and stops if they are missing. If a run finds a question on chain that is newer than its saved state and has no question file, it does **not** void it: it stops with a red "HELD" message. Usually the previous run's publish failed. Put that run's question files back on `game-data` (from the failed run's `game-data` artifact) and run the bot again. Only if they are truly lost, set the repository variable `BOT_VOID_ORPHANS` to the question number(s), for example `31,32`, run the bot once, and then delete the variable.
+
 A manual run does one tick. The timers are in the table above.
 
 ## The other workflows

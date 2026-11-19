@@ -23,7 +23,7 @@ const bin = fs.existsSync(WASM) ? fs.readFileSync(WASM) : Buffer.alloc(0);
 ok(bin.length > 0 && bin.indexOf(marker) === -1, "production build (the test ledger is NOT included)");
 {
   // The live declaration itself, not a comment (fix-check 3, V3-10).
-  const { isNormal } = createRequire(import.meta.url)("../../tools/mode-switch.cjs");
+  const { isNormal } = createRequire(import.meta.url)("../../../tools/mode-switch.cjs");
   ok(isNormal(fs.readFileSync("assembly/Mode.ts", "utf8")), "the normal build, not the withdrawals-only one (assembly/Mode.ts)");
 }
 {
