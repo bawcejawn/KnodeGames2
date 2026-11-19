@@ -124,3 +124,28 @@ test("J16-1: a second copy of a posted question (F-10) is still voided, never he
   const p = await w.run();
   assert.equal(held(p), 0, p.join("\n"));
 });
+
+// Repo Lens J16b-1: only a TRUSTED saved state arms the hold. A bot-state.json with a bad seal (edited by hand, an old
+// copy, another key) starts afresh, so an orphan at or above its checkedUpTo is voided as before (and the state-reset
+// alert is raised); a run with no seal key (noSealKey) never arms it either.
+test("J16b-1: a bad seal on bot-state.json does not arm the hold: the orphan is voided, not held", async () => {
+  const w = world({ onchain: [] });
+  await w.run();                                                  // a sealed state at #0
+  const st = JSON.parse(fs.readFileSync(w.P.botState, "utf8"));
+  st.seal = "00".repeat(65);                                      // the seal no longer matches
+  fs.writeFileSync(w.P.botState, JSON.stringify(st));
+  w.onchain.push(ORPHAN());
+  const p = await w.run();
+  assert.equal(held(p), 0, p.join("\n"));
+  assert.ok(p.some((x) => /was not written by this bot/.test(x)), "the state-reset alert is raised");
+  assert.equal(voids(w.sent), 1, "voided as before");
+});
+
+test("J16b-1: with no seal key (noSealKey) the hold is not armed", async () => {
+  const w = world({ onchain: [] });
+  await w.run();
+  w.onchain.push(ORPHAN());
+  const p = await w.run({ noSealKey: true });
+  assert.equal(held(p), 0, p.join("\n"));
+  assert.equal(voids(w.sent), 1);
+});
