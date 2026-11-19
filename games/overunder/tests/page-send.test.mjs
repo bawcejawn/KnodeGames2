@@ -94,3 +94,21 @@ test("a number above 2^64 - 1 decodes as no pick, even when its low bits would b
   assert.deepEqual(F.decodePick(r, "18446744073709551615", 0), {}, "2^64 - 1 is all 11: blank");
   assert.deepEqual(F.decodePick(r, "1", 0), { [r.rows[0].a]: "over" }, "a plain 1 still decodes");
 });
+
+// ── D-311: Over/Under SHOWS its line (only VS hides its numbers, D-309) ──
+test("the page shows each producer's line as soon as the sealed roster is out: before any pick, with no wallet connected", () => {
+  const fn = code.slice(code.indexOf("function renderSheet()"), code.indexOf("const why = "));
+  const rows = fn.slice(fn.indexOf("tbody.replaceChildren(...r.rows.map"), fn.indexOf("const n = Object.keys(cur).length"));
+  assert.match(rows, /lineText\(x\.line\)/, "every row shows its line");
+  assert.doesNotMatch(rows, /me\(\)|saved|st\.saved|dirty\(|isLocked|sending/, "what the line shows does not depend on a wallet, a saved pick, a draft or a lock");
+  // the rows are built from the roster alone: the only thing before them is "no roster yet"
+  const before = fn.slice(0, fn.indexOf("tbody.replaceChildren(...r.rows.map"));
+  assert.match(before, /if \(!r\) \{/);
+  assert.doesNotMatch(before.replace(/\$\("ou-send"\)\.hidden = !r;/, ""), /!me\(\)|picks\b.*return/, "no wallet or pick check before the rows");
+  assert.match(code, /\{ class: "num", text: lineText\(x\.line\) \}/, "the line is its own visible column");
+  assert.match(html, /<th>Line<\/th>/);
+  assert.doesNotMatch(html + js, /hidden until|until picks lock|reveal(ed)? (at|when) lock/i, "nothing about the line is hidden");
+  // the line the page shows is the roster's own line, the one the recorder scores against
+  assert.equal(F.lineOf("20400000"), 41);
+  assert.match(code, /lineText = \(line\) => `\$\{Math\.floor\(line \/ 2\)\}\.5`/);
+});

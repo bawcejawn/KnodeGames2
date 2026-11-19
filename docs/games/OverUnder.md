@@ -8,6 +8,7 @@ Every day, every block producer on the week's roster has a line: a number of blo
 
 ## Gameplay
 - **The roster and the lines** are published once, before the week's picks open, and never change (FC-9, D-284). The roster is the producers that pass the VHP Ruler's entry gate (not in ramp-up) and are not void on the card it is made from; there are at most 64 (D-296). If more than 64 qualify the roster is not made and the run stops with a loud error: nothing is cut silently.
+- **The line is shown** as soon as the Ruler publishes it with the sealed roster, before picks open, and stays visible (D-311). Only Knode Games VS hides its numbers until picks lock (D-309).
 - **The line** is the producer's expected blocks on that card, from the VHP Ruler, rounded to the half block (floor + 0.5). Nobody types it.
 - **A pick** is two numbers per day (D-296): 2 bits a row in roster order (00 blank, 01 Over, 10 Under); number A is rows 1 to 32, number B rows 33 to 64. They are two Picks rounds of 12 hours each. Both go in one approval. Picks open 2 days ahead (D-285). Number A locks 5 minutes before the UTC day starts; **number B locks 12 hours earlier** (5 minutes before noon UTC the day before).
 - **Changes:** a pick, then up to 2 changes before the lock, each paid by the player's own Mana (D-278, D-286). A played day can't be re-picked; no pick is ever given back.
