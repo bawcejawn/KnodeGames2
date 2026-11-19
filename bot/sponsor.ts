@@ -7,6 +7,8 @@
  *   npm run sponsor -- config [--per-tx 1] [--per-player-day 25] [--per-player-week 150] [--per-day 5000] [--free-per-day 2000] [--min-vhp 1] [--send]
  *                                                   set the caps (in Mana; 1 Mana = 1 KOIN of Mana) and the per-action
  *                                                   Mana limits (sponsor-data/mana-limits.json); keeps on/off as is
+ *   npm run sponsor -- config --keep-caps --per-tx 7 [--send]
+ *                                                   change ONLY the per-transaction cap; every other cap stays as on chain
  *   npm run sponsor -- config --vault off [caps]    guest-trap stopgap (4 Nov 2026): the vault switch stays OFF until the fixed
  *                                                   sponsor build is uploaded (pass it on every config run until then)
  *   npm run sponsor -- mana-limit <game|desk|race|picks>:<action> <most used> --source <text> [--save]
@@ -317,6 +319,16 @@ async function upload(send: boolean) {
 // ═══════════════════════════════ settings ═══════════════════════════════
 function flag(a: string[], name: string, d: string) { const i = a.indexOf(name); return i >= 0 && a[i + 1] && !a[i + 1].startsWith("--") ? a[i + 1] : d; }
 
+/** Where config's caps start from: the owner's defaults, or (enable, or config --keep-caps) the caps as they are on chain.
+ *  --keep-caps is for changing ONE cap without restating the others (e.g. config --keep-caps --per-tx 7 for the batch
+ *  measurement, D-254): only --per-tx may go with it, so the dry run can show that line alone changing. Exported for the tests. */
+export function capsBase(a: string[], enabledArg: boolean | undefined, cur: any) {
+  if (!a.includes("--keep-caps")) return enabledArg === true ? capsOf(cur) : DEFAULT_CAPS;
+  const other = ["--per-player-day", "--per-player-week", "--per-day", "--free-per-day", "--min-vhp"].filter((f) => a.includes(f));
+  if (other.length) throw new Error(`--keep-caps keeps the caps on chain, so it can't go with ${other.join(", ")}. Only --per-tx may change. Nothing was sent.`);
+  return capsOf(cur);
+}
+
 /** Builds the config: the pinned game, Desk, VHP and KOIN, and the caps. Exported for the tests. */
 export function buildConfig(game: any, desk: any, caps: { perTx: string; perPlayerDay: string; perPlayerWeek: string; perDay: string; minVhp?: string; freePerDay?: string }, enabled: boolean, race?: string, picks?: string, manaRows: ReturnType<typeof readLimits>["rows"] = [], picksCards = false, gameHasVault = false, pob?: string) {
   const vhp = game.vhp ?? PINNED_MAINNET.vhp;
@@ -420,7 +432,7 @@ async function setConfig(a: string[], send: boolean, enabledArg?: boolean) {
   const fromSat = (x: any) => (x && x !== "0" ? (Number(x) / 1e8).toString() : "0");
   // Audit SP-1: config uses the owner's settings (DEFAULT_CAPS) unless a flag says otherwise. enable keeps the caps on
   // chain (both nodes agree, checked above), so a cap lowered after a drain stays lowered (audit SP-29).
-  const base = enabledArg === true ? capsOf(cur) : DEFAULT_CAPS;
+  const base = capsBase(a, enabledArg, cur);
   const caps = {
     perTx: flag(a, "--per-tx", base.perTx),
     perPlayerDay: flag(a, "--per-player-day", base.perPlayerDay),
