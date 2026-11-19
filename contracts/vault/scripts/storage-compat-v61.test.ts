@@ -16,7 +16,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { Signer } from "koilib";
-import { SimChain } from "../../bot/chain.ts";
+import { SimChain } from "../../../bot/chain.ts";
 
 const V5 = "contracts/vault/test-fixtures/kpred-v5-test-build.wasm";
 const V6 = "contracts/vault/test-fixtures/kpred-v6-test-build.wasm";

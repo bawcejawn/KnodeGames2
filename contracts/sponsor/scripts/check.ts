@@ -93,7 +93,7 @@ if (fs.existsSync(picksAbiFile)) {
   // The sponsor tool's arg_types strings, worked out from the ABI: one byte per field, wire type + 1, plus 0x10 if repeated.
   const wire = (x: any) => (x.type === "bytes" || x.type === "string" || !scalars.has(x.type) ? 2 : 0);
   const argTypes = (fields: any[]) => "0x" + fields.sort((a, b) => a.id - b.id).map((x) => ((wire(x) + 1) | (x.rule === "repeated" ? 0x10 : 0)).toString(16).padStart(2, "0")).join("");
-  const sponsorSrc = fs.readFileSync("../../../bot/sponsor.ts", "utf8");
+  const sponsorSrc = fs.readFileSync("../../bot/sponsor.ts", "utf8");
   const pinned = (k: string) => sponsorSrc.match(new RegExp(`export const ${k} = "(0x[0-9a-f]+)"`))?.[1];
   const all = Object.values(f) as any[];
   ok(pinned("PICKS_ARG_TYPES") === argTypes(all.filter((x) => x.id <= 5)), `bot/sponsor.ts PICKS_ARG_TYPES = the ABI's fields 1 to 5 (${argTypes(all.filter((x) => x.id <= 5))})`);
