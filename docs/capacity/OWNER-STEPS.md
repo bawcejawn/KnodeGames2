@@ -19,12 +19,12 @@ same as GitHub's) and only asks GitHub when the copy is older. It never changes 
 
 1. dash.cloudflare.com -> left menu **Compute (Workers)** (older screens: **Workers & Pages**) -> **Create** ->
    **Create Worker** ("Start with Hello World"). Name: `kg-data`. Click **Deploy**.
-2. **Edit code**: select everything in the editor and delete it. Open `C:\kprediction\tools\cloudflare\kg-data-worker.js`
+2. **Edit code**: select everything in the editor and delete it. Open `C:\knodegames2\ops\cloudflare\kg-data-worker.js`
    in Notepad, copy all of it, paste it into the editor. Click **Deploy**.
 3. The Worker -> **Settings** -> **Domains & Routes** -> **Add** -> **Custom domain** -> `data.knodegames.com` -> **Add**.
 4. Wait 5 minutes. **Check** (read-only):
 ```powershell
-cd C:\kprediction
+cd C:\knodegames2
 git branch --show-current
 (Invoke-WebRequest -Uri https://data.knodegames.com/race-data/board.json -UseBasicParsing).StatusCode
 (Invoke-WebRequest -Uri https://data.knodegames.com/race-data/board.json -UseBasicParsing).Headers['X-KG-Mirror']
@@ -46,7 +46,7 @@ it is switched on, so nothing can break before then.
    **R2 bucket** -> Variable name `LIVE`, bucket `kg-live` -> **Deploy**.
 5. **The secret.** It's made on your PC, copied once into Cloudflare, and saved in `.env`. It never goes into a chat.
 ```powershell
-cd C:\kprediction
+cd C:\knodegames2
 git branch --show-current
 $b = New-Object byte[] 32; ([System.Security.Cryptography.RNGCryptoServiceProvider]::new()).GetBytes($b)
 $tok = ($b | ForEach-Object { $_.ToString("x2") }) -join ""
@@ -60,7 +60,7 @@ Select-String -Path .env -Pattern '^LIVE_TOKEN=' -Quiet
    paste (Ctrl+V) -> **Deploy**. Then clear the clipboard: `Set-Clipboard -Value " "`.
 6. **Your node's address.** Find the address your node answers on, on this PC:
 ```powershell
-cd C:\kprediction
+cd C:\knodegames2
 git branch --show-current
 Invoke-RestMethod -Uri http://127.0.0.1:8080 -Method Post -ContentType application/json -Body '{"jsonrpc":"2.0","id":1,"method":"chain.get_head_info","params":{}}' | Select-Object -ExpandProperty result | Select-Object -ExpandProperty head_topology
 ```
@@ -68,13 +68,13 @@ Invoke-RestMethod -Uri http://127.0.0.1:8080 -Method Post -ContentType applicati
    If it fails, ask the Node chat which local port your game node's JSON-RPC uses, and use that instead of 8080.
 7. **Check** (read-only; sends nothing):
 ```powershell
-cd C:\kprediction
+cd C:\knodegames2
 git branch --show-current
 node tools\capacity-live\uploader.mjs --dry
 ```
    Expect a short JSON with `"head"` and 24 `"blocks"`. Then send it once and read it back:
 ```powershell
-cd C:\kprediction
+cd C:\knodegames2
 git branch --show-current
 node tools\capacity-live\uploader.mjs --once
 (Invoke-WebRequest -Uri https://live.knodegames.com/live.json -UseBasicParsing).StatusCode
@@ -85,14 +85,14 @@ node tools\capacity-live\uploader.mjs --once
 
 ## A4b: the uploader task (Thu 19 Nov, about 10 minutes)
 ```powershell
-cd C:\kprediction
+cd C:\knodegames2
 git branch --show-current
 git pull
 powershell -ExecutionPolicy Bypass -File node\install-live-uploader.ps1
 ```
 It does a dry run first, then sets up "Knode live uploader" (every minute, all day, and at log-on). **Check** after 3 minutes:
 ```powershell
-cd C:\kprediction
+cd C:\knodegames2
 git branch --show-current
 Get-Content node\live-uploader.log -Tail 3
 ((Invoke-WebRequest -Uri https://live.knodegames.com/live.json -UseBasicParsing).Content | ConvertFrom-Json).head.height

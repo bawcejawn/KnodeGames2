@@ -1,7 +1,7 @@
-// Knode Games Cloudflare Worker "kg-dispatch": a backstop for GitHub's own timer (Block X incident, Sat 14 Nov 2026).
+// Knode Games Cloudflare Worker "kg-dispatch-2" (KnodeGames2; the old "kg-dispatch" keeps its code, triggers off): a backstop for GitHub's own timer (Block X incident, Sat 14 Nov 2026).
 // GitHub doesn't guarantee scheduled runs: under load it delays or drops them, and on Fri 13 / Sat 14 Nov it dropped
 // most of race.yml's hourly runs, so the current race had no card and the Block X page had no producers.
-// Source of truth: this file. To change the live Worker: Cloudflare -> Compute (Workers) -> kg-dispatch -> Edit code ->
+// Source of truth: this file. To change the live Worker: Cloudflare -> Compute (Workers) -> kg-dispatch-2 -> Edit code ->
 // paste this whole file -> Deploy. Owner steps: docs/ops/RECORDER-BACKSTOP.md. Tests: tests/audit/dispatch-worker.test.mjs.
 //
 // What it does, and only this: on its four Cron Triggers (five jobs) it asks GitHub whether the job already ran recently, and

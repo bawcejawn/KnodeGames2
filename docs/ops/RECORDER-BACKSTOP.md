@@ -33,7 +33,15 @@ This Worker checks whether the ruler's data job, the two recorders and the race'
 2. Click **Edit code**, delete everything, paste the whole of `ops/cloudflare/kg-dispatch-worker.js` from `main`, then **Deploy**.
 3. Go to **Settings** → **Domains & Routes**. If a `workers.dev` address is on, you can leave it: the Worker answers 404 to every web request.
 4. Go to **Settings** → **Variables and Secrets** → **Add**. Type: **Secret**. Name: `GH_DISPATCH_TOKEN`. Value: the token from step 1. Then **Deploy**.
-5. Go to **Settings** → **Trigger Events** (called "Cron Triggers" in some views) → **Add**. Add `22 * * * *`, then `41 * * * *`, then `51 * * * *`, then `7,37 * * * *`. Save.
+5. Don't add triggers yet. They come in step 2b, after the old Worker's are off.
+
+**2b. Swap the triggers (at cutover, Sun 22 Nov 2026, in this order)**
+Only one Worker may have triggers on at a time. If both had them, each would check GitHub and could start the same job twice (no double runs). The account is on Workers Paid (up to 250 triggers), so the old 5-trigger limit no longer applies, but the one-Worker rule does.
+1. Cloudflare → **Compute (Workers)** → **kg-dispatch** (the old one) → **Settings** → **Trigger Events** (called "Cron Triggers" in some views). Remove all four: `22 * * * *`, `41 * * * *`, `51 * * * *`, `7,37 * * * *`. Save. Don't delete the Worker or its code: it stays for rollback.
+2. Check: **kg-dispatch** → **Settings** → **Trigger Events** shows none.
+3. Cloudflare → **kg-dispatch-2** → **Settings** → **Trigger Events** → **Add**. Add `22 * * * *`, then `41 * * * *`, then `51 * * * *`, then `7,37 * * * *`. Save.
+4. Check: **kg-dispatch-2** shows exactly those four, and **kg-dispatch** still shows none.
+- **Rollback** (only with the cutover rollback): the same steps the other way round. Remove the four from **kg-dispatch-2** first, then add them back to **kg-dispatch**.
 
 **3. Check it** (the next hour)
 - In Cloudflare, open **kg-dispatch-2** → **Logs**. At :41 and :51 you should see `kg-dispatch: race.yml: already ran in the last 30 minutes …` (or `… started one`), and the same for `games.yml`; at :22, for `vhp-ruler.yml`; at :07 and :37, two lines: `race-samples.yml` and `kit-games.yml`.
@@ -50,6 +58,6 @@ This Worker checks whether the ruler's data job, the two recorders and the race'
 3. **Check:** at the next :07 or :37, **Logs** shows `kg-dispatch: race-samples.yml: …`.
 
 ## Adding the kit games (Mon 16 Nov 2026, for a Worker already set up)
-No new trigger: the `7,37 * * * *` trigger now checks `kit-games.yml` too (Cloudflare's Free plan allows 5 triggers per account).
+No new trigger: the `7,37 * * * *` trigger now checks `kit-games.yml` too (the account was on Cloudflare's Free plan then, 5 triggers per account; it is on Workers Paid now, see step 2b).
 1. Cloudflare → **kg-dispatch-2** → **Edit code**, delete everything, paste the whole of `ops/cloudflare/kg-dispatch-worker.js` from `main`, then **Deploy**.
 2. **Check:** at the next :07 or :37, **Logs** shows two lines, `kg-dispatch: race-samples.yml: …` and `kg-dispatch: kit-games.yml: …`. Keep the four triggers as they are.
