@@ -3,7 +3,7 @@
 // logs through the gh CLI (GET requests only). It writes nothing, sends nothing, and no game reads its result.
 //
 //   node tools/vhp-ruler-race-check.mjs <race-data folder> [--week 4] [--vhp-data <folder>] [--since 2026-11-16T00:00:00Z]
-//        [--gh bawcejawn/KnodeGames] [--now <ISO time>]
+//        [--gh bawcejawn/KnodeGames2] [--now <ISO time>]
 //
 // It checks:
 //  1. Every run of race.yml since --since finished green (a run still going is listed, not counted).
