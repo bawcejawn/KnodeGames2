@@ -453,9 +453,10 @@
     // the entry bar minK (whole expected blocks; 10 as approved) and the pool rule ("min": min(own, eff) per block, §3.2;
     // the only rule since Repo Lens #B-9 B9-1; the setting stays so every card says which rule it used)
     const minKBlocks = opts.minK ?? 10, poolRule = opts.poolRule ?? "min", mode = opts.mode;
-    const version = opts.version ?? RULE_VERSION, include = opts.include;
+    const version = opts.version ?? RULE_VERSION, include = opts.include, noVoid = opts.noVoid;
     if (!RULE_VERSIONS.includes(version)) throw new Error("version must be 4 or 5");
     if (include !== undefined) checkInclude(include);
+    if (noVoid !== undefined && noVoid !== true) throw new Error("noVoid must be true");
     if (!Number.isSafeInteger(minKBlocks) || minKBlocks < 1 || minKBlocks > 100000) throw new Error("minK must be a whole number of blocks from 1");
     if (mode !== undefined && !MODES.includes(mode)) throw new Error("mode must be A, B, C or D");
     if (!POOL_RULES.includes(poolRule)) throw new Error("poolRule must be min");
@@ -488,7 +489,7 @@
     return {
       ruleVersion: version, game: Number(dec(opts.game, "game")), round: dec(opts.round, "round"), ownRule, paying,
       T, seedBlock, seedBlockId, seedProducer: L.signer(seedBlock),
-      window: { W0: w.W0, W1: w.W1, L: w.L, S0: w.S0, S1: w.S1 }, c, minK: minKBlocks, poolRule, ...(mode === undefined ? {} : { mode }), ...(include === undefined ? {} : { include: [...include] }), total: tot, formFrom, producers,
+      window: { W0: w.W0, W1: w.W1, L: w.L, S0: w.S0, S1: w.S1 }, c, minK: minKBlocks, poolRule, ...(mode === undefined ? {} : { mode }), ...(include === undefined ? {} : { include: [...include] }), ...(noVoid === undefined ? {} : { noVoid: true }), total: tot, formFrom, producers,
     };
   }
 
@@ -527,6 +528,7 @@
     // card's seed, so the blocks that count for a bigger producer are among those that count for a smaller one)
     const mode = card.mode;
     if (mode !== undefined && !MODES.includes(mode)) throw new Error("mode must be A, B, C or D");
+    const noVoid = card.noVoid === true;   // D-312/D-317: scored without voids; outOfBand says what the band would have done
     const cap = mode === undefined ? LUCK_CAP : MODE_CAP[mode];
     const blocks = S1 - S0 + 1, [bandDown, bandUp] = voidBand(blocks), draws = new Map();
     const draw = (H) => {
@@ -553,7 +555,7 @@
         H = H2 + 1;
       }
       const quality = flagged ? "flagged" : "ok";
-      return { ...p, quality, sample: Number(sample), expected, signed: L.signedIn(p.a, S0, S1), credited, pct: pct(expected, credited), void: isVoid, moves: isVoid ? voidRecord(L, p.a, o, card.T, S0, S1) : null };
+      return { ...p, quality, sample: Number(sample), expected, signed: L.signedIn(p.a, S0, S1), credited, pct: pct(expected, credited), void: isVoid && !noVoid, moves: isVoid && !noVoid ? voidRecord(L, p.a, o, card.T, S0, S1) : null, ...(noVoid ? { outOfBand: isVoid } : {}) };
     });
     // A′ (D-165, D-171): the field is the producers with entry that aren't void. Its core is the members whose form is
     // at least CORE_LINE of the field's median form, the median weighted by expected blocks (the form at which half the
@@ -773,7 +775,7 @@
   /** recompute (§13): rebuild a published card FROM THE GAME'S OWN SETTINGS and compare byte for byte (Repo Lens #E-12
    *  M-1: never from the card's own settings, or a card made with the wrong window, c, own rule, paying flag or pooled
    *  list would pass). game = { game, round, window: { W0, W1, L, S0, S1 }, c, minK, poolRule, ownRule, paying, pooled }. */
-  const SETTINGS = ["game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"], OPTIONAL = ["mode", "include", "version"], WKEYS = ["W0", "W1", "L", "S0", "S1"];
+  const SETTINGS = ["game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"], OPTIONAL = ["mode", "include", "version", "noVoid"], WKEYS = ["W0", "W1", "L", "S0", "S1"];
   /** The game's settings, strictly (Repo Lens #B-5 N-5): every key, no other key, each of its own type. Same in Python,
    *  with one difference JavaScript can't see: JSON.parse reads 1.0 and 0e0 as plain numbers, which Python refuses
    *  (#B-6 B6-2). The game's publish job runs the Python twin (recompute_main), so Python decides. */
@@ -784,6 +786,7 @@
     if ("mode" in g && !MODES.includes(g.mode)) throw new Error("mode must be A, B, C or D");
     if ("version" in g && !RULE_VERSIONS.includes(g.version)) throw new Error("version must be 4 or 5");
     if ("include" in g) checkInclude(g.include);
+    if ("noVoid" in g && g.noVoid !== true) throw new Error("noVoid must be true");
     dec(g.game, "game"); dec(g.round, "round");
     const w = g.window;
     if (!w || typeof w !== "object" || Array.isArray(w) || Object.keys(w).sort().join() !== [...WKEYS].sort().join()) throw new Error(`window must have exactly: ${WKEYS.join(", ")}`);
@@ -807,7 +810,7 @@
     if (isDigest(pubD)) {   // the compact card: rebuild from the game's own settings, compare the sha256 of the exact bytes
       let mine;
       try {
-        mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}) });
+        mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("noVoid" in game ? { noVoid: game.noVoid } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}) });
         if (pubD.scored) mine = scoreCard(L, mine);
       } catch (e) { return { same: false, diff: `the data can't make this card: ${e.message}` }; }
       const d = cardDigest(mine).sha256;
@@ -815,12 +818,12 @@
     }
     const pub = typeof published === "string" ? JSON.parse(published) : published;
     const want = { game: Number(dec(game.game, "game")), round: dec(game.round, "round"), ownRule: game.ownRule, paying: game.paying, c: big(game.c).toString(10), minK: game.minK, poolRule: game.poolRule,
-      mode: game.mode, version: game.version ?? RULE_VERSION, include: JSON.stringify(game.include ?? null), W0: game.window.W0, W1: game.window.W1, L: game.window.L, S0: game.window.S0, S1: game.window.S1 };
-    const got = { game: pub.game, round: pub.round, ownRule: pub.ownRule, paying: pub.paying, c: String(pub.c), minK: pub.minK, poolRule: pub.poolRule, mode: pub.mode, version: pub.ruleVersion, include: JSON.stringify(pub.include ?? null), ...(pub.window || {}) };
+      mode: game.mode, version: game.version ?? RULE_VERSION, include: JSON.stringify(game.include ?? null), noVoid: game.noVoid, W0: game.window.W0, W1: game.window.W1, L: game.window.L, S0: game.window.S0, S1: game.window.S1 };
+    const got = { game: pub.game, round: pub.round, ownRule: pub.ownRule, paying: pub.paying, c: String(pub.c), minK: pub.minK, poolRule: pub.poolRule, mode: pub.mode, version: pub.ruleVersion, include: JSON.stringify(pub.include ?? null), noVoid: pub.noVoid, ...(pub.window || {}) };
     for (const k of Object.keys(want)) if (got[k] !== want[k]) return { same: false, diff: `setting ${k}: the card says ${JSON.stringify(got[k])}, the game says ${JSON.stringify(want[k])}` };
     let mine;
     try {
-      mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}) });
+      mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("noVoid" in game ? { noVoid: game.noVoid } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}) });
       if ((pub.producers || []).some((p) => "credited" in p)) mine = scoreCard(L, mine);
     } catch (e) { return { same: false, diff: `the data can't make this card: ${e.message}` }; }
     const a = cardJson(mine), b = typeof published === "string" ? published : cardJson(published);
@@ -829,6 +832,30 @@
     return { same: false, diff: `differs at byte ${i}: published …${b.slice(imax(0, i - 40), i + 40)}… vs recomputed …${a.slice(imax(0, i - 40), i + 40)}…` };
   }
 
-  root.KRuler = { VHP_CONTRACT, DELAY, ACTIVE, HIGH, AVG, FORM, HISTORY, SEED_AFTER, M, MIN_K, FORM_GATE, RULE_VERSION, RULE_VERSIONS, OWN_RULES, POOL_RULES, STEADY_BAND, CORE_LINE, BAND_SD, LUCK_CAP, voidBand, MODES, MODE_CAP, LIFT_SKIP, LIFT_SPAN, STRETCHES, LIFT_SD, liftForm, checkInclude, versionSchedule, versionAt, versionChange, modeSchedule, modeAt, modeChange, effectiveSchedule, cardMode, cardVersion, weekSummary, SWITCH_MAX, switchFrom, rulerMode, switchChange,
+  // ── Over/Under and VS helpers (D-312 to D-337): the twins of week_of_start, forecast_expected, median_line_halves, list_at, is_unreliable ──
+  const GENESIS_MS = 1792368000000n, WEEK_MS = 604800000n;   // vault week 0 starts Mon 19 Oct 2026 00:00 UTC
+  /** The vault week a game belongs to: the week it STARTS in (Mon 00:00 UTC is the first moment of a new week). */
+  function weekOfStart(startMs) {
+    const t = big(startMs);
+    if (t < GENESIS_MS) throw new Error("a game's start must be a whole number of milliseconds from week 0");
+    return Number((t - GENESIS_MS) / WEEK_MS);
+  }
+  /** The blocks a producer is forecast to sign in a game, millionths: its card's k (VHP share) scaled down by its form (never up), never above the luck cap (D-383). */
+  function forecastExpected(row) {
+    const k = big(row.k), form = big(row.form);
+    if (k < 0n || form < 0n) throw new Error("k and form can't be negative");
+    const e = (k * (form < M ? form : M)) / M;
+    return e < LUCK_CAP ? e : LUCK_CAP;
+  }
+  /** The Over/Under line in half-blocks (1 = half a block): the Poisson median half-line for `expected` (millionths). */
+  function medianLineHalves(expected) {
+    const e = big(expected);
+    return e < 150000n ? 1n : 2n * ((e - 150000n) / M) + 1n;
+  }
+  /** D-334: the producers on a game's list at block H: signed in the last 6 hours AND at least 10 blocks in 24 hours. */
+  function listAt(L, H) { return L.active(H).filter((a) => L.signedIn(a, H - AVG, H - 1) >= 10).sort(); }
+  /** The 'Unreliable' label: form below the 80% gate. */
+  function isUnreliable(row) { return big(row.form) < BigInt(FORM_GATE); }
+  root.KRuler = { VHP_CONTRACT, DELAY, ACTIVE, HIGH, AVG, FORM, HISTORY, SEED_AFTER, M, MIN_K, FORM_GATE, RULE_VERSION, RULE_VERSIONS, OWN_RULES, POOL_RULES, STEADY_BAND, CORE_LINE, BAND_SD, LUCK_CAP, voidBand, MODES, MODE_CAP, LIFT_SKIP, LIFT_SPAN, STRETCHES, LIFT_SD, liftForm, checkInclude, versionSchedule, versionAt, versionChange, modeSchedule, modeAt, modeChange, effectiveSchedule, cardMode, cardVersion, weekSummary, SWITCH_MAX, switchFrom, rulerMode, switchChange, GENESIS_MS, WEEK_MS, weekOfStart, forecastExpected, medianLineHalves, listAt, isUnreliable,
     sha256, hex, dec, cardTime, isqrt, trim, pct, fpct, rateOf, creditOf, kOf, vhpDeltas, ledger, own, avg, total, formOf, newcomer, makeCard, scoreCard, cardJson, cardDigest, checkSettings, recompute };
 })(typeof window !== "undefined" ? window : globalThis);
