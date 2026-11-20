@@ -4,15 +4,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const DIST = path.join(ROOT, "dist-site");
+// Its own temp folder, so other tests building the site at the same time cannot collide with it.
+const DIST = fs.mkdtempSync(path.join(os.tmpdir(), "kg-dist-imports-"));
+process.on("exit", () => fs.rmSync(DIST, { recursive: true, force: true }));
 
 test("every relative import in the built site's scripts resolves inside dist-site", () => {
-  const r = spawnSync(process.execPath, [path.join(ROOT, "tools/ci/assemble-site.mjs")], { cwd: ROOT, encoding: "utf8" });
+  const r = spawnSync(process.execPath, [path.join(ROOT, "tools/ci/assemble-site.mjs"), DIST], { cwd: ROOT, encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr);
   const missing = [], seen = new Set();
   const walk = (file) => {
