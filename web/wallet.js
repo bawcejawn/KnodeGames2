@@ -576,6 +576,8 @@
       const id = await W.provider.getChainId().catch(() => null);
       if (id !== W.chainId) throw new Error("The network node reports a different chain than Knode Games runs on. Nothing was signed.");
     }
+    // D-278: a pick change is never paid by the Knode Mana sponsor. A guest wallet has no Mana of its own, so it can't send one.
+    if (opts.noSponsor && W.kind === "guest") throw new Error("A guest wallet can't change a pick (a change uses your own Mana). Connect a wallet to change a pick. Nothing was sent.");
     if (W.kind === "guest") { if (!guestOn()) throw new Error("Guest play is paused for now. Connect Kondor or KOIN Vault to play."); return sendGuest(label, ops, opts); }
     return W.kind === "vault" ? sendVault(label, ops, opts) : sendKondor(label, ops, opts);
   }
@@ -584,7 +586,8 @@
    *  payer and is signed first. It is broadcast only as signed: if the wallet switched the payer (Kondor's free Mana
    *  option), or did not hand back a signed transaction (so the page can't see who pays), it is not sent. */
   async function sendKondor(label, ops, opts = {}) {
-    let sp = !opts.gamePays ? sponsorFor(ops) : null;
+    // opts.noSponsor (D-278, a pick change): never the Knode Mana sponsor; the player's own Mana, named as payer, below.
+    let sp = !opts.gamePays && !opts.noSponsor ? sponsorFor(ops) : null;
     // Sponsor v4 (owner, 13 Nov): a wallet with its own Mana (selfPayMin in deployment.json "sponsor", 25 by the spec) pays for
     // itself, with no sponsor. Off until that setting is present, so v3 behaves exactly as before.
     if (sp && await hasOwnMana(sp)) { sp = null; W.status && W.status(OWN_MANA_NOTE); }
@@ -759,6 +762,8 @@
    *  before signing and drops any whose round has locked, so a locked pick cannot make the whole transaction fail. */
   async function sendBatch(label, ops, opts = {}) {
     if (!Array.isArray(ops) || !ops.length) throw new Error("There is nothing to send.");
+    // D-278: a pick change always goes alone with the player's own Mana, never inside a batch.
+    if (opts.noSponsor) throw new Error("A change goes out on its own, never in a batch. Nothing was sent.");
     const live = typeof opts.stillOpen === "function" ? ops.filter((o) => opts.stillOpen(o)) : ops.slice();
     if (!live.length) throw new Error("Those picks have all locked, so nothing was sent.");
     if (live.length > 10) throw new Error("Send at most 10 picks at a time.");
@@ -854,6 +859,9 @@
     open(h("h3", {}, `Approve in KOIN Vault`), h("p", {}, `“${label}”. Open KOIN Vault, check the details and approve with your fingerprint or face, then come back here.`),
       h("a", { class: "kw-go", href: VAULT + "/", target: "_blank", rel: "noopener noreferrer", referrerpolicy: "no-referrer" }, "Open KOIN Vault"), status,
       h("p", {}, req.funding && req.funding.payer === "sponsor" ? "Mana for this one is covered by KOIN Vault." : "This uses your wallet's own Mana (from the KOIN it holds)."),
+      // D-278: the Knode Mana sponsor is never part of a KOIN Vault send (this path never calls sponsorFor), so a change
+      // sent here is never paid by Knode. KOIN Vault alone decides its own funding ("auto").
+      opts.noSponsor ? h("p", {}, "This is a change to a pick: Knode's Mana sponsor doesn't pay for it.") : null,
       opts.ownMana ? h("p", { class: "kw-warn" }, "This one must be paid with your own Mana (or KOIN Vault's), not the game's: right now a claim the game pays for could run out of Mana and fail. The page can't check who KOIN Vault charges. If KOIN Vault shows the game contract as the payer, reject it and claim later.") : null);
     let stop = false; onClose = () => { stop = true; };
     const until = Math.min(req.expiresAt || Infinity, Date.now() + 10 * 60000);
