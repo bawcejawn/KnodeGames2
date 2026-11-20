@@ -9,7 +9,7 @@ const problems = [];
 const TIMERS = {
   "bot.yml": ["7 * * * *", "48 11 * * 1-6", "48 23 * * 0-5"],
   "race.yml": ["37 * * * *"], "games.yml": ["47 * * * *"], "combo.yml": ["52 * * * *"], "golf.yml": ["57 * * * *"],
-  "kit-games.yml": ["57 * * * *"], "vhp-ruler.yml": ["12 * * * *"], "names.yml": ["4 * * * *"], "stats.yml": ["17 */2 * * *"],
+  "kit-games.yml": ["27,57 * * * *"], "vhp-ruler.yml": ["12 * * * *"], "names.yml": ["4 * * * *"], "stats.yml": ["17 */2 * * *"],
   "race-samples.yml": ["*/15 * * * *"], "watch.yml": ["*/30 * * * *"], "capacity.yml": ["23 13 * * *"],
 };
 const say = (m) => problems.push(m);

@@ -1,6 +1,6 @@
 // The Cloudflare Worker "kg-dispatch" (ops/cloudflare/kg-dispatch-worker.js): a backstop for GitHub's timer. It starts
 // vhp-ruler.yml at :22, race.yml at :41, games.yml at :51, and race-samples.yml and kit-games.yml at :07 and :37, only
-// when no run of that workflow on main was created in its window (30 minutes; 45 for kit-games.yml).
+// when no run of that workflow on main was created in its window (30 minutes; 25 for kit-games.yml, which runs at :27 and :57).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
@@ -52,18 +52,19 @@ test("kg-dispatch: :07 and :37 start race-samples.yml when it hasn't run in 30 m
   assert.equal(busy.calls.length, 2, "both ran recently: two lists, nothing started");
 });
 
-test("kg-dispatch: :07 and :37 start kit-games.yml (Fantasy) only when it hasn't run in 45 minutes (Repo Lens #J-8 J8-1)", async () => {
-  // :07 after a dropped :57 run: the window reaches back to :22, after the last normal :57 run, so it starts one.
+test("kg-dispatch: :07 and :37 start kit-games.yml (Fantasy) only when it hasn't run in 25 minutes (D-355: runs at :27 and :57)", async () => {
+  // :07 after a dropped :57 run: the window reaches back to :42, after the :27 run, so it starts one.
   const { f, calls } = gh((u) => (u.includes("kit-games") ? 0 : 1));
   const [, k] = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, Date.UTC(2026, 10, 16, 19, 7, 0));
   assert.deepEqual([k.workflow, k.dispatched], ["kit-games.yml", true]);
-  assert.match(calls[1].url, /workflows\/kit-games\.yml\/runs\?branch=main&per_page=5&created=%3E%3D2026-11-16T18%3A22%3A00Z$/);
+  assert.match(calls[1].url, /workflows\/kit-games\.yml\/runs\?branch=main&per_page=5&created=%3E%3D2026-11-16T18%3A42%3A00Z$/);
   assert.equal(calls[2].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/kit-games.yml/dispatches");
   assert.deepEqual(JSON.parse(calls[2].body), { ref: "main" });
-  // The window is 45 minutes: a normal :57 run is 10 minutes before :07 and 40 before :37, so neither check starts another.
+  // The window is 25 minutes: the normal run 10 minutes before each check (:57 before :07, :27 before :37) is seen, so
+  // neither check starts another; a dropped run leaves only the run 40 minutes earlier, outside the window, so one starts.
   const kit = M.JOBS["7,37 * * * *"].find((j) => j.workflow === "kit-games.yml");
-  assert.equal(kit.windowMin, 45);
-  assert.ok(40 < kit.windowMin && kit.windowMin < 70, "covers :57 from :37, and not the :57 before it from :07");
+  assert.equal(kit.windowMin, 25);
+  assert.ok(10 < kit.windowMin && kit.windowMin < 40, "sees the run 10 minutes before, never the one 40 minutes before");
 });
 
 test("kg-dispatch: an error on one job still runs the other, then the run fails (logged)", async () => {
@@ -74,7 +75,7 @@ test("kg-dispatch: an error on one job still runs the other, then the run fails 
     return new Response(null, { status: 204 });
   };
   await assert.rejects(M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW, (l) => lines.push(l)), /race-samples\.yml: GitHub answered 502 listing/);
-  assert.deepEqual(lines, ["kg-dispatch: race-samples.yml: ERROR race-samples.yml: GitHub answered 502 listing runs", `kg-dispatch: kit-games.yml: no run since 2026-11-14T13:56:00Z: started one`]);
+  assert.deepEqual(lines, ["kg-dispatch: race-samples.yml: ERROR race-samples.yml: GitHub answered 502 listing runs", `kg-dispatch: kit-games.yml: no run since 2026-11-14T14:16:00Z: started one`]);
 });
 
 test("kg-dispatch: a run this hour (GitHub's timer, by hand, or ours) -> nothing started", async () => {
