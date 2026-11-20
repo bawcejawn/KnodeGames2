@@ -947,13 +947,16 @@ export async function run(o: Opts) {
         if (RR.dayOf(t.time, ws) !== d) continue;
         const prevE = olds.get(t.height) || null;
         const needs = !(prevE && (prevE.card || prevE.void));
-        const e = o.rulerEntryOf ? o.rulerEntryOf(t, lead, head.time, prevE) : RR.entryFor(needs && !t.void ? ledger() : null, t, lead, head.time, prevE);
+        const e = o.rulerEntryOf ? o.rulerEntryOf(t, lead, head.time, prevE) : RR.entryFor(needs && !t.void ? ledger() : null, t, lead, head.time, prevE, mode === "on");
         if (e !== prevE) {   // (a published entry is reported once, when it is made)
           if (!e.card && e.note && !/^not yet/.test(e.note)) problems.push(`block ${t.height}: ${e.note}`);
+          // The 48-hour old-points fallback (owner, 18 Nov): in an ON week a target the ruler couldn't score in 48 hours is scored
+          // the old way (its week-file points). It counts, so it is not a void; the owner is alerted once (held), as for a void.
+          if (mode === "on" && RR.isFallback(e) && !RR.isFallback(prevE)) holds.push(`block ${t.height}: the VHP ruler couldn't score this ON-week target within 48 hours (its data was missing or behind), so it was scored the old way, with the points in its week file. Check the VHP ruler workflow (vhp-data)`);
           // Repo Lens #G-49 G49-1: in an ON week a 3-day void costs right picks their points for good: alert (held).
           if (mode === "on" && e.void && !e.card && !t.void && !(prevE && prevE.void)) holds.push(`block ${t.height}: the VHP ruler couldn't score this ON-week target within 3 days (its data was missing or behind), so no pick on it counts. Check the VHP ruler workflow (vhp-data)`);
         }
-        if (mode === "on" && !e.card && !e.void && head.time - t.time > RULER_LATE_MS) rulerLate++;
+        if (mode === "on" && !e.card && !e.void && !RR.isFallback(e) && head.time - t.time > RULER_LATE_MS) rulerLate++;
         fresh.targets.push(e); rulerAt.set(`${wf.week}:${t.height}`, e);
       }
       rulerDays.set(RR.xName(wf.week, d), fresh);
@@ -974,7 +977,7 @@ export async function run(o: Opts) {
   if (rulerLate) holds.push(`the VHP ruler's data is missing or behind: ${rulerLate} ON-week target(s) have waited more than ${RULER_LATE_MS / 3600000} hours for their card; after 3 days a target counts no pick. Check the VHP ruler workflow (vhp-data)`);
   for (const h of holds) if (!problems.includes(h)) problems.push(h);
   /** In an ON week, a pick's points are the ruler's (undefined: the target isn't scored by the ruler yet). */
-  const ruled = (w: number, t: any, producer: string, pts: number): number | undefined => (rulerMode(w) === "on" ? RR.ruledPoints(rulerAt.get(`${w}:${t.height}`), producer) : pts);
+  const ruled = (w: number, t: any, producer: string, pts: number): number | undefined => (rulerMode(w) === "on" ? RR.ruledPoints(rulerAt.get(`${w}:${t.height}`), producer, pts) : pts);
   const rulerScored = (w: number, from: number, to: number) => rulerMode(w) !== "on" || (all.get(w)?.targets || []).every((t: any) => t.time < from || t.time >= to || t.void || ruled(w, t, "", 0) !== undefined);
   const rowsOf = (from: number, to: number) => {
     const rows: any[] = [];

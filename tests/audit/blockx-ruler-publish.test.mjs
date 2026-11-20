@@ -201,7 +201,7 @@ test("G35-5: a failed vhp-data fetch never stops the recorder or the publish (th
 
 test("G35-4: in an ON week the page shows the ruler's points, not the week file's", () => {
   const js = fs.readFileSync(path.join(APP, "web/blockx.js"), "utf8");
-  assert.match(js, /const shownPts = \(t, p\) => \{\n    const e = rulerOn\.get\(t\.height\);\n    if \(!e\) return weekOn\(t\) \? undefined : p\[3\];[^\n]*\n    if \(!e\.card && !e\.void\) return undefined;\n    return !e\.void && p\[1\] === e\.signer \? e\.points : 0;/);
+  assert.match(js, /const shownPts = \(t, p\) => \{\n    const e = rulerOn\.get\(t\.height\);\n    if \(!e\) return weekOn\(t\) \? undefined : p\[3\];[^\n]*\n    if \(isFallback\(e\)\) return p\[3\];\n    if \(!e\.card && !e\.void\) return undefined;\n    return !e\.void && p\[1\] === e\.signer \? e\.points : 0;/);
   assert.match(js, /const pp = p \? shownPts\(t, p\) : 0, right = p && pp > 0;/);
   assert.match(js, /const sp = \(t\.picks \|\| \[\]\)\.map\(\(x\) => shownPts\(t, x\)\);/);
   assert.match(js, /sp\.some\(\(x\) => x === undefined\) \? "being scored by the ruler"/, "G49-3: no \"0 of N right\" while waiting");
