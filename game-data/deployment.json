@@ -43,6 +43,8 @@
     ],
     "rcLimit": "130000000",
     "rcLimitOther": "240000000",
+    "selfPayMin": "2500000000",
+    "batch": {},
     "rcLimits": {
       "1LmgqBGctL9F2YkyjTXgieTXwnYHh8Y6Pm:8ce33c6c": "130000000",
       "1EN7xU8R9tQXjHvrX79qZvvvGkkKWVnB5K:8ce33c6c": "120000000",
@@ -68,7 +70,8 @@
     "3": {
       "name": "Survivor",
       "results": "games-data:survivor/vault",
-      "board": "none"
+      "board": "none",
+      "kit": { "payoutRule": "d152", "vaultValues": "dense255", "entry": { "minRounds": 1, "minPoints": 1 }, "sundayFunRound": false, "roundsCorrectable": false, "liveWeek": true, "seasonWeeks": 2 }
     },
     "4": {
       "name": "Fantasy Producers",

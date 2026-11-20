@@ -9,8 +9,8 @@
        SECOND source (-SnapshotSha256), and unpacks it (so the node doesn't have to replay the whole chain)
     5. starts the node and tells you how to get its PUBLIC key
 
-  Run in PowerShell from C:\kprediction:
-      powershell -ExecutionPolicy Bypass -File node\setup-node.ps1 -Producer <contract address> -SnapshotSha256 <hash>
+  Run in PowerShell from your KnodeGames2 folder (e.g. C:\knodegames2):
+      powershell -ExecutionPolicy Bypass -File ops\node\setup-node.ps1 -Producer <contract address> -SnapshotSha256 <hash>
 
   -SnapshotSha256: the snapshot's SHA-256 from somewhere other than snapshots.armana.io, so a tampered server can't
   hand you a matching file and fingerprint together. For example the hash Armana posts in the Koinos Discord or Telegram,
@@ -21,13 +21,13 @@
   ("kpred-node") and a separate block-producer key.
 
   The same script also sets up your PERSONAL node next to it, in its own folder, Docker project and ports:
-      powershell -ExecutionPolicy Bypass -File node\setup-node.ps1 -Producer <your own address> -Root C:\koinos-personal -Project koinos-personal -PortOffset 10
+      powershell -ExecutionPolicy Bypass -File ops\node\setup-node.ps1 -Producer <your own address> -Root C:\koinos-personal -Project koinos-personal -PortOffset 10
   (RPC 8090, P2P 8898 for that one; the game node keeps 8080 / 8888.)
 
-  -RestoreKey <file> (R-VAULT-10): puts a backed-up block-producer key (node\backup-producer-keys.ps1, the USB stick)
+  -RestoreKey <file> (R-VAULT-10): puts a backed-up block-producer key (ops\node\backup-producer-keys.ps1, the USB stick)
   in place before the node first starts, so a replacement node produces with the SAME key: no re-registering, and the
   Desk avoids its 48-hour key wait. For example, the game node on a new PC:
-      powershell -ExecutionPolicy Bypass -File node\setup-node.ps1 -Producer 1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr -SnapshotSha256 <hash> -RestoreKey E:\knode-producer-keys-<date>\game\private.key
+      powershell -ExecutionPolicy Bypass -File ops\node\setup-node.ps1 -Producer 1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr -SnapshotSha256 <hash> -RestoreKey E:\knode-producer-keys-<date>\game\private.key
   !! Never run two nodes with the same key at the same time: the old node must be off for good first. The script asks
      you to confirm that, and refuses if this node already has a different key.
 #>
@@ -63,7 +63,7 @@ if ($RestoreKey) {
   Write-Host "!! its key folder deleted) before this one starts." -ForegroundColor Yellow
   $answer = Read-Host "Type YES if the old node is off for good"
   if ($answer -cne "YES") { throw "Not confirmed. Nothing was changed." }
-  # A node already moved to a Docker volume (node\move-node-to-volume.ps1) reads its key from the volume, not from
+  # A node already moved to a Docker volume (ops\node\move-node-to-volume.ps1) reads its key from the volume, not from
   # basedir: a key put in basedir would never be used (Repo Lens #F-8 F8-8). A restore is for a fresh folder.
   $override = Join-Path (Join-Path $Root "koinos") "docker-compose.override.yml"
   if ((Test-Path $override) -and (Select-String -Path $override -Pattern "^#\s*knode-volume:" -Quiet)) {
@@ -245,7 +245,7 @@ else { Note "The block producer key isn't there yet; check again in a minute." }
 
 Write-Host ""
 Write-Host "Done. Next:" -ForegroundColor Cyan
-Write-Host "  cd C:\kprediction"
+Write-Host "  cd $(Split-Path -Parent (Split-Path -Parent $PSScriptRoot))"
 Write-Host "  npm run bot -- node-status     # is the node caught up with the chain?"
 Write-Host "  npm run bot -- node-key        # the node's PUBLIC key (safe to share)"
 Write-Host ""
