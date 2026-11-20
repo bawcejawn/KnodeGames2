@@ -121,6 +121,14 @@ export const FANTASY_RIVAL_GAME = Object.freeze({ id: 5, name: "Weekly Rival", k
  *  except the id and the limits. The SHAPE (id, kind, list_size, lock_mode, round_size, round_offset) never changes. */
 export const SURVIVOR_GAME = Object.freeze({ id: 3, name: "Survivor", kind: 1, listSize: 1, lockMode: 2, round: DAY_MS, offset: 0,
   lead: 5 * 60000, ahead: 7 * DAY_MS, picksPerDay: 20, maxChanges: 5 });
+/** Last Node Standing, Picks game 13 (the Last Node chat's values; the same as web/lastnode-math.js MAINNET_GAME, which arrives with the Last Node PR). A LIST of
+ *  2 producers (start node and optional backup), TIME-locked, one round a UTC day whose target is 13:55 UTC: picks lock
+ *  5 minutes before it (13:50, 10 minutes before the 14:00 UTC start) and open 24 hours ahead. 10 picks a day per wallet,
+ *  5 changes per pick. The SHAPE never changes once applied. Announced and applied by the CURRENT Picks owner (D-350),
+ *  48 hours apart; the Picks owner handover waits until game 13 is applied (an accepted handover kills unapplied
+ *  announcements, Repo Lens #J-3 J3-2). */
+export const LASTNODE_GAME = Object.freeze({ id: 13, name: "Last Node Standing", kind: 2, listSize: 2, lockMode: 2, round: DAY_MS,
+  offset: 13 * 3600000 + 55 * 60000, lead: 5 * 60000, ahead: DAY_MS, picksPerDay: 10, maxChanges: 5 });
 /** Over Under (Picks game 16) and Knode Games VS (Picks game 17): NUMBER games (kind 3), TIME-locked, with NO pick changes
  *  (owner D-342 to D-351). The SHAPE (id, kind, list_size, number range, lock_mode, round_size, round_offset) never changes.
  *  - Over Under ROLLS (D-326, D-329, D-333): a new 12-hour game starts every 30 minutes (Picks round r starts at
@@ -134,7 +142,7 @@ export const OVERUNDER_GAME = Object.freeze({ id: 16, name: "Over Under", kind: 
   lead: 5 * 60000, ahead: 2 * 3600000, numberMin: "1", numberMax: "2", picksPerDay: 50, maxChanges: 0 });
 export const VS_GAME = Object.freeze({ id: 17, name: "Knode Games VS", kind: 3, packed: true, lockMode: 2, round: DAY_MS, offset: 0,
   lead: 5 * 60000, ahead: 2 * DAY_MS, numberMin: "0", numberMax: U64_MAX, picksPerDay: 20, maxChanges: 0 });
-const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME, OVERUNDER_GAME, VS_GAME];
+const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME, LASTNODE_GAME, OVERUNDER_GAME, VS_GAME];
 /** The picks per wallet per day and changes per pick the Picks contract allows at most. */
 const MAX_PICKS_PER_DAY = 50, MAX_CHANGES = 50;
 
@@ -468,7 +476,7 @@ export function timeRounds(g: { round: number; offset: number; lead: number; ahe
 }
 function gameOf(net: Net, id: number) {
   const g = net.games.find((x) => x.id === id);
-  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8; Survivor game 3; Over Under game 16; Knode Games VS game 17)"}.`);
+  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8; Survivor game 3; Last Node Standing game 13; Over Under game 16; Knode Games VS game 17)"}.`);
   return g;
 }
 async function sendCall(net: Net, p: Provider, chainId: string, signer: Signer, method: string, args: any, rcKoin = 2) {
