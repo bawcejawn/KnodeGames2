@@ -990,3 +990,11 @@ test("AB-061: once a week is sealed and matches its file, identical picks among 
     assert.doesNotMatch(v3.problems.join(" | "), /playing as one/, "different picks: no notice");
   } finally { delete PICKS_OF[2]; }
 });
+
+// Repo Lens #J-17b J17b-2 (Info): the unmarked-board notice is remembered per game AND week (the memo key), so it comes
+// once per game-week and again the next week. (Its text is tested in the L2-4 unmarked-board test above.)
+test("J17b-2: the unmarked-board notice's memo key carries the game and the week", () => {
+  const src = fs.readFileSync(new URL("./vault.ts", import.meta.url), "utf8");
+  const keys = src.match(/alert\(`[^`]*board-unmarked`/g) ?? [];
+  assert.deepEqual(keys, ["alert(`${id}:${w}:board-unmarked`"]);
+});
