@@ -10,6 +10,8 @@
 name: KnodeGames recorders
 
 on:
+  schedule:
+    - cron: "47 * * * *"     # every hour at minute 47 (after the race recorder at :37 has taken the hour's card)
   workflow_dispatch: {}
 
 concurrency:

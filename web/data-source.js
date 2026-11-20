@@ -2,7 +2,7 @@
 // Loaded first on every page, before any script that fetches data. docs/capacity/README.md explains it all.
 //
 // MIRROR: when on, a page's request for a published game file on GitHub
-//   https://raw.githubusercontent.com/bawcejawn/KnodeGames/<branch>/<file>.json
+//   https://raw.githubusercontent.com/bawcejawn/KnodeGames2/<branch>/<file>.json
 // goes to the same file on our Cloudflare mirror https://data.knodegames.com/<branch>/<file>.json (byte for byte the
 // same file, kept 5 minutes like GitHub's). If the mirror fails, the page asks GitHub exactly as before and leaves the
 // mirror alone for 10 minutes. Nothing else is touched: chain calls, wallets, same-site files and every other address
@@ -15,7 +15,7 @@
 (function () {
   "use strict";
   var ON = { mirror: true, live: false };   // mirror ON (owner's A3 check, Thu 12 Nov 11:28 PM ET); live waits for A4
-  var RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/";
+  var RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/";
   var MIRROR = "https://data.knodegames.com/";
   var LIVE = "https://live.knodegames.com/live.json";
   var BRANCHES = { "games-data": 1, "race-data": 1, "blocks-data": 1, "names-data": 1, "stats-data": 1, "prize-settings": 1, "game-data": 1 };
