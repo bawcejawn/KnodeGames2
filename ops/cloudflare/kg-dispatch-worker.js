@@ -13,11 +13,11 @@
 //                       the race cards had 9-10 samples, not 12, and Block X had no usable card; Block X chat, 15 Nov).
 //                       One run takes up to 12 samples over up to 48 minutes; checking twice an hour keeps a gap without
 //                       samples to about 30 minutes. One Cron Trigger with two minutes ("7,37 * * * *").
-//                    -> and kit-games.yml (the Shared Game Kit's games, Fantasy; GitHub's own timer is :57). Its jobs
-//                       were inside games.yml until Mon 16 Nov (#351: games.yml passed GitHub's 500 KB limit). Its
-//                       window is 45 minutes, so the :07 and :37 checks never start it after a normal :57 run (10 and
-//                       40 minutes earlier), and a dropped :57 run is started at :07 (Repo Lens #J-8 J8-1). It shares
-//                       the existing trigger: Cloudflare's Free plan allows 5 Cron Triggers per account (J5-2).
+//                    -> and kit-games.yml (the Shared Game Kit's games, Fantasy; GitHub's own timer is :27 and :57, D-355).
+//                       Its jobs were inside games.yml until Mon 16 Nov (#351: games.yml passed GitHub's 500 KB limit).
+//                       Its window is 25 minutes: the normal run 10 minutes before each check (:57 before :07, :27 before
+//                       :37) is seen, so nothing is doubled; a dropped run leaves only the one 40 minutes earlier, so one
+//                       is started (Repo Lens #J-8 J8-1, #24). It shares the existing trigger (one Worker, 4 triggers).
 // "Already ran": a run of that workflow on main created in the window (queued, running or finished), from GitHub's
 // timer, a manual run or this Worker. The GitHub timers stay on as they are; the workflows' concurrency groups
 // (knode-vhp-ruler, knode-race, knode-games for games.yml and kit-games.yml, knode-race-samples) mean two runs never

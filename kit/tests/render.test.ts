@@ -38,7 +38,7 @@ test("render: kit games live in kit-games.yml; games.yml holds no kit block and 
   if (main.status === 0) assert.equal(stripKitBlock(now), stripKitBlock(main.stdout), "games.yml's hand-written lines are main's");
 });
 
-test("render: kit-games.yml runs hourly at :57 and never beside the host (the host's concurrency group)", () => {
+test("render: kit-games.yml runs twice an hour (:27 and :57) and never beside the host (the host's concurrency group)", () => {
   const host = YAML.parse(fs.readFileSync(path.join(ROOT, ".github/workflows/games.yml"), "utf8"));
   const kit = YAML.parse(fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8"), { uniqueKeys: true });
   assert.deepEqual(kit.on, { schedule: [{ cron: KIT_CRON }], workflow_dispatch: {} }, "its own hour; no workflow_run (audit L-9)");
