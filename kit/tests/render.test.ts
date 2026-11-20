@@ -27,15 +27,18 @@ test("render: every committed kit workflow is exactly what the kit renders (run 
 
 // D-160, since the first kit game (Fantasy, #266): the kit never changes a hand-written line. Since Mon 16 Nov 2026 the
 // kit games' jobs live in their own file, kit-games.yml (games.yml had passed GitHub's 500 KB limit); games.yml holds
-// no kit block, and every hand-written line of it stays exactly as it is on main.
-test("render: kit games live in kit-games.yml; games.yml holds no kit block and its hand-written jobs are main's (D-160)", () => {
+// no kit block, and rendering leaves every hand-written line of it exactly as it is in this checkout. (Until Fri 20 Nov
+// this compared games.yml with origin/main, which failed any PR that changes a hand-written job on purpose, such as
+// the Ruler's vhp_ruler.py in #33, whenever origin/main existed; a shallow CI checkout skipped it.)
+test("render: kit games live in kit-games.yml; games.yml holds no kit block and rendering leaves its hand-written lines as they are (D-160)", () => {
   assert.deepEqual(kitGames(ROOT).flatMap((x: any) => x.games.map((g: any) => `${x.file}:${g.slug}`)), ["games.yml:fantasy", "games.yml:survivor"], "the kit games are exactly the games with a GameModule");
   const now = fs.readFileSync(path.join(ROOT, ".github/workflows/games.yml"), "utf8");
   assert.ok(!now.includes(BEGIN) && !now.includes(END), "no kit block in the host");
   const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
   assert.ok(kit.includes(BEGIN) && kit.includes(END), "the kit block is in kit-games.yml");
-  const main = spawnSync("git", ["show", "origin/main:.github/workflows/games.yml"], { cwd: ROOT, encoding: "utf8" });
-  if (main.status === 0) assert.equal(stripKitBlock(now), stripKitBlock(main.stdout), "games.yml's hand-written lines are main's");
+  const host = renderAll(ROOT).find((r: any) => path.basename(r.file) === "games.yml");
+  assert.ok(host, "the kit renders games.yml as a host");
+  assert.equal(host!.want, now, "rendering leaves games.yml's hand-written lines exactly as they are");
 });
 
 test("render: kit-games.yml runs twice an hour (:27 and :57) and never beside the host (the host's concurrency group)", () => {
