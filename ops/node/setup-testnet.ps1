@@ -5,8 +5,8 @@
   ("kpred-testnet") and its own ports (the testnet node answers on http://127.0.0.1:8081, the mainnet one stays on 8080).
   It does not produce blocks (it doesn't need to): it only reads the testnet and sends our test transactions.
 
-  Run in PowerShell from C:\kprediction:
-      powershell -ExecutionPolicy Bypass -File node\setup-testnet.ps1
+  Run in PowerShell from your KnodeGames2 folder (e.g. C:\knodegames2):
+      powershell -ExecutionPolicy Bypass -File ops\node\setup-testnet.ps1
 
   The first sync downloads the whole testnet chain (there is no snapshot), so it can take hours. Check progress with:
       npm run bot -- node-status --testnet
@@ -75,7 +75,7 @@ Ok "started"
 
 Write-Host ""
 Write-Host "Done. The node now downloads the testnet chain; that can take a few hours the first time." -ForegroundColor Cyan
-Write-Host "  cd C:\kprediction"
+Write-Host "  cd $(Split-Path -Parent (Split-Path -Parent $PSScriptRoot))"
 Write-Host "  npm run bot -- node-status --testnet     # how far it has synced"
 Write-Host ""
 Write-Host "Useful:"
