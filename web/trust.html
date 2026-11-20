@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <!-- Only these sources may run scripts, load data or be framed. 'unsafe-eval' is needed by koilib (its protobuf
        encoder builds functions at run time); CDN scripts are pinned by their integrity hash. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/ https://koinos.armana.io https://api.koinos.io https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/game-data/ https://koinos.armana.io https://api.koinos.io https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trust and safety · Knode Games</title>
@@ -127,9 +127,9 @@
       <h2 class="sec-title">Security status</h2>
       <article class="panel">
         <ul class="checks">
-          <li><span>Source-available: every line of both contracts, the website and the bot is public on <a href="https://github.com/bawcejawn/KnodeGames" target="_blank" rel="noopener">GitHub</a> to read and check (all rights reserved: see the license there).</span></li>
-          <li><span>Automated tests run on every change: 104 for the game, 25 for the swap desk (<a href="https://github.com/bawcejawn/KnodeGames/actions" target="_blank" rel="noopener">see the latest runs</a>).</span></li>
-          <li><span>Internal security reviews: <a href="https://github.com/bawcejawn/KnodeGames/blob/main/game/SECURITY.md" target="_blank" rel="noopener">game</a> and <a href="https://github.com/bawcejawn/KnodeGames/blob/main/desk/SECURITY.md" target="_blank" rel="noopener">swap desk</a>, each listing every risk, what stops it and the test that proves it.</span></li>
+          <li><span>Source-available: every line of both contracts, the website and the bot is public on <a href="https://github.com/bawcejawn/KnodeGames2" target="_blank" rel="noopener">GitHub</a> to read and check (all rights reserved: see the license there).</span></li>
+          <li><span>Automated checks run on every change: the site and bot tests, and a rebuild of all five contracts that must match their published fingerprints (<a href="https://github.com/bawcejawn/KnodeGames2/actions" target="_blank" rel="noopener">see the latest runs</a>).</span></li>
+          <li><span>Internal security reviews: <a href="https://github.com/bawcejawn/KnodeGames2/blob/main/contracts/vault/SECURITY.md" target="_blank" rel="noopener">game</a> and <a href="https://github.com/bawcejawn/KnodeGames2/blob/main/contracts/desk/SECURITY.md" target="_blank" rel="noopener">swap desk</a>, each listing every risk, what stops it and the test that proves it.</span></li>
           <li><span>Tried on mainnet with small amounts before going public.</span></li>
           <li class="pending"><span><b>Independent audit: completed October 2026; fixes being applied.</b> Until they are all live, please stake and swap only what you could afford to lose (<a href="terms.html">Terms &amp; risks</a>).</span></li>
         </ul>
@@ -139,7 +139,7 @@
     <section class="start-sec">
       <h2 class="sec-title">Code fingerprints</h2>
       <article class="panel">
-        <p class="muted">Anyone can rebuild the contracts from the public code and get exactly these fingerprints (SHA-256), proving the code on the chain is the code on GitHub. How: <a href="https://github.com/bawcejawn/KnodeGames/blob/main/README.md#check-the-contracts-yourself" target="_blank" rel="noopener">the README</a>.</p>
+        <p class="muted">Anyone can rebuild the contracts from the public code and get exactly these fingerprints (SHA-256), proving the code on the chain is the code on GitHub. How: <a href="https://github.com/bawcejawn/KnodeGames2/blob/main/README.md#check-the-contracts-yourself" target="_blank" rel="noopener">the README</a>.</p>
         <dl class="facts" id="prints" style="margin-top:12px"></dl>
       </article>
     </section>

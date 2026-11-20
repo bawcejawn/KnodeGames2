@@ -5,14 +5,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+// Its own temp folder, so other tests building the site at the same time cannot collide with it.
+const DIST = fs.mkdtempSync(path.join(os.tmpdir(), "kg-dist-urls-"));
+process.on("exit", () => fs.rmSync(DIST, { recursive: true, force: true }));
 
 test("every relative JSON file a page script asks for is in the assembled site", () => {
-  const r = spawnSync(process.execPath, [path.join(ROOT, "tools/ci/assemble-site.mjs")], { cwd: ROOT, encoding: "utf8" });
+  const r = spawnSync(process.execPath, [path.join(ROOT, "tools/ci/assemble-site.mjs"), DIST], { cwd: ROOT, encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr);
   const asked = new Set();
   for (const f of fs.readdirSync(path.join(ROOT, "web")).filter((n) => n.endsWith(".js"))) {
@@ -22,6 +26,6 @@ test("every relative JSON file a page script asks for is in the assembled site",
     }
   }
   assert.ok(asked.size >= 8, `found only ${asked.size} requests: the pattern no longer matches the pages`);
-  const missing = [...asked].filter((a) => !fs.existsSync(path.join(ROOT, "dist-site", a.split("  ")[0])));
-  assert.deepEqual(missing, [], "files the pages ask for but dist-site/ doesn't contain");
+  const missing = [...asked].filter((a) => !fs.existsSync(path.join(DIST, a.split("  ")[0])));
+  assert.deepEqual(missing, [], "files the pages ask for but the built site doesn't contain");
 });
