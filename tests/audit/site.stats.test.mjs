@@ -32,7 +32,7 @@ const STRIP = '<div id="stats-strip" hidden></div>', PANEL = '<section id="stats
 
 test("the strip shows up to 3 strong facts, from one fetch of the stats-data file", async () => {
   const { d, calls } = await page(STRIP, sample());
-  assert.deepEqual(calls, ["https://raw.githubusercontent.com/bawcejawn/KnodeGames/stats-data/stats.json"]);
+  assert.deepEqual(calls, ["https://raw.githubusercontent.com/bawcejawn/KnodeGames2/stats-data/stats.json"]);
   const s = d.getElementById("stats-strip");
   assert.equal(s.hidden, false);
   const facts = [...s.querySelectorAll(".stats-fact")].map((f) => f.textContent);
@@ -75,7 +75,7 @@ test("stats.js never writes HTML or stores anything, and both pages load it with
   for (const f of ["index.html", "games.html"]) {
     const h = fs.readFileSync(`${APP}/web/${f}`, "utf8");
     assert.match(h, /<script src="stats\.js"><\/script>/, f);
-    assert.match(h.match(/connect-src [^;]*/)[0], /https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/stats-data\//, f);
+    assert.match(h.match(/connect-src [^;]*/)[0], /https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/stats-data\//, f);
   }
   assert.match(fs.readFileSync(`${APP}/web/index.html`, "utf8"), /<div class="stats-strip" id="stats-strip" hidden><\/div>/);
   assert.match(fs.readFileSync(`${APP}/web/games.html`, "utf8"), /<section class="stats-panel" id="stats-panel" aria-label="Live stats" hidden><\/section>/);

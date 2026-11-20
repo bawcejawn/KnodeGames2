@@ -45,6 +45,6 @@ test("the test week banner (Mon 9 to Mon 16 Nov 2026) is gone after its week (ow
   const nav = fs.readFileSync(`${APP}/web/nav.js`, "utf8");
   assert.doesNotMatch(nav, /Date\.UTC\(2026, 10, 9\)/);
   assert.doesNotMatch(nav, /Test week:|Week 1 starts Monday 16 November/);
-  assert.match(nav, /const FX_FROM = Date\.UTC\(2026, 10, 16\), FX_UNTIL = Date\.UTC\(2026, 10, 23\);/, "Fantasy's banner is untouched");
+  assert.match(nav, /const FX_FROM = Date\.UTC\(2026, 10, 16\), FX_UNTIL = Date\.UTC\(2026, 10, 30\);/, "Fantasy's banner: weeks 4 and 5 (D-238)");
   assert.doesNotMatch(nav, /innerHTML|localStorage|fetch\(/);
 });

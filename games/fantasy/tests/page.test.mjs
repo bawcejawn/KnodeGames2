@@ -28,13 +28,15 @@ test("page: builds nothing from HTML strings; reads only the kit's files and the
   for (const f of ["board.json", "alltime.json", "inputs/W${w}.json", "W${pad(w)}.json"]) assert.ok(js.includes(f), f);
   assert.doesNotMatch(js, /index\.json|days\.json|rivals\.json/, "no files of the old recorder");
   const csp = html.match(/Content-Security-Policy" content="([^"]+)"/)[1];
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/games-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//);
   assert.doesNotMatch(html, /name="robots" content="noindex/, "searchable: in the menus as Test weeks (Hub #314)");
 });
 
 test("page: sends Picks game 4 for a day (round = the day number) and game 5 for a week (round = its Monday)", () => {
-  assert.match(js, /game: GAME, round: String\(d\), producers: list/);
-  assert.match(js, /game: RIVAL, round: String\(round\), producers: \[target\]/);
+  // Since the shared Send my picks card (D-255/D-278) both go through sendOne, which builds the pick for (game, round).
+  assert.match(js, /picks\.functions\.pick\(\{ player: me\(\), game, round: String\(round\), producers: wanted, number: "0" \}/);
+  assert.match(js, /sendOne\(GAME, d, list, /);
+  assert.match(js, /sendOne\(RIVAL, round, \[target\], /);
   assert.match(js, /round = dayNo\(weekStart\(rw\)\)/);
   assert.match(js, /const DAY = F\.DAY, LEAD = 300000/);
 });

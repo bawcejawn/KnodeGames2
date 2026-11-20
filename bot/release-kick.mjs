@@ -39,7 +39,7 @@ const DRY = process.argv.includes("--dry-run");
 const AT = (() => { const i = process.argv.indexOf("--at"); return i > 0 ? Date.parse(process.argv[i + 1]) : NaN; })();
 
 const API = process.env.HEAL_GITHUB_API || "https://api.github.com";
-const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames";
+const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames2";
 const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR;
 // Offsets from each round's release time.
 const EARLY_FROM = -10 * MIN, EARLY_TO = -2 * MIN;
@@ -150,10 +150,14 @@ export function heartbeatDecision(runs, now) {
   return { start: true, why: last ? `no bot run has started since ${stamp(last)}` : "no bot run found" };
 }
 
-/** Today's question file on main: null (not there), or { n: number of questions, skipped }. */
+/** The question files live on the game-data branch, not on main (docs/DATA.md; Repo Lens J14-1). */
+export const DATA_REF = "game-data";
+/** Where today's question file is read from (pure, for the tests). */
+export const todaysFilePath = (repo, label) => `/repos/${repo}/contents/game-data/questions/${label}.json?ref=${DATA_REF}`;
+/** Today's question file on the game-data branch: null (not there), or { n: number of questions, skipped }. */
 async function todaysFile(label) {
   // Read without the token: the repository is public, and the token only has Actions permission.
-  const r = await gh("GET", `/repos/${REPO}/contents/game-data/questions/${label}.json?ref=main`, null, false);
+  const r = await gh("GET", todaysFilePath(REPO, label), null, false);
   if (r.status === 404) return null;
   if (!r.ok) throw new GitHubError(`GitHub said ${r.status} reading ${label}.json`);
   const j = await r.json();

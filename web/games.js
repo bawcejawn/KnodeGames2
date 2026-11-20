@@ -11,8 +11,8 @@
   const BASE = "./";
   const GAME_DATA = BASE + "game-data/";
   // The owner's free-prize switches (bot/free-prizes.ts), published on the prize-settings branch. Read-only.
-  const PRIZE_URL = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/prize-settings/free-prizes.json";
-  const RACE_DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/";
+  const PRIZE_URL = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/prize-settings/free-prizes.json";
+  const RACE_DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/";
   const $ = (id) => document.getElementById(id);
   const SVG = "http://www.w3.org/2000/svg";
 
