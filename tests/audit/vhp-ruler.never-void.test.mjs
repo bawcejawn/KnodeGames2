@@ -9,7 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { R, PY, toJson } from "./vhp-ruler.fixture.mjs";
-import { chain, game, win } from "./vhp-ruler.repolens-b10-chain.mjs";
+import { chain, game, win, FROM } from "./vhp-ruler.repolens-b10-chain.mjs";
 
 const M = 1000000n, dir = fs.mkdtempSync(path.join(os.tmpdir(), "vhp-nv-"));
 const py = (code, data) => { const f = path.join(dir, `in${Math.random().toString(36).slice(2)}.json`); fs.writeFileSync(f, toJson(data)); return PY(`j = json.load(open(${JSON.stringify(f)}))\n${code}`); };
@@ -80,6 +80,9 @@ test("weekOfStart: the week a game STARTS in; Mon 00:00 UTC is a new week, Sun 2
   const G = 1792368000000n, W = 604800000n, cases = [[G, 0], [G + W - 1n, 0], [G + W, 1], [G + 5n * W, 5], [G + 5n * W - 1800000n, 4], [G + 5n * W + 1800000n, 5], [G + 6n * W - 1n, 5]];
   for (const [t, w] of cases) assert.equal(R.weekOfStart(t), w);
   assert.throws(() => R.weekOfStart(G - 1n), /week 0/);
+  for (const bad of ["1792368000000", 1792368000000.5, NaN, null, undefined, true]) assert.throws(() => R.weekOfStart(bad), /whole number/, `JS refuses ${String(bad)}`);   // J33-2: only a whole number or a BigInt
+  assert.equal(R.weekOfStart(1792368000000), 0, "a whole Number is fine");
+  assert.throws(() => py(`V.week_of_start("1792368000000")`, {}), /whole number/, "Python refuses the string too");
   const r = JSON.parse(py(`print(json.dumps([V.week_of_start(int(t)) for t in j["t"]]))`, { t: cases.map((c) => c[0].toString()) }));
   assert.deepEqual(r, cases.map((c) => c[1]));
   assert.throws(() => py(`V.week_of_start(${(G - 1n).toString()})`, {}), /week 0/);
@@ -107,4 +110,22 @@ test("listAt (D-334): signed in the last 6 hours AND at least 10 blocks in 24 ho
   assert.ok(dropped >= 0);
   assert.deepEqual(JSON.parse(py(`L = V.Ledger(j["tl"]); print(json.dumps(V.list_at(L, j["H"])))`, { tl, H })), [...got]);
   for (let i = 1; i < got.length; i++) assert.ok(got[i - 1] < got[i], "rising order");
+});
+
+test("listAt boundaries (J33-1): exactly 9 blocks out, exactly 10 in, 11 in; last block at H-7200 in, at H-7201 out; JS = Python; the near-miss rules all fail", () => {
+  const H = win.L, mk = (base, n, off) => new Set(Array.from({ length: n }, (_, i) => base - off - 200 * i));
+  const rows = [null, mk(H, 10, 1), mk(H, 9, 2), mk(H, 11, 3), mk(H - 7200, 20, 1), mk(H - 7200, 12, 0)];   // ps[1]: 10 blocks, ps[2]: 9, ps[3]: 11, ps[4]: last block H-7201, ps[5]: last block H-7200
+  const { tl, ps } = chain({ np: 6, signerOf: (k, ps) => { for (let j = 1; j < 6; j++) if (rows[j].has(FROM + k)) return ps[j]; return ps[0]; } }), L = R.ledger(tl);   // signerOf gets the index from FROM, not the height
+  const want = [ps[0], ps[1], ps[3], ps[5]].sort();   // ps[0] signs the rest; 9 blocks is out; 10 and 11 are in; H-7200 is the last block still inside the 6 hours; H-7201 is outside
+  const got = [...R.listAt(L, H)];
+  assert.deepEqual(got, want);
+  const count = (a, h0, h1) => L.signedIn(a, h0, h1);
+  assert.equal(count(ps[1], H - 28800, H - 1), 10); assert.equal(count(ps[2], H - 28800, H - 1), 9); assert.equal(count(ps[3], H - 28800, H - 1), 11);
+  assert.equal(count(ps[5], H - 7200, H - 1), 1); assert.equal(count(ps[4], H - 7200, H - 1), 0); assert.equal(count(ps[4], H - 7201, H - 1), 1);
+  // the near-miss rules each give a different list, so the test fails every one of them
+  const atLeast = (n, Hh) => [...L.active(Hh)].filter((a) => L.signedIn(a, H - 28800, H - 1) >= n).sort();
+  assert.notDeepEqual(atLeast(9, H), want, ">= 9 would list the 9-block producer"); assert.notDeepEqual(atLeast(11, H), want, ">= 11 would drop the 10-block producer");
+  assert.notDeepEqual(atLeast(10, H + 1), want, "active(H + 1) would drop the producer whose last block is H - 7200");
+  assert.notDeepEqual(atLeast(10, H - 1), want, "active(H - 1) would add the producer whose last block is H - 7201");
+  assert.deepEqual(JSON.parse(py(`L = V.Ledger(j["tl"]); print(json.dumps(V.list_at(L, j["H"])))`, { tl, H })), want, "JS = Python");
 });

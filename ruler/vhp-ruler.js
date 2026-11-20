@@ -836,6 +836,7 @@
   const GENESIS_MS = 1792368000000n, WEEK_MS = 604800000n;   // vault week 0 starts Mon 19 Oct 2026 00:00 UTC
   /** The vault week a game belongs to: the week it STARTS in (Mon 00:00 UTC is the first moment of a new week). */
   function weekOfStart(startMs) {
+    if (typeof startMs !== "bigint" && !Number.isSafeInteger(startMs)) throw new Error("a game's start must be a whole number of milliseconds");   // a string or a fraction is refused, as in Python
     const t = big(startMs);
     if (t < GENESIS_MS) throw new Error("a game's start must be a whole number of milliseconds from week 0");
     return Number((t - GENESIS_MS) / WEEK_MS);
