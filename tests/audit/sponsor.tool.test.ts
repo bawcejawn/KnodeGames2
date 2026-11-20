@@ -226,7 +226,8 @@ test("audit SP-8: the deployed site must ask for at most each chain row, its fal
 test("audit SP-1 / SP-5 / SP-14 / SP-17: config uses the owner's caps, stops on a failed read, checks the code, and the site's other-actions limit fits the cap", async () => {
   const src = fs.readFileSync("bot/sponsor.ts", "utf8");
   const body = src.slice(src.indexOf("async function setConfig("), src.indexOf("/** Copies the per-action limits"));
-  assert.match(body, /const base = enabledArg === true \? capsOf\(cur\) : DEFAULT_CAPS;/, "config: the owner's caps; enable: the caps on chain (round 4, SP-39)");
+  assert.match(body, /const base = capsBase\(a, enabledArg, cur\);/, "config: the owner's caps; enable and --keep-caps: the caps on chain (round 4, SP-39)");
+  assert.match(src, /if \(!a\.includes\("--keep-caps"\)\) return enabledArg === true \? capsOf\(cur\) : DEFAULT_CAPS;/, "capsBase: without --keep-caps nothing changed");
   assert.match(body, /flag\(a, "--per-day", base\.perDay\)/);
   assert.ok(!/fromSat\(cur\.max_mana_per_day, DEFAULT_CAPS/.test(body), "no fallback to what is on chain");
   assert.match(src, /Couldn't read the sponsor's settings from/, "a failed read stops (never 'nothing set': switched off)");
