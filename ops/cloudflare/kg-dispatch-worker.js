@@ -26,11 +26,18 @@
 // The only secret is GH_DISPATCH_TOKEN, a Worker secret (a fine-grained GitHub token for this one repository with
 // "Actions: Read and write" and nothing else). It is never in this file, never logged, never sent anywhere but GitHub.
 const REPO = "bawcejawn/KnodeGames2";
+// Cutover day (Fri 20 Nov 2026): GitHub's own timers did not start in KnodeGames2 after #9, so the Worker also backs up
+// the hourly bot, names and golf (window 50: the :07 check starts one if none ran in the last 50 minutes, and the :37
+// check then sees it) and stats (every 2 hours, window 110). Same 4 triggers; when GitHub's timers run, the Worker
+// sees their runs and starts nothing. A duplicate is harmless: each workflow's concurrency group queues it.
 export const JOBS = {
-  "22 * * * *": [{ workflow: "vhp-ruler.yml", windowMin: 30 }],
+  "22 * * * *": [{ workflow: "vhp-ruler.yml", windowMin: 30 }, { workflow: "stats.yml", windowMin: 110 }],
   "41 * * * *": [{ workflow: "race.yml", windowMin: 30 }],
   "51 * * * *": [{ workflow: "games.yml", windowMin: 30 }],
-  "7,37 * * * *": [{ workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25 }],
+  "7,37 * * * *": [
+    { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25 },
+    { workflow: "bot.yml", windowMin: 50 }, { workflow: "names.yml", windowMin: 50 }, { workflow: "golf.yml", windowMin: 50 },
+  ],
 };
 const API = "https://api.github.com/repos/" + REPO + "/actions/workflows/";
 

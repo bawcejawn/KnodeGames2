@@ -3,6 +3,7 @@
 // when no run of that workflow on main was created in its window (30 minutes; 25 for kit-games.yml, which runs at :27 and :57).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 
@@ -48,8 +49,8 @@ test("kg-dispatch: :07 and :37 start race-samples.yml when it hasn't run in 30 m
   assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/race-samples.yml/dispatches");
   const busy = gh(1);
   const out = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, busy.f, NOW);
-  assert.deepEqual(out.map((x) => x.dispatched), [false, false]);
-  assert.equal(busy.calls.length, 2, "both ran recently: two lists, nothing started");
+  assert.deepEqual(out.map((x) => x.dispatched), [false, false, false, false, false]);
+  assert.equal(busy.calls.length, 5, "all ran recently: five lists, nothing started");
 });
 
 test("kg-dispatch: :07 and :37 start kit-games.yml (Fantasy) only when it hasn't run in 25 minutes (D-355: runs at :27 and :57)", async () => {
@@ -75,7 +76,8 @@ test("kg-dispatch: an error on one job still runs the other, then the run fails 
     return new Response(null, { status: 204 });
   };
   await assert.rejects(M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW, (l) => lines.push(l)), /race-samples\.yml: GitHub answered 502 listing/);
-  assert.deepEqual(lines, ["kg-dispatch: race-samples.yml: ERROR race-samples.yml: GitHub answered 502 listing runs", `kg-dispatch: kit-games.yml: no run since 2026-11-14T14:16:00Z: started one`]);
+  assert.deepEqual(lines, ["kg-dispatch: race-samples.yml: ERROR race-samples.yml: GitHub answered 502 listing runs", `kg-dispatch: kit-games.yml: no run since 2026-11-14T14:16:00Z: started one`,
+    "kg-dispatch: bot.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: names.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: golf.yml: no run since 2026-11-14T13:51:00Z: started one"]);
 });
 
 test("kg-dispatch: a run this hour (GitHub's timer, by hand, or ours) -> nothing started", async () => {
@@ -97,7 +99,7 @@ test("kg-dispatch: only its jobs; an unknown trigger, no token, a GitHub error o
   await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, bad, NOW), /total_count/);
   await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, gh(0, { dispatchStatus: 403 }).f, NOW), /403 to the dispatch/);
   assert.deepEqual(Object.keys(M.JOBS), ["22 * * * *", "41 * * * *", "51 * * * *", "7,37 * * * *"], "four triggers: the account's 5th stays free (J5-2)");
-  assert.deepEqual(Object.values(M.JOBS).flat().map((j) => j.workflow), ["vhp-ruler.yml", "race.yml", "games.yml", "race-samples.yml", "kit-games.yml"]);
+  assert.deepEqual(Object.values(M.JOBS).flat().map((j) => j.workflow), ["vhp-ruler.yml", "stats.yml", "race.yml", "games.yml", "race-samples.yml", "kit-games.yml", "bot.yml", "names.yml", "golf.yml"]);
 });
 
 test("kg-dispatch: no web endpoint, and the token is never in the file", async () => {
@@ -115,4 +117,18 @@ test("kg-dispatch: the workflows it starts can be started by hand and never over
     assert.match(y, /workflow_dispatch:/, f);
     assert.match(y, new RegExp(`concurrency:\\s*\\n\\s*group: ${g}\\s*\\n\\s*cancel-in-progress: false`), f);
   }
+});
+
+test("kg-dispatch: cutover backup (Fri 20 Nov): bot, names and golf at :07 and :37 with a 50-minute window; stats at :22 with 110", () => {
+  const at = (cron, wf) => M.JOBS[cron].find((j) => j.workflow === wf);
+  for (const wf of ["bot.yml", "names.yml", "golf.yml"]) {
+    const j = at("7,37 * * * *", wf);
+    assert.ok(j, wf);
+    // An hourly workflow: the :37 check must see the run started at :07 (30 minutes), and the :07 check must not see the
+    // previous hour's :07 run (60 minutes), so 30 < w < 60.
+    assert.ok(30 < j.windowMin && j.windowMin < 60, wf);
+  }
+  const st = at("22 * * * *", "stats.yml");
+  assert.ok(st && 60 < st.windowMin && st.windowMin < 120, "stats runs every 2 hours: seen within 2 h, never doubled hourly");
+  for (const wf of Object.values(M.JOBS).flat().map((j) => j.workflow)) assert.ok(fs.existsSync(`.github/workflows/${wf}`), wf);
 });
