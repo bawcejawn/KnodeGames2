@@ -121,7 +121,20 @@ export const FANTASY_RIVAL_GAME = Object.freeze({ id: 5, name: "Weekly Rival", k
  *  except the id and the limits. The SHAPE (id, kind, list_size, lock_mode, round_size, round_offset) never changes. */
 export const SURVIVOR_GAME = Object.freeze({ id: 3, name: "Survivor", kind: 1, listSize: 1, lockMode: 2, round: DAY_MS, offset: 0,
   lead: 5 * 60000, ahead: 7 * DAY_MS, picksPerDay: 20, maxChanges: 5 });
-const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME];
+/** Over Under (Picks game 16) and Knode Games VS (Picks game 17): NUMBER games (kind 3), TIME-locked, with NO pick changes
+ *  (owner D-342 to D-351). The SHAPE (id, kind, list_size, number range, lock_mode, round_size, round_offset) never changes.
+ *  - Over Under ROLLS (D-326, D-329, D-333): a new 12-hour game starts every 30 minutes (Picks round r starts at
+ *    r × 30 min UTC), one producer per game; the pick is 1 = Over or 2 = Under. Picks open 2 hours before the start and lock
+ *    5 minutes before it (D-325), so 4 rounds are open at once; at most 48 games start a day, under the 50 picks a day.
+ *  - VS (D-327): one 24-hour round from 00:00 UTC, the pool node against every producer on the day's roster; the pick is
+ *    one packed number, 1 bit a matchup (up to 64), so the range is the whole u64, 0 … 2^64 − 1. That is above
+ *    JavaScript's safe integers, so the range is kept as decimal STRINGS and checked with BigInt, never as a Number. */
+export const U64_MAX = "18446744073709551615";
+export const OVERUNDER_GAME = Object.freeze({ id: 16, name: "Over Under", kind: 3, packed: true, lockMode: 2, round: 30 * 60000, offset: 0,
+  lead: 5 * 60000, ahead: 2 * 3600000, numberMin: "1", numberMax: "2", picksPerDay: 50, maxChanges: 0 });
+export const VS_GAME = Object.freeze({ id: 17, name: "Knode Games VS", kind: 3, packed: true, lockMode: 2, round: DAY_MS, offset: 0,
+  lead: 5 * 60000, ahead: 2 * DAY_MS, numberMin: "0", numberMax: U64_MAX, picksPerDay: 20, maxChanges: 0 });
+const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME, OVERUNDER_GAME, VS_GAME];
 /** The picks per wallet per day and changes per pick the Picks contract allows at most. */
 const MAX_PICKS_PER_DAY = 50, MAX_CHANGES = 50;
 
@@ -335,7 +348,7 @@ async function findVhp(p: Provider): Promise<string | null> {
 // ═══════════════════════════════ games ═══════════════════════════════
 /** The game_config the contract takes for a Block X game (one producer, locked by block height). Exported for the tests. */
 export function buildGameConfig(g: any, enabled = true) {
-  if (g.kind === 3) return bracketConfig(g, enabled);
+  if (g.kind === 3) return g.packed ? packedNumberConfig(g, enabled) : bracketConfig(g, enabled);
   if (g.kind === 4) return cardConfig(g, enabled);
   if (g.lockMode === 2) return timeListConfig(g, enabled);
   X.forGame(g);   // the contract's own limits for a height game (lead ≥ 100, ahead > lead, ...)
@@ -360,6 +373,24 @@ function bracketConfig(g: any, enabled: boolean) {
   if (!(g.picksPerDay >= 1 && g.picksPerDay <= MAX_PICKS_PER_DAY)) throw new Error("Picks per day must be 1 to 50.");
   if (!(g.maxChanges >= 0 && g.maxChanges <= MAX_CHANGES)) throw new Error("Changes must be 0 to 50.");
   return { id: g.id, name: g.name, kind: 3, list_size: 0, number_min: "0", number_max: String(g.numberMax), lock_mode: 2, round_size: String(g.round), round_offset: String(g.offset),
+    lead: String(g.lead), ahead: String(g.ahead), max_picks_per_day: g.picksPerDay, max_changes: g.maxChanges, enabled };
+}
+/** A packed NUMBER game (kind 3, time lock: Over Under, VS): every limit the contract's checkGame applies. number_min and
+ *  number_max are decimal strings read with BigInt (u64), so 2^64 − 1 is exact and nothing is rounded. */
+function packedNumberConfig(g: any, enabled: boolean) {
+  const ok = (c: boolean, why: string) => { if (!c) throw new Error(`Game ${g.id}: ${why}.`); };
+  if (typeof g.name !== "string" || !g.name || Buffer.byteLength(g.name) > 40) throw new Error("A game needs a name of 1 to 40 bytes.");
+  ok(g.id >= 1 && g.id < 128, "game ids are 1 to 127");
+  const u64 = (v: any) => typeof v === "string" && /^(0|[1-9][0-9]{0,19})$/.test(v) && BigInt(v) <= BigInt(U64_MAX);
+  ok(u64(g.numberMin) && u64(g.numberMax), "number_min and number_max are whole-number strings from 0 to 2^64 − 1");
+  ok(BigInt(g.numberMin) <= BigInt(g.numberMax), "number_min at most number_max");
+  ok(g.lockMode === 2, "locked by time");
+  ok(Number.isSafeInteger(g.round) && Number.isSafeInteger(g.offset) && g.round >= 1 && g.offset >= 0 && g.offset < g.round, "round_size at least 1 and above round_offset");
+  ok(Number.isSafeInteger(g.lead) && g.lead >= 300000, "lead at least 5 minutes");
+  ok(Number.isSafeInteger(g.ahead) && g.ahead > g.lead && g.ahead <= 35 * DAY_MS, "ahead above lead and at most 35 days");
+  if (!(g.picksPerDay >= 1 && g.picksPerDay <= MAX_PICKS_PER_DAY)) throw new Error("Picks per day must be 1 to 50.");
+  if (!(g.maxChanges >= 0 && g.maxChanges <= MAX_CHANGES)) throw new Error("Changes must be 0 to 50.");
+  return { id: g.id, name: g.name, kind: 3, list_size: 0, number_min: g.numberMin, number_max: g.numberMax, lock_mode: 2, round_size: String(g.round), round_offset: String(g.offset),
     lead: String(g.lead), ahead: String(g.ahead), max_picks_per_day: g.picksPerDay, max_changes: g.maxChanges, enabled };
 }
 /** A CARD game (kind 4, Picks v2): every limit the contract's checkGame / checkCardGame applies. */
@@ -437,7 +468,7 @@ export function timeRounds(g: { round: number; offset: number; lead: number; ahe
 }
 function gameOf(net: Net, id: number) {
   const g = net.games.find((x) => x.id === id);
-  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8; Survivor game 3)"}.`);
+  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8; Survivor game 3; Over Under game 16; Knode Games VS game 17)"}.`);
   return g;
 }
 async function sendCall(net: Net, p: Provider, chainId: string, signer: Signer, method: string, args: any, rcKoin = 2) {
@@ -525,7 +556,7 @@ async function announce(id: number, send: boolean) {
     log(`  SHAPE (never changes): kind 4 (card), up to ${g.listSize} legs ever (${g.maxLegs} now), lock by TIME, ${g.slotsPerDay} cards a UTC day (one per slot), offset 0`);
     for (const t of g.legTypes) log(`    leg type ${t.code}: ${t.lock_mode === 1 ? `every ${t.round_size} blocks, locks ${t.lead} blocks before, opens ${t.ahead} blocks ahead` : `every ${Number(t.round_size) / 3600000} h, locks ${Number(t.lead) / 60000} min before, opens ${Number(t.ahead) / 3600000} h ahead`}`);
   } else if (g.kind === 3 || g.lockMode === 2) {
-    log(g.kind === 3 ? `  SHAPE (never changes): kind 3 (number), list_size 0, numbers 0 … ${g.numberMax}, lock by TIME, round ${g.round} ms (${g.round / DAY_MS} days), offset ${g.offset} ms`
+    log(g.kind === 3 ? `  SHAPE (never changes): kind 3 (number), list_size 0, numbers ${g.numberMin ?? 0} … ${g.numberMax}, lock by TIME, round ${g.round} ms (${g.round / DAY_MS} days), offset ${g.offset} ms`
       : `  SHAPE (never changes): kind ${g.kind} (${g.kind === 1 ? "one pick" : "a list"}), list_size ${g.listSize}, lock by TIME, round ${g.round} ms (${g.round / DAY_MS} days), offset ${g.offset} ms`);
     log(`  lead ${g.lead} ms (${g.lead / 60000} min), ahead ${g.ahead} ms (${g.ahead / 3600000} h)`);
     for (const x of timeRounds(g, Date.now())) log(`    round ${x.round}: opens ${x.opens}, locks ${x.locks}, target ${x.target}`);
