@@ -30,7 +30,7 @@ export const JOBS = {
   "22 * * * *": [{ workflow: "vhp-ruler.yml", windowMin: 30 }],
   "41 * * * *": [{ workflow: "race.yml", windowMin: 30 }],
   "51 * * * *": [{ workflow: "games.yml", windowMin: 30 }],
-  "7,37 * * * *": [{ workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 45 }],
+  "7,37 * * * *": [{ workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25 }],
 };
 const API = "https://api.github.com/repos/" + REPO + "/actions/workflows/";
 

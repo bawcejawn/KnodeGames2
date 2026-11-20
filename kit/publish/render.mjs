@@ -159,7 +159,7 @@ export const kitFileName = (host) => {
 /** The whole kit workflow file: a header, then the kit block. Its own hourly time, KIT_CRON, ten minutes after the host's
  *  :47; it shares the host's concurrency group, so a host run still going waits it out and the two never push at once.
  *  No workflow_run and no actions: write (audit L-9 and bot/workflow.test.ts forbid both). */
-export const KIT_CRON = "57 * * * *";
+export const KIT_CRON = "27,57 * * * *";   // twice an hour (D-355): a game whose schedule file must be written in a 78-minute window gets 2 chances, not 1
 export function renderKitFile({ host, hostName, group, block }) {
   if (!/^[A-Za-z0-9][A-Za-z0-9 ()&.,!+-]{1,63}$/.test(hostName)) throw new Error(`bad host workflow name ${JSON.stringify(hostName)}`);
   if (!/^[a-z][a-z0-9-]{1,63}$/.test(group)) throw new Error(`bad concurrency group ${group}`);
@@ -172,7 +172,7 @@ name: ${q(`${hostName} (kit games)`)}
 
 on:
   schedule:
-    - cron: "${KIT_CRON}"     # every hour, ten minutes after ${host} (:47); waits for it if it is still running
+    - cron: "${KIT_CRON}"     # twice an hour (D-355); :57 is ten minutes after ${host} (:47) and waits for it if it is still running
   workflow_dispatch: {}
 
 concurrency:

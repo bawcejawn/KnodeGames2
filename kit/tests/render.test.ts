@@ -42,7 +42,7 @@ test("render: kit-games.yml runs hourly at :57 and never beside the host (the ho
   const host = YAML.parse(fs.readFileSync(path.join(ROOT, ".github/workflows/games.yml"), "utf8"));
   const kit = YAML.parse(fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8"), { uniqueKeys: true });
   assert.deepEqual(kit.on, { schedule: [{ cron: KIT_CRON }], workflow_dispatch: {} }, "its own hour; no workflow_run (audit L-9)");
-  assert.equal(KIT_CRON, "57 * * * *");
+  assert.equal(KIT_CRON, "27,57 * * * *");
   assert.deepEqual(host.on.schedule, [{ cron: "47 * * * *" }], "ten minutes after the host");
   assert.equal(kit.name, `${host.name} (kit games)`);
   assert.deepEqual(kit.concurrency, host.concurrency, "the same concurrency group as the host");

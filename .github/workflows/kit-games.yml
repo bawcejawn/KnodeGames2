@@ -7,7 +7,7 @@ name: "KnodeGames recorders (kit games)"
 
 on:
   schedule:
-    - cron: "57 * * * *"     # every hour, ten minutes after games.yml (:47); waits for it if it is still running
+    - cron: "27,57 * * * *"     # twice an hour (D-355); :57 is ten minutes after games.yml (:47) and waits for it if it is still running
   workflow_dispatch: {}
 
 concurrency:

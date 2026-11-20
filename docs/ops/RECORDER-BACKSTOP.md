@@ -10,9 +10,9 @@ This Worker checks whether the ruler's data job, the two recorders and the race'
 | :41 | `race.yml` | :37 |
 | :51 | `games.yml` | :47 |
 | :07 and :37 | `race-samples.yml` (the race's VHP samples, which the race cards use) | every 15 minutes |
-| :07 and :37 | `kit-games.yml` (the Shared Game Kit's games, Fantasy; its jobs were in `games.yml` until Mon 16 Nov) | :57 |
+| :07 and :37 | `kit-games.yml` (the Shared Game Kit's games, Fantasy; its jobs were in `games.yml` until Mon 16 Nov) | :27 and :57 |
 
-- **"Ran":** a run of that workflow on `main` created in the last 30 minutes (45 for `kit-games.yml`, so a normal :57 run is never doubled). That counts a scheduled run, a manual run, or one this Worker started.
+- **"Ran":** a run of that workflow on `main` created in the last 30 minutes (25 for `kit-games.yml`, which runs at :27 and :57, so its normal run 10 minutes before each check is never doubled). That counts a scheduled run, a manual run, or one this Worker started.
 - **A trigger it doesn't know** (for example one typed as `37,7 * * * *`) is an error: the run shows as failed in Cloudflare and Logs says `no job for cron …`.
 - **What stays as it is:** GitHub's timers stay on. The workflows' concurrency groups make sure two runs never overlap.
 - **What it never touches:** files, settings and the workflows themselves.
