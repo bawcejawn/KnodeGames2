@@ -187,7 +187,7 @@ test("producer.html points public node runners at their public.key, not the owne
 test("words: no Chainge, the brand is two words, Vortex for the bridge", () => {
   const visible = html.replace(/<[^>]+>/g, " ");
   assert.doesNotMatch(html, /chainge/i);
-  assert.doesNotMatch(visible.replace(/bawcejawn\/KnodeGames\//g, ""), /KnodeGames/, "the repo name in a link is fine; the brand is two words");
+  assert.doesNotMatch(visible.replace(/bawcejawn\/KnodeGames2\//g, ""), /KnodeGames/, "the repo name in a link is fine; the brand is two words");
   assert.match(html, /Vortex/);
 });
 

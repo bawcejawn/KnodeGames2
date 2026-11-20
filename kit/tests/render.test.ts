@@ -38,12 +38,12 @@ test("render: kit games live in kit-games.yml; games.yml holds no kit block and 
   if (main.status === 0) assert.equal(stripKitBlock(now), stripKitBlock(main.stdout), "games.yml's hand-written lines are main's");
 });
 
-test("render: kit-games.yml runs hourly at :57 and never beside the host (the host's concurrency group)", () => {
+test("render: kit-games.yml runs twice an hour (:27 and :57) and never beside the host (the host's concurrency group)", () => {
   const host = YAML.parse(fs.readFileSync(path.join(ROOT, ".github/workflows/games.yml"), "utf8"));
   const kit = YAML.parse(fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8"), { uniqueKeys: true });
-  assert.deepEqual(kit.on, { workflow_dispatch: {} }, "manual only until the owner turns the hourly timer on; no workflow_run");
-  assert.equal(KIT_CRON, "57 * * * *", "the hour to put back when the timer is turned on");
-  assert.equal(host.on.schedule, undefined, "the host workflow has no timer");
+  assert.deepEqual(kit.on, { schedule: [{ cron: KIT_CRON }], workflow_dispatch: {} }, "its own hour; no workflow_run (audit L-9)");
+  assert.equal(KIT_CRON, "27,57 * * * *");
+  assert.deepEqual(host.on.schedule, [{ cron: "47 * * * *" }], "ten minutes after the host");
   assert.equal(kit.name, `${host.name} (kit games)`);
   assert.deepEqual(kit.concurrency, host.concurrency, "the same concurrency group as the host");
   assert.equal(kit.concurrency["cancel-in-progress"], false);

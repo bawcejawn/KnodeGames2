@@ -25,7 +25,8 @@ const yml = `# The shared VHP ruler's data (design .ai/standards/VHP_RULER.md §
 name: VHP ruler data
 
 on:
-  # No schedule. The owner turns this on later by adding the cron back (see docs/WORKFLOWS.md).
+  schedule:
+    - cron: "12 * * * *"     # every hour at minute 12
   workflow_dispatch:
     inputs:
       mode:

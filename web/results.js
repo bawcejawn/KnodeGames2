@@ -38,7 +38,7 @@
     document.querySelectorAll("#race-types-soon").forEach((n) => n.classList.remove("rules-soon"));
   }
   rulesText();
-  const RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/";
+  const RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/";
   const EXPLORER = "https://koinosscan.com/address/";
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode Games pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Games Swap" };
   const ADDR = /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/;

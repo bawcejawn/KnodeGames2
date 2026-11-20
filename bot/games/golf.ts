@@ -947,7 +947,7 @@ export async function run(o: Opts) {
 }
 
 // ── npm run golf -- status: a read-only look at what Block Golf has published (for the owner and the admin page) ──
-const PUBLISHED = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/golf/";
+const PUBLISHED = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/golf/";
 /** One line per week and per hole, in plain words, from the published index and week files. Reads only. */
 /** Text from the published files, made safe for a terminal (B13-B3): no control or bidi characters, at most 200. */
 export const plain = (x: unknown): string => String(x ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").slice(0, 200);

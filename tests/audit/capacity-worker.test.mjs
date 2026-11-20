@@ -29,7 +29,7 @@ test("CW-1 mirror: same bytes, CORS, and GitHub asked once for many reads (query
   assert.equal(a.status, 200);
   assert.equal(a.headers.get("access-control-allow-origin"), "*");
   assert.equal(a.headers.get("x-kg-mirror"), "kg-data");
-  assert.equal(await a.text(), '{"from":"https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/board.json"}');
+  assert.equal(await a.text(), '{"from":"https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/board.json"}');
   for (let i = 0; i < 50; i++) await go(`/race-data/board.json?t=${i}`);
   assert.equal(ups.length, 1);
   const h = await go("/race-data/board.json", { method: "HEAD" });

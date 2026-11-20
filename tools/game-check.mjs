@@ -33,7 +33,39 @@ export function checkGame(slug, root = ROOT) {
     ok(!!entry, `games.json lists ${m.page}`);
     ok(fs.existsSync(path.join(root, m.page)) || fs.existsSync(path.join(dir, m.page)), `page ${m.page} exists`);
   }
+  for (const r of checkSendPicks(m, root)) res.push(r);
   return res;
+}
+
+/** The shared "Send my picks" card (D-255 / D-256 / D-278): a game page that builds Picks `pick` operations sends them
+ *  only through web/js/lib/send-picks.js, so every game shows "your pick this round", asks before a change, checks the
+ *  round is open, and never lets the sponsor pay for a change. A page that builds picks must import the card and must
+ *  not call the wallet's send or sendBatch itself. A send that is not a pick (a stake, a claim) marks its line with
+ *  `// game:check send-ok: <why>`. */
+export const SEND_PICKS = "./js/lib/send-picks.js";
+export function sendPicksProblems(src) {
+  if (!/\.functions\.pick\s*\(/.test(src)) return [];
+  const out = [];
+  if (!new RegExp(`import\\s+\\*\\s+as\\s+\\w+\\s+from\\s+["']${SEND_PICKS.replace(/[.]/g, "\\.")}["']`).test(src)) out.push(`imports the shared card (import * as SP from "${SEND_PICKS}")`);
+  src.split("\n").forEach((line, i) => {
+    if (/\b(?:W|KWallet|wallet)\s*\.\s*send(?:Batch)?\s*\(/.test(line) && !/game:check send-ok:/.test(line)) out.push(`line ${i + 1} calls the wallet directly; send picks with SP.send (or mark a non-pick send "// game:check send-ok: <why>")`);
+  });
+  return out;
+}
+/** Pages allowed to send picks themselves for now, each with the PR that removes it. Library (19 Nov): Survivor (#17)
+ *  merges before the card; Survivor's follow-up PR moves it onto the card and deletes this line. Nothing else is added. */
+export const SEND_PICKS_ALLOW = { "web/survivor.js": "until Survivor's follow-up PR moves it onto the card (D-278)" };
+export function checkSendPicks(m, root = ROOT) {
+  if (!m || typeof m.page !== "string") return [];
+  const js = path.join(root, "web", m.page.replace(/\.html$/, ".js"));
+  if (!fs.existsSync(js)) return [];
+  const src = fs.readFileSync(js, "utf8");
+  if (!/\.functions\.pick\s*\(/.test(src)) return [];
+  const probs = sendPicksProblems(src);
+  const rel = path.relative(root, js).split(path.sep).join("/");
+  if (probs.length && SEND_PICKS_ALLOW[rel]) return [{ pass: false, msg: `${rel} (Send my picks, D-256): allowed for now, ${SEND_PICKS_ALLOW[rel]}: ${probs.join("; ")}`, required: false }];
+  return probs.length ? probs.map((p) => ({ pass: false, msg: `${rel} (Send my picks, D-256): ${p}`, required: true }))
+    : [{ pass: true, msg: `${rel} sends picks only through the shared Send my picks card (D-256)`, required: true }];
 }
 
 /** Games on the kit (every game since D-158): the kit's conformance suite (GAME_KIT.md §5). */
