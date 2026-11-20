@@ -309,7 +309,7 @@ test("combo page: sends only a Combo card through the Picks contract's pick, onl
   }
   // Network reads: the RPC, race-data, games-data/combo, and this site's own deployment and ABI files.
   const urls = [...js.matchAll(/"https:\/\/[^"]+"/g)].map((m) => m[0]);
-  for (const u of urls) assert.match(u, /koinos\.armana\.io|raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/(race-data|games-data\/combo)\/|koinosscan\.com|knodegames\.com\/combo\.html/, u);
+  for (const u of urls) assert.match(u, /koinos\.armana\.io|raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/(race-data|games-data\/combo)\/|koinosscan\.com|knodegames\.com\/combo\.html/, u);
   for (const f of js.matchAll(/new URL\("([^"]+)", ROOT\)/g)) assert.match(f[1], /^(picks-data\/deployment|game-data\/deployment|contracts\/picks\/abi\/picks\.koilib|game\/abi\/kpred-v6\.koilib)\.json$/, f[1]);
 });
 

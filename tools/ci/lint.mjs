@@ -28,6 +28,11 @@ if (!fs.existsSync(path.join(web, "index.html")) || !fs.readFileSync(path.join(w
   say("web/index.html must load early-view.js");
 }
 if (!fs.existsSync(path.join(web, "fairness.html"))) say("web/fairness.html is missing");
+// L7b-1: the site build copies game files a page imports by a plain string; a template-string import under ./games/
+// would not be copied and would 404 on the site.
+for (const f of fs.readdirSync(web).filter((n) => n.endsWith(".js"))) {
+  if (/\bimport\s*\(\s*`[^`]*games\//.test(fs.readFileSync(path.join(web, f), "utf8"))) say(`web/${f} imports from ./games/ with a template string; name the file in a plain string`);
+}
 
 if (problems.length) {
   console.error(problems.map((p) => "lint: " + p).join("\n"));

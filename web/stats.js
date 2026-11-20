@@ -8,7 +8,7 @@
    drawn with textContent; addresses go through names.js when the page loads it. */
 (() => {
   "use strict";
-  const URL_ = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/stats-data/stats.json";
+  const URL_ = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/stats-data/stats.json";
   const ADDR = /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/;
   const STALE_MS = 6 * 3600000;          // older than this: the strip hides, the panel says when it was updated
   // The strip shows a number only once it reads well (research item 18).

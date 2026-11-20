@@ -25,9 +25,9 @@ test("kg-dispatch: no run this hour -> starts the workflow once on main", async 
   const [r] = await M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW);
   assert.deepEqual([r.workflow, r.dispatched], ["race.yml", true]);
   assert.equal(calls.length, 2);
-  assert.match(calls[0].url, /^https:\/\/api\.github\.com\/repos\/bawcejawn\/KnodeGames\/actions\/workflows\/race\.yml\/runs\?branch=main&per_page=5&created=%3E%3D2026-11-14T14%3A11%3A00Z$/);
+  assert.match(calls[0].url, /^https:\/\/api\.github\.com\/repos\/bawcejawn\/KnodeGames2\/actions\/workflows\/race\.yml\/runs\?branch=main&per_page=5&created=%3E%3D2026-11-14T14%3A11%3A00Z$/);
   assert.equal(calls[1].method, "POST");
-  assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames/actions/workflows/race.yml/dispatches");
+  assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/race.yml/dispatches");
   assert.deepEqual(JSON.parse(calls[1].body), { ref: "main" });
   assert.equal(calls[1].headers.Authorization, "Bearer " + TOKEN);
 });
@@ -36,7 +36,7 @@ test("kg-dispatch: :22 starts vhp-ruler.yml when it hasn't run (the Ruler chat, 
   const { f, calls } = gh(0);
   const [r] = await M.runJob("22 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW);
   assert.deepEqual([r.workflow, r.dispatched], ["vhp-ruler.yml", true]);
-  assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames/actions/workflows/vhp-ruler.yml/dispatches");
+  assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/vhp-ruler.yml/dispatches");
 });
 
 test("kg-dispatch: :07 and :37 start race-samples.yml when it hasn't run in 30 minutes (Block X chat, 15 Nov)", async () => {
@@ -45,7 +45,7 @@ test("kg-dispatch: :07 and :37 start race-samples.yml when it hasn't run in 30 m
   assert.deepEqual([r.workflow, r.dispatched], ["race-samples.yml", true]);
   assert.deepEqual([k.workflow, k.dispatched], ["kit-games.yml", false]);
   assert.match(calls[0].url, /workflows\/race-samples\.yml\/runs\?branch=main&per_page=5&created=%3E%3D2026-11-15T14%3A07%3A00Z$/);
-  assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames/actions/workflows/race-samples.yml/dispatches");
+  assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/race-samples.yml/dispatches");
   const busy = gh(1);
   const out = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, busy.f, NOW);
   assert.deepEqual(out.map((x) => x.dispatched), [false, false]);
@@ -58,7 +58,7 @@ test("kg-dispatch: :07 and :37 start kit-games.yml (Fantasy) only when it hasn't
   const [, k] = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, Date.UTC(2026, 10, 16, 19, 7, 0));
   assert.deepEqual([k.workflow, k.dispatched], ["kit-games.yml", true]);
   assert.match(calls[1].url, /workflows\/kit-games\.yml\/runs\?branch=main&per_page=5&created=%3E%3D2026-11-16T18%3A22%3A00Z$/);
-  assert.equal(calls[2].url, "https://api.github.com/repos/bawcejawn/KnodeGames/actions/workflows/kit-games.yml/dispatches");
+  assert.equal(calls[2].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/kit-games.yml/dispatches");
   assert.deepEqual(JSON.parse(calls[2].body), { ref: "main" });
   // The window is 45 minutes: a normal :57 run is 10 minutes before :07 and 40 before :37, so neither check starts another.
   const kit = M.JOBS["7,37 * * * *"].find((j) => j.workflow === "kit-games.yml");
