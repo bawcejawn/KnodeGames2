@@ -22,20 +22,19 @@ test("CL-2 caps and colours", () => {
   assert.equal(L.colour(85), "red");
 });
 
-test("CL-3 no workflow has a timer; the report still lists the data branches", () => {
+test("CL-3 the report covers every workflow's schedule and the data branches it can see", () => {
   const rows = L.collect();
   const sched = rows.find((r) => r.kind === "schedules");
-  assert.ok(sched);
-  assert.equal(sched.value, 0, "timers stay off until the owner turns one workflow on");
+  assert.ok(sched && sched.value > 0);
+  assert.equal(L.ALERT_SCHEDULES, false, "switch on once the schedule cut lands (Mon 23 Nov)");
 });
 
-test("CL-4 the capacity workflow is read-only, pinned, and does not run itself", () => {
+test("CL-4 the daily workflow is read-only, pinned, once a day, and runs the report with --ci", () => {
   const y = fs.readFileSync(".github/workflows/capacity.yml", "utf8");
   assert.match(y, /^permissions:\n  contents: read\n/m);
   assert.doesNotMatch(y, /secrets\./);
   assert.doesNotMatch(y, /contents: write|id-token|pull-requests/);
-  assert.equal(L.runsPerDay(y), 0);
-  assert.match(y, /workflow_dispatch/);
+  assert.equal(L.runsPerDay(y), 1);
   assert.match(y, /node tools\/capacity\/limits\.mjs --ci/);
   for (const u of y.matchAll(/uses: ([^\s]+)/g)) assert.match(u[1], /@[0-9a-f]{40}$/, `pinned: ${u[1]}`);
 });
