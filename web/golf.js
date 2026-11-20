@@ -5,7 +5,7 @@
   "use strict";
   const G = window.KGolf;
   if (!G || typeof document === "undefined" || !document.getElementById("card-rows")) return;
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/golf/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/golf/";
   const EXPLORER = "https://koinosscan.com/address/";
   const $ = (id) => document.getElementById(id);
   const el = (tag, attrs = {}, ...kids) => {

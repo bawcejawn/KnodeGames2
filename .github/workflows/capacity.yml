@@ -4,6 +4,8 @@ name: Capacity limits
 # The run fails when any published file is at 60% or more of its cap, so GitHub emails the owner weeks before a wall.
 # Reads only the git copies of the public data branches: no secrets, no chain, no writes. One run a day.
 on:
+  schedule:
+    - cron: "23 13 * * *"
   workflow_dispatch: {}
 
 permissions:
