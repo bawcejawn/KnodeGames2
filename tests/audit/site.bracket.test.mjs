@@ -439,11 +439,11 @@ test("the page: scripts in order, the shared board, reads only the bracket files
   assert.match(page, /<script src="names\.js"><\/script>\s*<script src="stake-panel\.js"><\/script>\s*<script src="vhp-standard\.js"><\/script>\s*<script src="bracket-math\.js"><\/script>\s*<script src="board\.js"><\/script>\s*<script src="bracket\.js"><\/script>/);
   assert.match(page, /<link rel="stylesheet" href="board\.css">/);
   const csp = page.match(/Content-Security-Policy" content="([^"]+)"/)[1];
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/games-data\//);
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/blocks-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/blocks-data\//);
   assert.doesNotMatch(page, /<script>(?!\s*<\/script>)|\son[a-z]+="/i, "no inline scripts or handlers");
   const urls = [...js.matchAll(/"(https:\/\/[^"]+)"/g)].map((m) => m[1]);
-  for (const u of urls) assert.ok(/^https:\/\/(raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/(games-data\/bracket\/|blocks-data\/recent-blocks\.json)|koinos\.armana\.io|api\.koinosblocks\.com|koinosscan\.com\/address\/)$/.test(u), u);
+  for (const u of urls) assert.ok(/^https:\/\/(raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/(games-data\/bracket\/|blocks-data\/recent-blocks\.json)|koinos\.armana\.io|api\.koinosblocks\.com|koinosscan\.com\/address\/)$/.test(u), u);
   const body = page.slice(page.indexOf("<body>"));
   assert.doesNotMatch(body + js, /bawcejawn\/Knode\/|bawcejawn\.github\.io\/Knode|api\.koinos\.io/, "no old URLs (#E-3 L-15)");
   assert.match(js, /new URL\("picks-data\/deployment\.json", ROOT\)/);

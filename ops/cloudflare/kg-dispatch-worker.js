@@ -1,7 +1,7 @@
-// Knode Games Cloudflare Worker "kg-dispatch": a backstop for GitHub's own timer (Block X incident, Sat 14 Nov 2026).
+// Knode Games Cloudflare Worker "kg-dispatch-2" (KnodeGames2; the old "kg-dispatch" keeps its code, triggers off): a backstop for GitHub's own timer (Block X incident, Sat 14 Nov 2026).
 // GitHub doesn't guarantee scheduled runs: under load it delays or drops them, and on Fri 13 / Sat 14 Nov it dropped
 // most of race.yml's hourly runs, so the current race had no card and the Block X page had no producers.
-// Source of truth: this file. To change the live Worker: Cloudflare -> Compute (Workers) -> kg-dispatch -> Edit code ->
+// Source of truth: this file. To change the live Worker: Cloudflare -> Compute (Workers) -> kg-dispatch-2 -> Edit code ->
 // paste this whole file -> Deploy. Owner steps: docs/ops/RECORDER-BACKSTOP.md. Tests: tests/audit/dispatch-worker.test.mjs.
 //
 // What it does, and only this: on its four Cron Triggers (five jobs) it asks GitHub whether the job already ran recently, and
@@ -13,11 +13,11 @@
 //                       the race cards had 9-10 samples, not 12, and Block X had no usable card; Block X chat, 15 Nov).
 //                       One run takes up to 12 samples over up to 48 minutes; checking twice an hour keeps a gap without
 //                       samples to about 30 minutes. One Cron Trigger with two minutes ("7,37 * * * *").
-//                    -> and kit-games.yml (the Shared Game Kit's games, Fantasy; GitHub's own timer is :57). Its jobs
-//                       were inside games.yml until Mon 16 Nov (#351: games.yml passed GitHub's 500 KB limit). Its
-//                       window is 45 minutes, so the :07 and :37 checks never start it after a normal :57 run (10 and
-//                       40 minutes earlier), and a dropped :57 run is started at :07 (Repo Lens #J-8 J8-1). It shares
-//                       the existing trigger: Cloudflare's Free plan allows 5 Cron Triggers per account (J5-2).
+//                    -> and kit-games.yml (the Shared Game Kit's games, Fantasy; GitHub's own timer is :27 and :57, D-355).
+//                       Its jobs were inside games.yml until Mon 16 Nov (#351: games.yml passed GitHub's 500 KB limit).
+//                       Its window is 25 minutes: the normal run 10 minutes before each check (:57 before :07, :27 before
+//                       :37) is seen, so nothing is doubled; a dropped run leaves only the one 40 minutes earlier, so one
+//                       is started (Repo Lens #J-8 J8-1, #24). It shares the existing trigger (one Worker, 4 triggers).
 // "Already ran": a run of that workflow on main created in the window (queued, running or finished), from GitHub's
 // timer, a manual run or this Worker. The GitHub timers stay on as they are; the workflows' concurrency groups
 // (knode-vhp-ruler, knode-race, knode-games for games.yml and kit-games.yml, knode-race-samples) mean two runs never
@@ -25,12 +25,19 @@
 // mistyped trigger shows as a failed run in Cloudflare instead of doing nothing quietly.
 // The only secret is GH_DISPATCH_TOKEN, a Worker secret (a fine-grained GitHub token for this one repository with
 // "Actions: Read and write" and nothing else). It is never in this file, never logged, never sent anywhere but GitHub.
-const REPO = "bawcejawn/KnodeGames";
+const REPO = "bawcejawn/KnodeGames2";
+// Cutover day (Fri 20 Nov 2026): GitHub's own timers did not start in KnodeGames2 after #9, so the Worker also backs up
+// the hourly bot, names and golf (window 50: the :07 check starts one if none ran in the last 50 minutes, and the :37
+// check then sees it) and stats (every 2 hours, window 110). Same 4 triggers; when GitHub's timers run, the Worker
+// sees their runs and starts nothing. A duplicate is harmless: each workflow's concurrency group queues it.
 export const JOBS = {
-  "22 * * * *": [{ workflow: "vhp-ruler.yml", windowMin: 30 }],
+  "22 * * * *": [{ workflow: "vhp-ruler.yml", windowMin: 30 }, { workflow: "stats.yml", windowMin: 110 }],
   "41 * * * *": [{ workflow: "race.yml", windowMin: 30 }],
   "51 * * * *": [{ workflow: "games.yml", windowMin: 30 }],
-  "7,37 * * * *": [{ workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 45 }],
+  "7,37 * * * *": [
+    { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25 },
+    { workflow: "bot.yml", windowMin: 50 }, { workflow: "names.yml", windowMin: 50 }, { workflow: "golf.yml", windowMin: 50 },
+  ],
 };
 const API = "https://api.github.com/repos/" + REPO + "/actions/workflows/";
 

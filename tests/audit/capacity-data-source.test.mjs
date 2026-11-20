@@ -6,7 +6,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const SRC = fs.readFileSync("web/data-source.js", "utf8");
-const RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/";
+const RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/";
 function load({ mirror = false, live = false, answer } = {}) {
   const seen = [];
   const window = { fetch: async (u, init) => { seen.push(String(u)); return answer(String(u), init); } };

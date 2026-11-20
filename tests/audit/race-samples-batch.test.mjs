@@ -66,7 +66,8 @@ test("sampler: never two samples within 4 minutes, so 8 hours hold at most SAMPL
 });
 
 test("Capacity GATE-1500 #12: the sampler starts every 15 minutes (each run still takes up to 12 samples over up to 48 minutes)", () => {
-  assert.doesNotMatch(yml, /cron:/, "no timer until the owner turns this workflow on");
+  assert.match(yml, /- cron: "\*\/15 \* \* \* \*"/);
+  assert.doesNotMatch(yml, /cron: "\*\/5 /);
   assert.match(yml, /workflow_dispatch/);
   assert.match(yml, /for i in \$\(seq 1 12\)/, "12 samples a run");
   assert.match(yml, /-ge 2880 \]/, "for at most 48 minutes");

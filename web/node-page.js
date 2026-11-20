@@ -7,7 +7,7 @@
   const VHP = "12Y5vW6gk8GceH53YfRkRre2Rrcsgw7Naq";
   const EXPLORER = "https://koinosscan.com/address/";
   const POB = "159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv"; // Koinos Proof-of-Burn system contract (mainnet)
-  const RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/";   // data-source.js sends these to the mirror
+  const RAW = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/";   // data-source.js sends these to the mirror
   const UNIT = 1e8, MAX_BLOCKS = 201600, WORKERS = 6, REORG = 60, STORE = "nd-blocks-v2";
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode Games pool" };
   const QUICK = [["Knode Games pool", "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr"]];
@@ -107,7 +107,7 @@
 
   /** The bot publishes the last two days of blocks every hour as one file (branch blocks-data). One download instead
    *  of ~144 requests to the public node. It is only used if a random sample of its blocks matches the chain. */
-  const SNAPSHOT = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/blocks-data/recent-blocks.json";
+  const SNAPSHOT = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/blocks-data/recent-blocks.json";
   async function loadSnapshot(needFrom, top, headId) {
     try {
       say("Loading recent blocks…");
