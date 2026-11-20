@@ -31,6 +31,8 @@ export const PAGES = [
     desc: "Every Koinos block producer is a horse. Four 6-hour races a day, every day (Sunday's are for fun), handicapped by VHP so every horse has the same chance. Free, live from the chain.", image: "og-knode.png", priority: "0.7" },
   { file: "fantasy.html", path: "fantasy.html", title: "Fantasy Producers · Draft a team of Koinos block producers", short: "Fantasy Producers",
     desc: "Draft five Koinos block producers under a salary cap, pick a captain who scores double, and score on how reliably they sign their blocks. Weekly league and Weekly Rival.", image: "og-knode.png", priority: "0.6" },
+  { file: "vs.html", path: "vs.html", title: "Knode Games VS · Pick the producers that beat the pool node", short: "Knode Games VS",
+    desc: "Knode Games pool node vs every Koinos block producer, every day. Pick the producers that beat it, or pick the pool node to beat them all. Free test.", image: "og-knode.png", priority: "0.7" },
   { file: "blockx.html", path: "blockx.html", title: "Who Signs Block X · Pick the Koinos producer of the next big blocks", short: "Who Signs Block X",
     desc: "A target about every hour (every 1,200 Koinos blocks). Pick the producer you think signs it; smaller producers score more. Free, with weekly VHP prizes.", image: "og-knode.png", priority: "0.6" },
   { file: "combo.html", path: "combo.html", title: "Combo Card · Build a parlay of Koinos producer calls", short: "Combo Card",
