@@ -273,7 +273,7 @@ test("the guide's download boxes name the right files and show their real SHA-25
   const html = fs.readFileSync(path.join(ROOT, "web/run-node.html"), "utf8");
   for (const [file, local] of [["heal-one-node.ps1", PS1], ["heal-one-node.py", PY]]) {
     const sha = crypto.createHash("sha256").update(fs.readFileSync(local)).digest("hex");
-    assert.ok(html.includes(`https://raw.githubusercontent.com/bawcejawn/KnodeGames/main/ops/node/one/${file}`), `${file}: download link`);
+    assert.ok(html.includes(`https://raw.githubusercontent.com/bawcejawn/KnodeGames2/main/ops/node/one/${file}`), `${file}: download link`);
     assert.ok(html.toLowerCase().includes(sha), `${file}: the page shows its SHA-256 ${sha}`);
   }
 });

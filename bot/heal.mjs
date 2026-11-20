@@ -53,7 +53,7 @@ const NETWORK_RPC = process.env.RPC || "https://koinos.armana.io";
 // HTML error page). The check is skipped only when none of them answers.
 const NETWORK_FALLBACKS = (process.env.HEAL_RPC_FALLBACKS ?? "https://api.koinos.io,https://api.koinosblocks.com").split(",").map((x) => x.trim()).filter(Boolean);
 const GITHUB_API = process.env.HEAL_GITHUB_API || "https://api.github.com";
-const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames";
+const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames2";
 const BEHIND = 200;                    // blocks (~10 minutes at ~3 s per block)
 const COOLDOWN_MS = 50 * 60_000;       // wait after a restart before restarting the same node again
 const MAX_HEALS = 3, WINDOW_MS = 6 * 3600_000;

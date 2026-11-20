@@ -15,7 +15,7 @@
   // Free read split (Capacity): each page load starts on Armana or koinosblocks at random; the other is the failover.
   const RPCS = ["https://koinos.armana.io", "https://api.koinosblocks.com"];
   if (Math.random() < 0.5) RPCS.reverse();
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/";
   const VHP = "12Y5vW6gk8GceH53YfRkRre2Rrcsgw7Naq";
   const EXPLORER = "https://koinosscan.com/address/";
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode Games pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Games Swap" };

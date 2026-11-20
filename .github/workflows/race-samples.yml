@@ -10,6 +10,11 @@
 name: Race VHP samples
 
 on:
+  schedule:
+    # Capacity (13 Nov, GATE-1500 #12): every 15 minutes, not 5. Each run already takes up to 12 samples over up to
+    # 48 minutes (below), so the samples per hour don't change; only the scheduled starts do (about 288 -> 96 a day,
+    # each queued start counting against GitHub's limits). Audit BX-42's short, random samples are kept inside the run.
+    - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
 concurrency:

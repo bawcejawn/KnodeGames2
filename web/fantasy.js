@@ -23,14 +23,14 @@ function start() {
   "use strict";
   const lib = window.koilib || window.koinos || window;
   const ROOT = new URL("./", location.href);
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/fantasy/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/fantasy/";
   const RPC = ["https://koinos.armana.io", "https://api.koinosblocks.com"];
   const DAY = F.DAY, LEAD = 300000, GAME = F.GAMES.team, RIVAL = F.GAMES.rival;
   let GENESIS = window.KWeeks ? window.KWeeks.GENESIS_MS : 1792368000000, WEEK = 7 * DAY;
   /** Knode's own nodes: in the pool like any other producer, and marked (owner decision 27 Oct). */
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Swap" };
   /** The week 4 test-week note goes once week 4 is over (Sun 22 Nov 7 PM ET = Mon 23 Nov 00:00 UTC; D-174). */
-  const TEST_WEEK_ENDS = Date.UTC(2026, 10, 23);
+  const TEST_WEEK_ENDS = Date.UTC(2026, 10, 30);   // weeks 4 and 5 are free play (D-238)
   if (Date.now() >= TEST_WEEK_ENDS && $("fx-testweeks")) $("fx-testweeks").hidden = true;
 
   // ── small helpers ──
