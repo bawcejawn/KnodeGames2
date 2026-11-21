@@ -318,3 +318,22 @@ test("KR-2 / R-1: a non-rolling game's roundsFor and resultOf get exactly the co
   assert.deepEqual([...seen.rounds], ["inputs,now,published"]);
   assert.deepEqual([...seen.result], ["blockAt"]);
 });
+
+// ───────── LR-1 (Repo Lens 5, #R5-4b): pins for the 3-day lead, a non-list cards value, and the rolling card count ─────────
+test("LR-1: the schedule lead is at most 3 days (4320 min accepted, 4321 refused)", () => {
+  assert.equal(rollingProblem({ ...OU, scheduleFromMin: 4320, scheduleToMin: 4290 }), "");
+  assert.match(rollingProblem({ ...OU, scheduleFromMin: 4321, scheduleToMin: 4290 }), /at most 3 days/);
+});
+
+test("LR-1: a ruler game's schedule file whose cards isn't a list is held by its shape", () => {
+  const f = { v: 1, game: rcfg.game, round: rollingId(N0), start: C.start(N0), written: C.scheduleFrom(N0) + 5 * MIN, body: { line: 1 }, cards: "x" };
+  assert.match(scheduleShape(f, scheduleName(N0), rcfg), /cards aren't a card list/);
+});
+
+test("LR-1: a rolling ruler week file with fewer cards than rounds decided from a schedule file is held (rollingWeekWhy's cardPerRound count)", () => {
+  const n = N0, s = C.start(n), sched = new Set([rollingId(n)]);
+  const j: any = { week: 5, start: at(5), end: at(6), rounds: [[rollingId(n), startDay(s), 0, "s", []], [rollingId(n + 1), startDay(C.start(n + 1)), 0, "v", []]], cards: [] };
+  assert.match(rollingWeekWhy(j, rcfg, sched), /1 rounds decided from a schedule file but only 0 ruler cards/);
+  assert.equal(rollingWeekWhy({ ...j, cards: [[{ game: 4 }, "a".repeat(64)]] }, rcfg, sched), "", "one card for the one scheduled round; the cancelled round needs none");
+  assert.equal(rollingWeekWhy(j, cfg, sched), "", "a non-ruler rolling game has no card count");
+});
