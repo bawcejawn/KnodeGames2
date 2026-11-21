@@ -38,6 +38,7 @@ import { readVhp, MAINNET_VHP, withRetry } from "../../questions/common.ts";
 await import("../../web/race-math.js");
 await import("../../web/blockx-math.js");
 import * as RR from "../blockx-ruler.ts";
+import { writeBoardV2 } from "./blockx-parts.ts";
 const M: any = (globalThis as any).KRaceMath;
 const X: any = (globalThis as any).KBlockX;
 
@@ -1110,7 +1111,13 @@ export async function run(o: Opts) {
     // Repo Lens #G-35 G35-2: the ruler switch this run used (null = unset), recorded every run, so the publish job always
     // knows the last published value (a switch change that would rescore a started week is refused against it).
     rulerFrom: RULER_FROM }) + "\n");
-  fs.writeFileSync(path.join(OUT, "board.json"), JSON.stringify(board) + "\n");
+  // Board on KG parts (shape doc BLOCKX-BOARD-PARTS-SHAPE): OFF unless BLOCKX_PARTS=on, so board.json stays v1 (the shipped
+  // readers only know v1) until the owner switches it, after Golf's reader and the Vault fallback reader are merged.
+  if (E.BLOCKX_PARTS === "on") {
+    const b2 = writeBoardV2(OUT, board, head.time);
+    for (const w of b2.warnings) problems.push(`${w}. Tell the Block X chat`);
+    fs.writeFileSync(path.join(OUT, "board.json"), JSON.stringify(b2.board) + "\n");
+  } else fs.writeFileSync(path.join(OUT, "board.json"), JSON.stringify(board) + "\n");
   // The VHP ruler's day files, for every shadow / on week this run handled (they record the switch value used).
   for (const [name, day] of rulerDays) if (weeks.has(day.week)) fs.writeFileSync(path.join(OUT, name), JSON.stringify(day) + "\n");
   // Capacity (owner, 12 Nov): warn in every run once any Block X file nears the 2 MB publish limit.
