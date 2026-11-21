@@ -76,7 +76,10 @@ test("Get VHP tells Wormhole users to paste the vKOIN contract address for each 
 test("the Ruler page says which games use it (Race live from Week 1; the others from the Ruler chat's dates, 15 Nov) and carries the Race rules; no mode is named", () => {
   const p = fs.readFileSync(`${APP}web/ruler.html`, "utf8"), text = p.replace(/<[^>]+>/g, " ");
   assert.match(p, /Which games use the Ruler/);
-  for (const g of ["Producer Race", "Who Signs Block X", "Producer Bracket", "Fantasy Producers", "Last Node Standing", "Combo Card"]) assert.ok(text.includes(g), g);
+  for (const g of ["Producer Race", "Who Signs Block X", "Producer Bracket", "Fantasy Producers", "Last Node Standing", "Knode Games VS", "Combo Card"]) assert.ok(text.includes(g), g);
+  // Knode Games VS: the Ruler chat's row (M-228), TEST marked, no prizes yet; "no producer voids" is not said until VS pays (D-309).
+  assert.match(text, /Knode Games VS\s+Sets who wins each matchup against the pool node, from one 24-hour card a day\.\s+TEST only, no prizes yet\./);
+  assert.doesNotMatch(text, /no producer voids/i);
   assert.match(text, /6-hour races: live from Week 1 \(Mon 16 Nov\)/);
   assert.match(text, /From Week 2 \(Mon 23 Nov\)\. Week 1 is a practice week for the Ruler\./);
   assert.match(text, /From its first week, Week 2 \(from Mon 23 Nov\)\./);

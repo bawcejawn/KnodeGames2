@@ -40,6 +40,8 @@
         "free": { "show": 6, "minDays": 3, "prize": "The Free play board pays no VHP prize for now. Players staked in Last Node Standing share its weekly bucket." },
         "columns": [{ "key": "pts", "label": "Points" }, { "key": "rides", "label": "Rides" },
                     { "key": "jumps", "label": "Jumps", "wide": true }, { "key": "events", "label": "Events", "wide": true }] } },
+    { "id": "vs", "name": "Knode Games VS", "kinds": ["free"], "status": "live", "href": "vs.html",
+      "line": "Pick which producers beat our node. One call a day." },
     { "id": "combo", "name": "Combo Card", "kinds": ["free", "staked"], "status": "preview", "href": "combo.html", "opens": "Opens Mon 7 Dec",
       "line": "Build a card of 2 to 10 calls from the races and Block X. Every leg must hit; harder legs pay more. Preview: build and share cards now; sending opens Mon 7 Dec." }
   ]
