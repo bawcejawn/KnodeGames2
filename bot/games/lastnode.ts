@@ -26,6 +26,7 @@
  *   npm run lastnode      (or: npx tsx bot/games/lastnode.ts)
  */
 import { Provider, Contract } from "koilib";
+import { nodeProvider } from "../node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -1011,7 +1012,7 @@ async function fetchRaceCards(base: string, dir: string, t: number) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  if (!argv.includes("--testnet")) return run({ p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null });
+  if (!argv.includes("--testnet")) return run({ p: nodeProvider(RPC), check: RPC_CHECK ? nodeProvider(RPC_CHECK) : null });
   // Testnet practice: picks on the testnet Picks contract (test KOIN); the race on the real MAINNET producers, read only
   // (the testnet has a single producer). Never writes outside testnet-data/.
   const cfg = readNetConfig();

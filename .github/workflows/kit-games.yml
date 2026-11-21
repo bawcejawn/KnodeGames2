@@ -93,6 +93,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}
           KIT_PREV: ${{ runner.temp }}/prev
           KIT_OUT: ${{ runner.temp }}/out
           KIT_VHP_DATA: ${{ runner.temp }}/vhp-data
@@ -267,6 +268,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}
           KIT_PREV: ${{ runner.temp }}/prev
           KIT_OUT: ${{ runner.temp }}/out
           KIT_VHP_DATA: ${{ runner.temp }}/vhp-data
@@ -354,6 +356,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}
           KIT_PREV: ${{ runner.temp }}/prev
           KIT_OUT: ${{ runner.temp }}/out
           KIT_VHP_DATA: ${{ runner.temp }}/vhp-data

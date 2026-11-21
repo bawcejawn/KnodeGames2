@@ -72,6 +72,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           LASTNODE_PREV: ${{ runner.temp }}/prev/lastnode
           LASTNODE_OUT: ${{ runner.temp }}/games-data/lastnode
           LASTNODE_VHP_DATA: ${{ runner.temp }}/vhp-data

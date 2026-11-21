@@ -30,6 +30,7 @@
  *   npm run blockx -- --testnet --game 2    one game of testnet/blockx.json (TESTNET_RPC overrides its rpc)
  */
 import { Provider, Contract, utils as kutils } from "koilib";
+import { nodeProvider } from "../node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
@@ -1241,7 +1242,7 @@ async function main() {
     const prizesFromWeek = prizesFromEnv(E.PRIZES_FROM_WEEK);
     const prizesUnset = prizesFromWeek === null ? JSON.stringify(E.PRIZES_FROM_WEEK ?? null) : null;   // owner 10 Nov: fail loudly
     if (prizesUnset !== null) console.log(`::warning::PRIZES_FROM_WEEK is not a plain week number (it reads ${prizesUnset}): any week that could go final is held`);
-    const r = await run({ p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null, prizesFromWeek, prizesUnset, schedule: X.MAINNET_SCHEDULE as any, vaultGame: X.VAULT_GAME });
+    const r = await run({ p: nodeProvider(RPC), check: RPC_CHECK ? nodeProvider(RPC_CHECK) : null, prizesFromWeek, prizesUnset, schedule: X.MAINNET_SCHEDULE as any, vaultGame: X.VAULT_GAME });
     // Repo Lens E4-7: tell the workflow a week is held; its last job fails the run (an email) after publishing.
     if (r.held.length && E.GITHUB_OUTPUT) fs.appendFileSync(E.GITHUB_OUTPUT, "held=true\n");
     return r;
