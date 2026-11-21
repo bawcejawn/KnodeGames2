@@ -84,6 +84,87 @@ export const dayOf = (locksAt) => Math.floor((locksAt - 1) / DAY) * DAY;
 /** Sunday UTC (D-129): a day d is Sunday when (d / DAY + 4) % 7 === 0 (1 Jan 1970 was a Thursday). */
 export const isSunday = (day) => (((Math.floor(day / DAY) + 4) % 7) + 7) % 7 === 0;
 
+// ───────────────────────── rolling rounds (Over/Under, D-342 to D-370) ─────────────────────────
+// A rolling game (game.json "rolling") starts a new game every roundMin minutes on a fixed grid from the vault's
+// genesis (round n starts at genesis + n × roundMin), each lasting gameMin. Round n's id is "r" + n in 5 digits. It
+// counts for the vault week its START is in (Mon 00:00 UTC starts the new week; Ruler weekOfStart). Its picks lock
+// leadMin before the start.
+// Before each start the recorder publishes a write-once schedule file, schedule/r#####.json, between scheduleFromMin
+// and scheduleToMin minutes before the start (the game's own content: who plays, the line). This job accepts a NEW one
+// only from scheduleFromMin (less a run's slack) until cancelAfterMin minutes before the start, by its own clock. A
+// round with no published schedule file by then is CANCELLED for everyone (void), and the game's queue is unchanged
+// (D-344): the game decides its queue from the schedule files that exist, never from a cancelled round.
+// None of this applies to a game without "rolling": its files are exactly as before (Vault K-2).
+export const ROLLING_KEYS = ["roundMin", "gameMin", "leadMin", "scheduleFromMin", "scheduleToMin", "cancelAfterMin"];
+export const ROLLING_ID = /^r([0-9]{5})$/;
+export const SCHEDULE_FILE = /^schedule\/r([0-9]{5})\.json$/;
+export const SCHEDULE_KEYS = ["v", "game", "round", "start", "written", "body"];
+export const MAX_SCHEDULE_BYTES = 64 * 1024;
+export const MAX_ROLLING_NO = 99999;
+export const rollingId = (n) => {
+  if (!(Number.isSafeInteger(n) && n >= 0 && n <= MAX_ROLLING_NO)) throw new Error(`rolling round ${n} is outside 0–${MAX_ROLLING_NO}`);
+  return "r" + String(n).padStart(5, "0");
+};
+export const rollingNo = (id) => { const m = typeof id === "string" ? ROLLING_ID.exec(id) : null; return m ? Number(m[1]) : null; };
+export const scheduleName = (n) => `schedule/${rollingId(n)}.json`;
+/** "" when the rolling settings are usable, else why not (game.json's schema says the same in words). */
+export function rollingProblem(r) {
+  if (!r || typeof r !== "object" || Array.isArray(r) || Object.keys(r).join() !== ROLLING_KEYS.join()) return `rolling: { ${ROLLING_KEYS.join(", ")} } in this order`;
+  if (!ROLLING_KEYS.every((x) => Number.isSafeInteger(r[x]) && r[x] >= 0)) return "rolling: whole minutes";
+  if (!(r.roundMin >= 5 && DAY % (r.roundMin * 60000) === 0)) return "rolling.roundMin: at least 5 and a whole number of rounds a day";
+  if (!(r.gameMin >= r.roundMin && r.gameMin % r.roundMin === 0 && r.gameMin <= 7 * 24 * 60)) return "rolling.gameMin: a whole number of rounds, at most a week";
+  if (!(r.scheduleFromMin > r.scheduleToMin && r.scheduleToMin > r.cancelAfterMin && r.cancelAfterMin > r.leadMin)) return "rolling: scheduleFromMin > scheduleToMin > cancelAfterMin > leadMin";
+  if (!(r.scheduleFromMin - r.scheduleToMin >= r.roundMin)) return "rolling: the schedule window (scheduleFromMin − scheduleToMin) must be at least one round, so a run every round always lands in it";
+  if (!(r.scheduleFromMin <= 24 * 60)) return "rolling.scheduleFromMin: at most a day";
+  return "";
+}
+/** The grid of a rolling game (cfg: { genesis, rolling }). All times UTC ms. */
+export function rollingClock(cfg) {
+  const r = cfg.rolling, M = 60000, roundMs = r.roundMin * M;
+  const start = (n) => cfg.genesis + n * roundMs;
+  return {
+    roundMs, gameMs: r.gameMin * M, leadMs: r.leadMin * M,
+    start,
+    /** The first round number whose start is at or after t. */
+    firstAtOrAfter: (t) => Math.max(0, Math.ceil((t - cfg.genesis) / roundMs)),
+    locksAt: (n) => start(n) - r.leadMin * M,
+    resolvesAt: (n) => start(n) + r.gameMin * M,
+    scheduleFrom: (n) => start(n) - r.scheduleFromMin * M,
+    scheduleTo: (n) => start(n) - r.scheduleToMin * M,
+    cancelAt: (n) => start(n) - r.cancelAfterMin * M,
+  };
+}
+/** The UTC day a rolling round counts for: the day its START is in (not dayOf(locksAt): a 00:00 start is that day's). */
+export const startDay = (start) => Math.floor(start / DAY) * DAY;
+/** "" when a schedule file is in the kit's shape for this game and name, else why not. Its body is the game's own JSON. */
+export function scheduleShape(j, name, cfg) {
+  const m = SCHEDULE_FILE.exec(name);
+  if (!m) return "not a schedule file's name";
+  if (!j || typeof j !== "object" || Array.isArray(j) || Object.keys(j).join() !== SCHEDULE_KEYS.join()) return `not a schedule file's shape ({${SCHEDULE_KEYS.join(", ")}})`;
+  const n = Number(m[1]), c = rollingClock(cfg);
+  if (j.v !== 1 || j.game !== cfg.game || j.round !== rollingId(n)) return "wrong version, game or round";
+  if (j.start !== c.start(n)) return "its start isn't its round's start on the grid";
+  if (!nat(j.written)) return "bad written time";
+  if (j.written < c.scheduleFrom(n) - FUTURE_SLACK_MS || j.written > c.scheduleTo(n) + FUTURE_SLACK_MS) return "written outside its schedule window";
+  if (!j.body || typeof j.body !== "object" || Array.isArray(j.body)) return "its body must be a JSON object";
+  return "";
+}
+/** "" when a rolling game's week file keeps the grid's rules, else why not: every round is r##### on the grid, starts
+ *  inside the week, counts for the UTC day of its start, and a round with a result ("s") has a published schedule file
+ *  (a cancelled round can only be void). `sched`: the round ids with a schedule file published after this job. */
+export function rollingWeekWhy(j, cfg, sched) {
+  const c = rollingClock(cfg);
+  for (const r of j.rounds) {
+    const n = rollingNo(r[0]);
+    if (n === null) return `round ${r[0]}: a rolling round's id is r##### (5 digits)`;
+    const s = c.start(n);
+    if (!(s >= j.start && s < j.end)) return `round ${r[0]}: it starts outside week ${j.week} (a rolling round counts for the week it starts in)`;
+    if (r[1] !== startDay(s)) return `round ${r[0]}: its day must be the UTC day of its start`;
+    if (r[3] === "s" && !sched.has(r[0])) return `round ${r[0]}: scored, but it has no published schedule file (a round without one is cancelled, D-344)`;
+  }
+  return "";
+}
+
 // ───────────────────────── the week file ─────────────────────────
 export const WEEK_KEYS = ["v", "game", "week", "start", "end", "min", "state", "seen", "rounds", "players"];
 export const STATES = ["open", "pending", "final"];
@@ -577,7 +658,7 @@ export function readWeekFolder(dir, cfg) {
   return { manifest: m, week: partsToWeek(parts, cfg) };
 }
 
-const NAMES = new RegExp(`^(board\\.json|alltime\\.json|W([0-9]{3}|[1-9][0-9]{3})\\.json|vault/(HOLD-|RELEASE-)?W${VNUM}\\.json|inputs/W${VNUM}\\.json)$`);
+const NAMES = new RegExp(`^(board\\.json|alltime\\.json|W([0-9]{3}|[1-9][0-9]{3})\\.json|vault/(HOLD-|RELEASE-)?W${VNUM}\\.json|inputs/W${VNUM}\\.json|schedule/r[0-9]{5}\\.json)$`);
 const ISO = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/;
 const same = (a, b) => a !== null && b !== null && Buffer.compare(a, b) === 0;
 const isHold = (h, cfg, w) => !!h && typeof h === "object" && Object.keys(h).join() === "game,week,reason" && h.game === cfg.game && h.week === w && typeof h.reason === "string" && h.reason.length > 0 && h.reason.length <= 300;
@@ -589,7 +670,7 @@ function listFiles(dir) {
     for (const f of fs.readdirSync(d).sort()) {
       const p = path.join(d, f), r = rel ? `${rel}/${f}` : f, s = fs.lstatSync(p);
       if (s.isSymbolicLink()) bad.push(r);
-      else if (s.isDirectory()) { if (r === "vault" || r === "inputs") walk(p, r); else bad.push(r + "/"); }
+      else if (s.isDirectory()) { if (r === "vault" || r === "inputs" || r === "schedule") walk(p, r); else bad.push(r + "/"); }
       else if (s.isFile()) out.push(r); else bad.push(r);
     }
   };
@@ -671,6 +752,31 @@ export function checkGame(cfg, inDir, pubDir, now, release = "", cardsOk = null,
     inputsOk.set(w, sha256(raw)); publish.push(f);
   }
 
+  // Rolling rounds: schedule files are write-once, published only inside their window by this job's clock; one that
+  // misses its round's cancel time is held, and that round is cancelled for everyone (D-344).
+  const schedOk = new Set();     // round ids whose schedule file is published after this job (incoming or published)
+  for (const f of files.filter((x) => x.startsWith("schedule/"))) {
+    if (!NAMES.test(f)) continue;
+    const id = SCHEDULE_FILE.exec(f) ? `r${SCHEDULE_FILE.exec(f)[1]}` : "";
+    const raw = readRaw(inDir, f), old = readRaw(pubDir, f);
+    const p = parseCanon(raw);
+    if (!p.ok) { hold(f, p.why); continue; }
+    if (old) { if (!same(raw, old)) hold(f, "it changes a published schedule file (write-once)"); else schedOk.add(id); continue; }
+    if (!cfg.rolling) { hold(f, "this game has no rolling rounds"); continue; }
+    if (raw.length > MAX_SCHEDULE_BYTES) { hold(f, `a schedule file over ${MAX_SCHEDULE_BYTES} bytes`); continue; }
+    const why = scheduleShape(p.v, f, cfg);
+    if (why) { hold(f, why); continue; }
+    const n = rollingNo(id), c = rollingClock(cfg);
+    if (now < c.scheduleFrom(n) - FUTURE_SLACK_MS) { hold(f, "a schedule file before its window, by this job's clock"); continue; }
+    if (now > c.cancelAt(n)) { hold(f, "a schedule file after its round's cancel time (start − cancelAfterMin), by this job's clock: the round is cancelled for everyone (D-344)"); continue; }
+    if (p.v.written > now + FUTURE_SLACK_MS) { hold(f, "written in the future by this job's clock"); continue; }
+    schedOk.add(id); publish.push(f);
+  }
+  for (const f of fs.existsSync(path.join(pubDir, "schedule")) ? fs.readdirSync(path.join(pubDir, "schedule")) : []) {
+    const m = /^(r[0-9]{5})\.json$/.exec(f);
+    if (m && parseCanon(readRaw(pubDir, `schedule/${f}`)).ok) schedOk.add(m[1]);
+  }
+
   for (const f of files) {
     if (!NAMES.test(f)) { hold(f, "a name the game may not publish"); continue; }
     if (!WEEK_FILE.test(f)) continue;
@@ -681,6 +787,7 @@ export function checkGame(cfg, inDir, pubDir, now, release = "", cardsOk = null,
     if (why) { hold(f, why); continue; }
     const w = j.week;
     heldWeeks.add(w);
+    if (cfg.rolling) { const rw = rollingWeekWhy(j, cfg, schedOk); if (rw) { hold(f, rw); continue; } }
     if (cfg.inputsFile && (inputsOk.get(w) ?? pubInputs(w)) !== j.inputs) { hold(f, "its inputs hash isn't the published inputs file's (FC-9)"); continue; }
     { const cw2 = cardsWhy(raw, old, j); if (cw2) { hold(f, cw2); continue; } }
     const pv = old ? parseCanon(old) : null;

@@ -57,6 +57,7 @@ unless the owner decides to move one (GAME_KIT §6: replay, two shadow weeks wit
 | G13-1 | A gap in a game's weeks never silently resets carried state |
 | `cardPerRound` (Library, 12 Nov) | On by default for ruler games; no extra pin |
 | G7 (Block X + Fantasy, 12 Nov) | A time-locked round's last pick block is `blockAt(lock) − 1` (`lastPickBlock`) |
+| Rolling rounds (D-342 to D-370, Over/Under; draft Fri 20 Nov) | game.json `rolling` { roundMin, gameMin, leadMin, scheduleFromMin, scheduleToMin, cancelAfterMin }: a round every roundMin on the vault's grid (id `r#####`), counted for the week and UTC day it STARTS in; a write-once `schedule/r#####.json` made between scheduleFromMin and scheduleToMin before each start (`scheduleFor`, both nodes; `ctx.schedules` holds the earlier ones); no published schedule by cancelAfterMin before the start = cancelled for everyone (void), queue unchanged (D-344). A game without `rolling` is byte for byte as before (Vault K-2, `rolling-golden.k2.test.ts`) |
 
 ## Capacity (CAPACITY_STANDARD)
 Rule 2 is built (every run warns past 60% of the 2 MB publish cap). Rule 3 holds (page loops and the 1.9 MB write cap

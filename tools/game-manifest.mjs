@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { rollingProblem } from "../kit/publish/check.inline.mjs";
 
 export const ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));   // a real path on Windows too
 
@@ -74,7 +75,7 @@ export function validateManifest(m, opts = {}) {
   return p;
 }
 
-export const KIT_FIELDS = ["payoutRule", "vaultValues", "minPts", "rowCap", "entry", "budgets", "liveWeek", "roundsCorrectable", "maxRoundPoints", "inputsFile", "inputsLeadHours", "published", "vhpData", "cardPerRound", "parts", "firstWeek"];
+export const KIT_FIELDS = ["payoutRule", "vaultValues", "minPts", "rowCap", "entry", "budgets", "liveWeek", "roundsCorrectable", "maxRoundPoints", "inputsFile", "inputsLeadHours", "published", "vhpData", "cardPerRound", "parts", "firstWeek", "rolling"];
 /** Budget ceilings: a game's whole run must fit its own record job (25 min, KC-4). */
 export const BUDGET_MAX = { reads: 200000, ms: 20 * 60000, atOnce: 16, tries: 6 };
 /** A game's name is rendered into its workflow: one plain line (KC-14). */
@@ -103,6 +104,14 @@ function checkKitFields(m, need) {
   if (m.parts !== undefined) need(m.parts === "d" || m.parts === "r", 'parts: "d" (one part per UTC day) or "r" (one part per round)');
   // The first vault week the kit records (Fantasy, 14 Nov): earlier weeks are never read, recorded or alerted on.
   if (m.firstWeek !== undefined) need(Number.isInteger(m.firstWeek) && m.firstWeek >= 0 && m.firstWeek <= 9999, "firstWeek: the first vault week the kit records, a whole number 0–9999");
+  // Rolling rounds (Over/Under, D-342 to D-370): a new round every roundMin on the vault's grid, write-once schedule
+  // files between scheduleFromMin and scheduleToMin before each start, cancelled without one by cancelAfterMin.
+  if (m.rolling !== undefined) {
+    const why = rollingProblem(m.rolling);
+    need(!why, why || "rolling");
+    need(m.picks?.contract === "picks", "rolling: a rolling game's picks come from the Picks contract");
+    need(m.parts === undefined || m.parts === "r", 'rolling: parts, if used, must be "r" (one part per round)');
+  }
   // Phase 1 item 6: other kit games whose published final weeks this game reads (ctx.published.games).
   if (m.published !== undefined) need(Array.isArray(m.published) && m.published.length <= 4 && m.published.every((x) => typeof x === "string" && /^[a-z][a-z0-9-]{1,23}$/.test(x) && x !== m.slug) && new Set(m.published).size === m.published.length, "published: up to 4 other kit games' slugs");
 }

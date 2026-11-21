@@ -15,7 +15,7 @@
 // The module never sees the clock, files or the network except through what this passes it.
 import fs from "node:fs";
 import path from "node:path";
-import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_STATE_BYTES, MAX_EXTRAS_BYTES } from "../publish/check.inline.mjs";
+import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_STATE_BYTES, MAX_EXTRAS_BYTES, rollingClock, rollingId, rollingNo, scheduleName, startDay, rollingProblem, MAX_SCHEDULE_BYTES } from "../publish/check.inline.mjs";
 import { clockFromState, type VaultClock } from "./clock.ts";
 import { agree, budgeted, Budget, DEFAULT_BUDGETS, Disagree, OutOfBudget, ReadFailed, sameJson, toJson, type Budgets, type KitNode } from "./nodes.ts";
 import { Prev, Out, MAX_WRITE_BYTES } from "./store.ts";
@@ -48,7 +48,35 @@ export type KitGameCfg = {
   inputsFile?: boolean;
   /** How long before the week opens the inputs file is made (default 2 days: Saturday 00:00 UTC). */
   inputsLeadMs?: number;
+  /** Rolling rounds (game.json "rolling", Over/Under): a new round every roundMin on the grid, write-once schedule files,
+   *  cancel without one (kit/publish/check.inline.mjs, "rolling rounds"). Unset: none of it runs (Vault K-2). */
+  rolling?: { roundMin: number; gameMin: number; leadMin: number; scheduleFromMin: number; scheduleToMin: number; cancelAfterMin: number };
 };
+
+/** A rolling game's rounds for a week: every grid round whose START is in the week (Mon 00:00 UTC starts the new week),
+ *  id r#####, day = the UTC day of its start, picks locking leadMin before it, decided gameMin after it. pickRound: the
+ *  Picks contract round for round n (the game's own mapping). A rolling game's roundsFor returns exactly these. */
+export function rollingRounds(span: { start: number; end: number }, cfg: Pick2<KitGameCfg, "genesis" | "rolling">, pickRound?: (n: number, start: number) => number): Round[] {
+  if (!cfg.rolling) throw new Error("rollingRounds: the game has no rolling settings");
+  const c = rollingClock(cfg);
+  const out: Round[] = [];
+  for (let n = c.firstAtOrAfter(span.start); c.start(n) < span.end; n++) {
+    const start = c.start(n);
+    out.push({ id: rollingId(n), day: startDay(start), locksAt: c.locksAt(n), resolvesAt: c.resolvesAt(n), ...(pickRound ? { pickRound: pickRound(n, start) } : {}) });
+  }
+  return out;
+}
+type Pick2<T, K extends keyof T> = { [P in K]: T[P] };
+
+/** "" when a rolling game's round is exactly its grid round inside the week, else why not (the runtime stops on it). */
+export function rollingRoundWhy(r: Round, cfg: Pick2<KitGameCfg, "genesis" | "rolling">, span: { start: number; end: number }): string {
+  const n = rollingNo(r.id);
+  if (n === null) return `round ${r.id}: a rolling round's id is r##### (5 digits)`;
+  const c = rollingClock(cfg), start = c.start(n);
+  if (!(start >= span.start && start < span.end)) return `round ${r.id}: it starts outside the week (a rolling round counts for the week it starts in)`;
+  if (r.day !== startDay(start) || r.locksAt !== c.locksAt(n) || r.resolvesAt !== c.resolvesAt(n)) return `round ${r.id}: its day, locksAt and resolvesAt must be its grid round's (use the kit's rollingRounds)`;
+  return "";
+}
 
 export type RunOpts = {
   /** K4 (internal): this pass writes the open copy of the current week (liveWeek), not last week. */
@@ -308,6 +336,37 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     }
   }
 
+  // Rolling rounds: each round's write-once schedule file, made once inside its window (scheduleFromMin to
+  // scheduleToMin before its start), on both nodes (they must agree). A round that gets none by its cancel time is
+  // cancelled for everyone (below, and the publish check), and the queue is unchanged (D-344).
+  const schedules = cfg.rolling ? prev.schedules() : null;
+  const scheduleBodies = schedules ? new Map([...schedules].map(([k, v]) => [k, v.body])) : null;
+  if (cfg.rolling && !o.live) {
+    const why = rollingProblem(cfg.rolling);
+    if (why) throw new Error(`${cfg.slug}: ${why}`);
+    if (!m.scheduleFor) throw new Error(`${cfg.slug}: a rolling game needs scheduleFor`);
+    const c = rollingClock(cfg);
+    // The starts whose window holds now: scheduleFrom(n) <= now < scheduleTo(n).
+    for (let n = c.firstAtOrAfter(now + cfg.rolling.scheduleToMin * MIN + 1); c.scheduleFrom(n) <= now; n++) {
+      const id = rollingId(n), start = c.start(n);
+      if (!(c.scheduleFrom(n) <= now && now < c.scheduleTo(n)) || prev.schedule(id)) continue;
+      if (cfg.firstWeek !== undefined && clock.weekOf(start) < cfg.firstWeek) continue;
+      try {
+        const ctxOf = (read: NodeReader) => ({ now, read, published, schedules: scheduleBodies!, ...(cfg.vhpData ? { vhp: vhpIn } : {}), blockAt: blockAtA });
+        const body = toJson(await agree(`round ${id}'s schedule`, () => m.scheduleFor!(n, start, ctxOf(va)), () => m.scheduleFor!(n, start, ctxOf(vb))));
+        if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error(`round ${id}: scheduleFor must return a JSON object`);
+        const f = { v: 1, game: cfg.game, round: id, start, written: now, body };
+        if (Buffer.byteLength(canon(f)) > MAX_SCHEDULE_BYTES) throw new Error(`round ${id}: its schedule file would be over ${MAX_SCHEDULE_BYTES} bytes`);
+        out.write(scheduleName(n), f);
+        scheduleBodies!.set(id, body);
+        alerts.notes.push(`round ${id}: its schedule file was made (starts ${new Date(start).toISOString()})`);
+      } catch (e) {
+        if (!(isNotYet(e) || e instanceof Disagree || e instanceof OutOfBudget || e instanceof ReadFailed)) throw e;
+        alerts.errors.push(`round ${id}'s schedule file couldn't be made this run (${(e as Error).message}): without one by ${new Date(c.cancelAt(n)).toISOString()} the round is cancelled for everyone (D-344)`);
+      }
+    }
+  }
+
   const w = o.live ? cw : cw - 1;
   if (w < 0) { log(`${cfg.slug}: no week has ended yet.`); return { week: null, state: "none", alerts, written: out.written }; }
   // firstWeek (Fantasy, 14 Nov): a week before the game's first week is never read, recorded or alerted on, so a game
@@ -440,7 +499,7 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     carry = checkedStates("carryIn", m.carryIn ? m.carryIn(last, span, inputs) : last);
   }
 
-  const rounds: Round[] = m.roundsFor(span, { now, inputs, published }).slice().sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+  const rounds: Round[] = m.roundsFor(span, scheduleBodies ? { now, inputs, published, schedules: scheduleBodies } : { now, inputs, published }).slice().sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
   if (rounds.length > MAX_ROUNDS) throw new Error(`${cfg.slug}: ${rounds.length} rounds in week ${w}, more than the kit's ${MAX_ROUNDS} (KC-11)`);
   const ids = new Set(rounds.map((r) => r.id));
   if (ids.size !== rounds.length) throw new Error(`${cfg.slug}: roundsFor gave a round id twice`);
@@ -497,7 +556,7 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   const pubFallbacks = new Map<string, [string, number, string]>((Array.isArray(pw?.fallbacks) ? pw.fallbacks : []).map((f: any) => [f[0], f]));
   const resultOf = async (r: Round, rd: NodeReader) => {
     if (!cfg.vhpData) {
-      try { return await m.resultOf(r, rd, inputs, { blockAt: chainOf(rd) }); }
+      try { return await m.resultOf(r, rd, inputs, cfg.rolling ? { blockAt: chainOf(rd), schedule: prev.schedule(r.id)?.body } : { blockAt: chainOf(rd) }); }
       catch (e) { if (isNotYet(e)) { notYet.add(r.id); if ((e as any).lagging) lagging.add(r.id); return PENDING; } throw e; }
     }
     const mine = new Map<string, any>();
@@ -513,7 +572,7 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
       const text = String(why ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_FALLBACK_WHY) || "no ruler card";
       fb = [r.id, at, text];
     };
-    try { res = await m.resultOf(r, rd, inputs, { vhp: vhpRound!(mine), blockAt: chainOf(rd), fallback }); }
+    try { res = await m.resultOf(r, rd, inputs, cfg.rolling ? { vhp: vhpRound!(mine), blockAt: chainOf(rd), fallback, schedule: prev.schedule(r.id)?.body } : { vhp: vhpRound!(mine), blockAt: chainOf(rd), fallback }); }
     catch (e) { if (isNotYet(e)) { notYet.add(r.id); if ((e as any).lagging) lagging.add(r.id); return PENDING; } throw e; }
     for (const [k, v] of mine) usedWeekCards.set(k, v);
     if (fb && res !== PENDING) fallbackOf.set(r.id, fb);
@@ -555,7 +614,8 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   const roundsOut: any[] = [];
   for (const r of rounds) {
     const day = r.day;
-    if (!(Number.isSafeInteger(day) && day === dayOf(r.locksAt) && day >= span.start && day < span.end)) throw new Error(`round ${r.id}: its day must be dayOf(locksAt) inside week ${w} (KC-30)`);
+    if (cfg.rolling) { const why = rollingRoundWhy(r, cfg, span); if (why) throw new Error(`${why} (KC-30, rolling)`); }
+    else if (!(Number.isSafeInteger(day) && day === dayOf(r.locksAt) && day >= span.start && day < span.end)) throw new Error(`round ${r.id}: its day must be dayOf(locksAt) inside week ${w} (KC-30)`);
     const fun = cfg.sundayFunRound && isSunday(day) ? 1 : 0;
     const picks = (ra.picks.get(r.id) ?? []).slice().sort((x, y) => (x.wallet < y.wallet ? -1 : 1));
     for (const p of picks) if (!idx.has(p.wallet)) throw new Error(`round ${r.id}: ${p.wallet} picked but has no stake read`);
@@ -565,7 +625,11 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     for (const a of who) if (!idx.has(a)) throw new Error(`round ${r.id}: ${a} has a state but no stake read`);
     let status: "s" | "v" | "p" = "p";
     let rows: [string, number, number][] = who.map((a) => [a, 0, 0]);
-    if (now >= r.resolvesAt) {
+    // Rolling rounds (D-344): no published schedule file by its cancel time = cancelled for everyone (void); the queue
+    // is unchanged (the game reads only the schedules that exist). The publish check refuses a later schedule file.
+    const cancelled = !!cfg.rolling && !prev.schedule(r.id) && now >= rollingClock(cfg).cancelAt(rollingNo(r.id)!);
+    if (cancelled) { status = "v"; if (now >= r.resolvesAt && !pubRounds.get(r.id)) alerts.notes.push(`round ${r.id}: cancelled (no schedule file was published by its cancel time, D-344)`); }
+    else if (now >= r.resolvesAt) {
       try {
         const same = m.same ?? sameJson;
         const res = await agree(`round ${r.id}'s result`, () => resultOf(r, va as NodeReader), () => resultOf(r, vb as NodeReader),

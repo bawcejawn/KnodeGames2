@@ -53,6 +53,9 @@ export class Prev {
     if (fs.existsSync(vd)) for (const f of fs.readdirSync(vd).sort()) if (/^(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})\.json$/.test(f)) take(`vault/${f}`);
     const id = path.join(dir, "inputs");
     if (fs.existsSync(id)) for (const f of fs.readdirSync(id).sort()) if (/^W(0|[1-9][0-9]{0,3})\.json$/.test(f)) take(`inputs/${f}`);
+    // Rolling rounds: the published schedule files (write-once), schedule/r#####.json.
+    const sd = path.join(dir, "schedule");
+    if (fs.existsSync(sd)) for (const f of fs.readdirSync(sd).sort()) if (/^r[0-9]{5}\.json$/.test(f)) take(`schedule/${f}`);
     return new Prev(dir, files, manifests);
   }
 
@@ -64,6 +67,12 @@ export class Prev {
   /** The week's published inputs file (FC-9), parsed. */
   inputs(w: number): any | null { return this.files.get(`inputs/W${w}.json`) ?? null; }
   alltime(): any | null { return this.files.get("alltime.json") ?? null; }
+  /** Rolling rounds: round id's published schedule file (r#####), parsed, or null. */
+  schedule(id: string): any | null { return this.files.get(`schedule/${id}.json`) ?? null; }
+  /** Every published schedule file, by round id, in round order. */
+  schedules(): Map<string, any> {
+    return new Map([...this.files.entries()].filter(([k]) => /^schedule\/r[0-9]{5}\.json$/.test(k)).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([k, v]) => [k.slice(9, 15), v]));
+  }
   /** Every published week number (any state), ascending. */
   weeks(): number[] {
     return [...this.files.keys()].map((k) => /^W([0-9]{3,4})\.json$/.exec(k)).filter(Boolean).map((m) => Number(m![1])).sort((a, b) => a - b);
@@ -80,8 +89,9 @@ export class Out {
   readonly written: string[] = [];
   constructor(readonly dir: string) { fs.mkdirSync(path.join(dir, "vault"), { recursive: true }); }
   write(rel: string, v: unknown) {
-    if (!/^(board\.json|alltime\.json|W([0-9]{3}|[1-9][0-9]{3})\.json|vault\/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})\.json|inputs\/W(0|[1-9][0-9]{0,3})\.json)$/.test(rel)) throw new Error(`the kit never writes ${rel}`);
+    if (!/^(board\.json|alltime\.json|W([0-9]{3}|[1-9][0-9]{3})\.json|vault\/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})\.json|inputs\/W(0|[1-9][0-9]{0,3})\.json|schedule\/r[0-9]{5}\.json)$/.test(rel)) throw new Error(`the kit never writes ${rel}`);
     if (rel.startsWith("inputs/")) fs.mkdirSync(path.join(this.dir, "inputs"), { recursive: true });
+    if (rel.startsWith("schedule/")) fs.mkdirSync(path.join(this.dir, "schedule"), { recursive: true });
     const s = canon(v);
     if (Buffer.byteLength(s) > MAX_WRITE_BYTES) throw new Error(`${rel} would be over ${MAX_WRITE_BYTES} bytes: stopping (RECORDER §6.7)`);
     fs.writeFileSync(path.join(this.dir, rel), s);

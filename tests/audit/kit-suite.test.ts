@@ -36,6 +36,8 @@ import "../../kit/tests/first-week.test.ts";
 import "../../kit/tests/g82-3.test.ts";
 import "../../kit/tests/g79-1.test.ts";
 import "../../kit/tests/parts-kit.test.ts";
+import "../../kit/tests/rolling.test.ts";
+import "../../kit/tests/rolling-golden.k2.test.ts";
 import "./kit-repolens-g41.test.ts";
 
 import test from "node:test";
