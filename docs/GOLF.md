@@ -51,6 +51,8 @@ once and in its right shard; and the total equals the list's `players`. Anything
 or 2, is a failed read (said aloud in the run's problems), never a hole scored on part of its field. The workflow takes
 the folders of the board's `week` and `lastWeek` lists (plain files only).
 
+**Block X's `pts10` (within-N tenths, Block X D-313).** When every row of the week's Block X list (v 1 rows, or a v 2 `pts10` column typed `i`) has a whole-number `pts10` from 0, Golf scores the Block X hole on `pts10` instead of `pts`, so players tied on `pts` but apart on `pts10` are no longer tied. With no `pts10` anywhere, nothing changes. `pts10` on only some rows, or one that isn't a whole number from 0, is a failed read. Golf scores by rank, so an old week's `pts10 = pts x 10` gives the same strokes.
+
 No contract, vault or sponsor change is needed to add a hole. A game with the shared board adds one line to `games.json`; any other game's build adds its reader and a test.
 
 ## The Clubhouse hole (owner, 6 Nov; accumulating, owner 15 Nov)
