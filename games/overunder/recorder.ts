@@ -108,7 +108,8 @@ export const game: GameModule<RawPick, OUResult, unknown> = {
     const out: Score = new Map();
     for (const p of picks) {
       const points = R.pointOf(Number((p.pick as any)?.number), result.outcome);
-      out.set(p.wallet, { points, at: points > 0 ? p.at : 0 });
+      // NK-19: a score time must lie inside the vault week, but a pick for a game in the week's first 2 hours is made before it.
+      out.set(p.wallet, { points, at: points > 0 ? Math.max(p.at, R.WEEK0 + R.weekOfStart(Number(round.pickRound) * R.SLOT) * R.WEEK_MS) : 0 });
     }
     return out;
   },

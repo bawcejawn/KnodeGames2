@@ -19,7 +19,7 @@ A new game every 30 minutes. Each game is one block producer and a line, in half
 - The game is scored on a ruler card with the **same card round and size window** as its schedule card and the game's own 14,400 blocks, so it has the same k and form. The line in the file must equal the line from this scored card's row; if not, the game is cancelled.
 - **Over wins** if credited blocks × 2 > the line (in half blocks); otherwise Under wins. A void producer is skipped (no win, no loss).
 - **1 point** for each game called right. A game counts for the **week it starts in** (Monday 00:00 UTC starts a new week). Every day counts, Sunday too.
-- Weekly leaderboard; final from Mon 00:00 UTC after the kit's re-read on both nodes.
+- Weekly leaderboard; final after the last game of the week is decided (a game started late on Sunday ends about 12 hours later, on Monday), then the kit's re-read on both nodes.
 
 ## Form labels
 On form: 97% or more. A little behind: 90% to 96.9%. Behind: 80% to 89.9%. Unreliable: below 80%.
