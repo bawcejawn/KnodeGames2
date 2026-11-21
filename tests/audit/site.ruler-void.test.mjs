@@ -48,8 +48,8 @@ test("results.js reads race-data R<week>.json by week number, draws with textCon
   assert.doesNotMatch(js, /innerHTML|insertAdjacentHTML|eval\(/);
   assert.ok(home.indexOf("ruler-void.js") > 0 && home.indexOf("ruler-void.js") < home.indexOf("results.js") && home.includes('ruler-void.js"></script>\n  <script src="race-math.js"'), "the helper loads before results.js");
 });
-test("the Ruler page: from Week 1, the limits, picks, and the whole-void line; no banned words", () => {
-  assert.match(page, /from Week 1 \(Monday 16 November\)/);
+test("the Ruler page: from Week 4, the limits, picks, and the whole-void line; no banned words", () => {
+  assert.match(page, /from Week 4 \(Monday 16 November\)/);
   assert.match(page, /no pick in it scores\. Picks are never returned/); assert.doesNotMatch(page, /given back|gives picks back/);
   for (const t of ["5%", "25%", "10%", "12%", "50%", "15%", "100%"]) assert.ok(page.includes(t), t);
   const text = page.replace(/<[^>]+>/g, " ");
@@ -73,13 +73,13 @@ test("Get VHP tells Wormhole users to paste the vKOIN contract address for each 
   assert.match(g, /Ethereum address in step 2: check they match/);
 });
 
-test("the Ruler page says which games use it (Race live from Week 1; the others from the Ruler chat's dates, 15 Nov) and carries the Race rules; no mode is named", () => {
+test("the Ruler page says which games use it (Race live from Week 4; the others from the Ruler chat's dates, 15 Nov) and carries the Race rules; no mode is named", () => {
   const p = fs.readFileSync(`${APP}web/ruler.html`, "utf8"), text = p.replace(/<[^>]+>/g, " ");
   assert.match(p, /Which games use the Ruler/);
   for (const g of ["Producer Race", "Who Signs Block X", "Producer Bracket", "Fantasy Producers", "Last Node Standing", "Combo Card"]) assert.ok(text.includes(g), g);
-  assert.match(text, /6-hour races: live from Week 1 \(Mon 16 Nov\)/);
-  assert.match(text, /From Week 2 \(Mon 23 Nov\)\. Week 1 is a practice week for the Ruler\./);
-  assert.match(text, /From its first week, Week 2 \(from Mon 23 Nov\)\./);
+  assert.match(text, /6-hour races: live from Week 4 \(Mon 16 Nov\)/);
+  assert.match(text, /From Week 5 \(Mon 23 Nov\)\. Week 4 is a practice week for the Ruler\./);
+  assert.match(text, /From its first week, Week 5 \(from Mon 23 Nov\)\./);
   assert.match(text, /From its first week \(Mon 7 Dec\)\./);
   assert.doesNotMatch(text, /Planned:|next kit version/);
   assert.match(text, /luck against its own size/);
