@@ -43,7 +43,7 @@
       try { const d = await fetchJson(new URL("picks-data/deployment.json", ROOT)); if (isAddr(d.contract)) picks = d.contract; } catch { /* not live yet */ }
       NET = { rpc: Math.random() < 0.5 ? ["https://koinos.armana.io", "https://api.koinosblocks.com"] : ["https://api.koinosblocks.com", "https://koinos.armana.io"], data: "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/blockx/", raceData: "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/",
         cards: "race", picks, explorer: "https://koinosscan.com/address/", chainId: MAINNET_CHAIN_ID,
-        prize: "1st and 2nd at the end of the week win the free-play prize (2 and 1 VHP, from Week 1, the week of Mon 16 Nov)." };
+        prize: "1st and 2nd at the end of the week win the free-play prize (2 and 1 VHP, from Week 4, the week of Mon 16 Nov)." };
       // The game whose weeks contain now, or the one the #game-N link asks for; both as tabs around the switch.
       const now = Date.now(), want = /^#game-(\d+)$/.exec(location.hash);
       const games = X.MAINNET_SCHEDULE.map((e) => ({ ...e.game, ...X.periodOf(e), name: e.game.id === X.MAINNET_HOURLY.id ? `Hourly (from ${new Date(X.periodOf(e).from).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })})` : "Every 2 hours" }));

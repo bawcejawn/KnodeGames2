@@ -30,7 +30,7 @@ test("All the games lists every game; only the open ones are links; no 'Coming s
   for (const name of ["Survivor"]) assert.match(g, new RegExp(`<div class="also-card gtile soon" aria-disabled="true"><span[^>]*>[^<]*</span><div><b>${name}</b>`), `${name} is not a link`);
   assert.match(g, /<a class="also-card gtile" href="swap\.html">[\s\S]*Knode Games Swap/);
   assert.match(g, /<a class="also-card gtile" href="run-node\.html">[\s\S]*Run a node/);
-  assert.match(g, /Block Golf[\s\S]*?Practice in Week 1 \(from Mon 16 Nov\)/);   // owner, 10 Nov: Golf is clickable, practice in Week 1
+  assert.match(g, /Block Golf[\s\S]*?Practice in Week 4 \(from Mon 16 Nov\)/);   // owner, 10 Nov: Golf is clickable, practice in Week 4
   assert.doesNotMatch(g, /Coming soon/);   // the games list has no label (the race card says what is coming)
   assert.doesNotMatch(welcome, /Never miss a day|welcome-remind/);
 });

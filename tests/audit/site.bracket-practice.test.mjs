@@ -78,14 +78,14 @@ async function openPage({ now, chainNow = now, picksDeployment = PINNED, index, 
     confirm: async () => { const b = button("Confirm in wallet"); assert.ok(b, "a Confirm button: " + modalText()); b.click(); await flush(w, 30); },
   };
 }
-const SUNDAY = BM.seedTime(4) + 3 * 3600000;   // the week of Mon 16 Nov (vault week 4 = "Week 1") is on show
+const SUNDAY = BM.seedTime(4) + 3 * 3600000;   // the week of Mon 16 Nov (vault week 4 = "Week 4") is on show
 const idx = (prizesFromWeek) => ({ v: 1, updated: "2026-11-15T03:00:00.000Z", weeks: [4], contract: PINNED, game: 9, prizesFromWeek });
 const note = (p) => p.$("bk-practice");
 
-test("practice notice: Week 1 with prizes from vault week 5 says practice, no VHP, and when staked rewards start", async () => {
+test("practice notice: Week 4 with prizes from vault week 5 says practice, no VHP, and when staked rewards start", async () => {
   const p = await openPage({ now: SUNDAY, index: idx(5) });
   assert.equal(note(p).hidden, false);
-  assert.match(note(p).textContent, /^Week 1 is a practice week: brackets, points and both leaderboards count for fun only, and no VHP is paid for it\. Staked rewards and the Free play prize start Week 2, the week of Mon, Nov 23\.$/);
+  assert.match(note(p).textContent, /^Week 4 is a practice week: brackets, points and both leaderboards count for fun only, and no VHP is paid for it\. Staked rewards and the Free play prize start Week 5, the week of Mon, Nov 23\.$/);
 });
 
 test("practice notice: no first paid week set yet says practice too", async () => {
@@ -118,14 +118,14 @@ test("an ET visitor sees picks open Sat, Nov 14, 9:00 PM EST", () => {
 test("before the seeding (Thursday): the line names the seeding and when picks open; no bracket to send", async () => {
   const p = await openPage({ now: BM.seedTime(4) - 2 * 86400000, noWeek: true, index: idx(5) });
   const line = p.$("week-line").textContent;
-  assert.match(line, new RegExp(`^Week 1: the bracket is seeded ${esc(full(BM.seedTime(4)))} \\(in .*\\), and picks open ${esc(full(OPEN))}\\.$`));
+  assert.match(line, new RegExp(`^Week 4: the bracket is seeded ${esc(full(BM.seedTime(4)))} \\(in .*\\), and picks open ${esc(full(OPEN))}\\.$`));
   assert.equal(new Date(OPEN).toISOString(), "2026-11-15T02:00:00.000Z");
   assert.equal(p.$("bk-actions").hidden, true, "no Submit");
 });
 
 test("seeded but before picks open (Sat 7–9 PM ET): bracket shown read-only, 'Picks open' line, no Submit", async () => {
   const p = await openPage({ now: BM.seedTime(4) + 3600000, index: idx(5) });
-  assert.ok(p.$("week-line").textContent.startsWith(`Week 1: 8-producer bracket, seeded. Picks open ${full(OPEN)} (in 1 h 00 min) and lock ${full(BM.lockTime(4))}`), p.$("week-line").textContent);
+  assert.ok(p.$("week-line").textContent.startsWith(`Week 4: 8-producer bracket, seeded. Picks open ${full(OPEN)} (in 1 h 00 min) and lock ${full(BM.lockTime(4))}`), p.$("week-line").textContent);
   assert.equal(p.$("bk-actions").hidden, true, "no Submit before picks open");
   assert.equal(p.w.document.querySelectorAll("#bk-list button").length, 0, "no pick buttons");
   assert.equal(p.modalText(), "", "no error pop-up");
@@ -136,14 +136,14 @@ test("picks open but the Picks game isn't on chain yet: says so, no Submit; once
   assert.match(none.$("week-line").textContent, /Picks open as soon as the Bracket's Picks game is live on the chain \(it isn't yet\)/);
   assert.equal(none.$("bk-actions").hidden, true);
   const live = await openPage({ now: OPEN + 60000, index: idx(5), game: { id: 9, enabled: true } });
-  assert.match(live.$("week-line").textContent, /^Week 1: 8-producer bracket\. Picks lock /);
+  assert.match(live.$("week-line").textContent, /^Week 4: 8-producer bracket\. Picks lock /);
   assert.equal(live.$("bk-actions").hidden, false, "Submit shown once the game is live");
 });
 
-test("weeks are named as players know them: vault week 4 is 'Week 1', never 'Week 5'", async () => {
+test("weeks are named as players know them: vault week 4 is 'Week 4', never the old 'Week 1'", async () => {
   const p = await openPage({ now: SUNDAY, index: idx(5) });
-  assert.match(p.$("week-line").textContent, /^Week 1: /);
-  assert.doesNotMatch(p.w.document.body.textContent, /Week 5/);
+  assert.match(p.$("week-line").textContent, /^Week 4: /);
+  assert.doesNotMatch(p.w.document.body.textContent, /Week [123]\b/);
 });
 
 // R-BR-7 (owner 11 Nov): the VHP ruler line, from index.json rulerFrom (the switch the recorder read)
@@ -153,12 +153,12 @@ test("ruler line: hidden with the switch unset; the shadow week names the Monday
   const sh = await openPage({ now: SUNDAY, index: { ...idx(5), rulerFrom: 5 } });   // week 4 on show = the shadow week
   const t = sh.$("bk-ruler").textContent;
   assert.equal(sh.$("bk-ruler").hidden, false);
-  assert.match(t, /^Shadow week: the VHP ruler runs beside the real results and counts for nothing; from Week 2 \(the week of Mon, Nov 23\) it decides the matchups\./);
+  assert.match(t, /^Shadow week: the VHP ruler runs beside the real results and counts for nothing; from Week 5 \(the week of Mon, Nov 23\) it decides the matchups\./);
   assert.match(t, /void for that day only, and so is one that signs no block all day: it loses its matchup, so a pick on it counts as a loss; if both are void, the day index decides/);
   const later = await openPage({ now: SUNDAY, index: { ...idx(5), rulerFrom: 6 } });
-  assert.match(later.$("bk-ruler").textContent, /^From Week 3 \(the week of Mon, Nov 30\) the VHP ruler decides the matchups\./);
+  assert.match(later.$("bk-ruler").textContent, /^From Week 6 \(the week of Mon, Nov 30\) the VHP ruler decides the matchups\./);
   const on = await openPage({ now: SUNDAY, index: { ...idx(5), rulerFrom: 4 } });
-  assert.match(on.$("bk-ruler").textContent, /^The VHP ruler decides the matchups \(since Week 1, the week of Mon, Nov 16\)\./);
+  assert.match(on.$("bk-ruler").textContent, /^The VHP ruler decides the matchups \(since Week 4, the week of Mon, Nov 16\)\./);
 });
 
 // Repo Lens #G-48 G48-4: in a week the VHP ruler scores, the page says what decided each played round and doesn't show the

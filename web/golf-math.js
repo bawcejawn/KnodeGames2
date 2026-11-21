@@ -211,8 +211,8 @@
     return m;
   }
 
-  /** The share line: "⛳ Knode Games · Block Golf · Week 1: −1 (27 on par 28) 🐦⚪🦅⚪⬛🟧🐦⚪". weekLabel: what players call
-   *  the week (weeks.js KWeeks.label, D-063: vault week 4 is "Week 1"). */
+  /** The share line: "⛳ Knode Games · Block Golf · Week 4: −1 (27 on par 28) 🐦⚪🦅⚪⬛🟧🐦⚪". weekLabel: what players call
+   *  the week (weeks.js KWeeks.label, D-063, owner 21 Nov: vault week 4 is "Week 4"). */
   function shareText(c, weekLabel) {
     if (!c) return "";
     const icons = c.holes.map((x) => ICON[x.strokes] || "⚪").join("");
