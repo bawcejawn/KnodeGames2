@@ -1,0 +1,785 @@
+/* lastnode.html: Last Node Standing. It reads the chain's recent blocks (chain-blocks.js), the recorder's files
+   (games-data/lastnode: the field, the recorded hours, the leaderboard), the race recorder's current card (race-data,
+   for reliability only) and, once the KnodeGames Picks contract is live (picks-data/deployment.json), your picks.
+   It sends one thing: a pick you confirm in your wallet (your start node, a backup or a jump).
+   TESTNET (lastnode-testnet.html, <meta name="kg-network" content="testnet">): picks go to the testnet Picks contract
+   (testnet/blockx.json) with the testnet wallet (testnet-wallet.js, test KOIN only); the race is still the real MAINNET
+   producers, read only, because the testnet has a single producer. #game-94 is the fast test game, #game-33 the real
+   timing.
+   The rules are lastnode-math.js, the same file the recorder (bot/games/lastnode.ts) runs. The live cut shown here is
+   worked out from blocks that may not be irreversible yet; the recorder's file is the final word.
+   Picks go through the shared "Send my picks" card (js/lib/send-picks.js, D-255/D-278): a change shows your pick this
+   round first, asks, and is sent alone with your own Mana; only a first pick may be paid by the Mana sponsor. */
+import * as SP from "./js/lib/send-picks.js";
+(() => {
+  "use strict";
+  const L0 = window.KLastNode, M = window.KRaceMath;
+  if (!L0 || !M || typeof document === "undefined" || !document.getElementById("track")) return;
+  const meta = document.querySelector('meta[name="kg-network"]');
+  const TESTNET = !!(meta && meta.getAttribute("content") === "testnet");
+  // Testnet: the fast test game (94) unless the address asks for the real timing (#game-33).
+  const L = TESTNET ? L0.forGame(location.hash === "#game-33" ? L0.REAL_TEST_GAME : L0.FAST_GAME) : L0;
+  // The VHP ruler (owner, 11 Nov; Library, 12 Nov): the real game's field and cuts come from the ruler's cards (each hour,
+  // the node with the worst luck that hour goes). Testnet practice keeps the old handicap method.
+  const RULER = !TESTNET;
+
+  const lib = window.koilib || window.koinos || window;
+  const MAINNET_RPC = ["https://koinos.armana.io", "https://api.koinos.io"];
+  const MAINNET_CHAIN_ID = "EiBZK_GGVP0H_fXVAM3j6EAuz3-B-l3ejxRSewi7qIBfSA==";
+  const RACE_DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/";
+  let DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/lastnode/";
+  const EXPLORER = "https://koinosscan.com/address/";
+  const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "KnodeGames pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "KnodeGames Swap" };
+  const ROOT = new URL("../", location.href);
+  const provider = new lib.Provider(MAINNET_RPC);   // the race: always mainnet blocks, read only
+  let picksProvider = provider;                      // the picks: mainnet, or the testnet on the test page
+  let NET = null;                                    // testnet settings (testnet/lastnode.json)
+  const W = TESTNET ? window.KTestWallet : window.KWallet;
+  const H = L.CUT, SEND_MARGIN = 60000;      // H: one cut window (1 hour; 20 minutes in the fast test game)
+
+  // Audit LN-5: the page's clock is the chain's (the newest block's time when it was read), not the device's. Stalls
+  // only make a reading older, so the freshest of the last 10 minutes' readings is used. Readings are anchored to the
+  // page's own steady timer (performance.now), so a device clock that jumps (a phone syncing its time) changes nothing.
+  const mono = () => performance.now();
+  const offsets = [];
+  const nowT = () => (offsets.length ? mono() + Math.max(...offsets) : Date.now());
+  function noteChainTime(tip) {
+    const off = tip - mono();
+    if (!Number.isFinite(off) || Math.abs(tip - Date.now()) > 3600000) return;     // a clock over an hour out: leave it alone
+    offsets.push(off); if (offsets.length > 20) offsets.shift();
+  }
+  // Audit LN-22: the lock and open times of the game as registered in the Picks contract (get_game), so a later
+  // tighten_game (a longer lead, a shorter ahead) is followed here. Until it is read: the rules' own settings.
+  const REG = { lead: L.LEAD, ahead: L.AHEAD };
+  const lockAt = (r) => L.roundTime(r) - REG.lead;
+  const openAt = (r) => L.roundTime(r) - REG.ahead;
+  /** A pick for round r can be sent now: the round is open, and its lock is more than a minute away. */
+  const pickable = (r, t = nowT()) => L.pickable(r, t, REG, SEND_MARGIN);
+  /** The page's own cut-off for a round: a minute before the lock (what the countdowns count down to). */
+  const cutoff = (r) => lockAt(r) - SEND_MARGIN;
+
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; if (k === "text") e.textContent = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); } for (const c of kids) if (c != null) e.append(c); return e; };
+  const isAddr = (a) => typeof a === "string" && /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(a);
+  // Producer and player nicknames (D-078): names.js (KNames.of), else the built-in names and the short address.
+  const nameOf = (a) => (!isAddr(a) ? "–" : window.KNames && typeof window.KNames.of === "function" ? window.KNames.of(a) : NAMES[a] || a.slice(0, 5) + "…" + a.slice(-4));
+  const fmt = (n, d = 0) => Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  const clock = (t) => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const dayTime = (t) => new Date(t).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+  const dur = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)), m = Math.floor(s / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min` : m >= 1 ? `${m} min` : `${s} s`; };
+  const steps = (x) => fmt(x / L.H_SCALE, 0);
+  const say = (t) => { $("status").textContent = t; $("status").hidden = !t; };
+  async function fetchJson(url) { const r = await fetch(url, { cache: "no-cache" }); if (!r.ok) throw new Error(String(r.status)); return r.json(); }
+
+  let B = null;                    // recent blocks (chain-blocks.js)
+  const days = new Map();          // day → the recorder's D file (or a field worked out here from the card)
+  let card = null;                 // the race card in force now (for reliability)
+  let weekCards = [];              // this week's race cards, oldest first (each live window's card, as the recorder picks it)
+  let picksContract = null, sending = false;
+  const myPicks = new Map();       // round → producer (for the shown event and the next one)
+  let board = null;
+  const me = () => (W && W.address) || null;
+
+  // ── which event to show: one still running (a big field runs past midnight), else today's ──
+  function shownEvent(now = nowT()) {
+    const today = L.eventOf(now), y = L.eventOf(today.start - L.PERIOD);
+    const yd = days.get(y.day);
+    if (yd && yd.field && !yd.void && now < today.start && !result(yd).done) return { ev: y, df: yd };
+    return { ev: today, df: days.get(today.day) || null };
+  }
+  /** Audit LN-6: the next event whose start pick isn't past the page's cut-off; open: whether its picks are open now. */
+  const nextEntry = (now = nowT()) => L.nextEntry(now, REG, SEND_MARGIN);
+
+  // ── the hours: the recorder's where it has them, else counted here from recent blocks ──
+  function liveHours(df, now = nowT()) {
+    // Fix-check LNF-3/N-4 and L-3: recorded windows carry the multipliers their race card lowered; a live window uses
+    // the recorder's rule (the first card taken at or after its end), or until that card exists the latest one.
+    const hours = (df.hours || []).map((h) => ({ blocks: h.blocks, hh: h.hh, recorded: true }));
+    const cutFor = (t1) => {
+      const c = weekCards.find((x) => Number(x.at) >= t1) || card;
+      return c && df.field && Number(c.at) >= Number(df.field.at) ? L.raceCut(df.field, c) : null;
+    };
+    if (!B || !B.ts.length || !df.field) return { hours, partial: null };
+    const inField = new Set(df.field.nodes.map((n) => n.a));
+    const tip = B.ts[B.ts.length - 1];
+    const count = (t0, t1) => {
+      const c = {};
+      for (let i = M.lowerBound(B.ts, t0); i < B.ts.length && B.ts[i] < t1; i++) { const a = B.signers[B.sig[i]]; if (inField.has(a)) c[a] = (c[a] || 0) + 1; }
+      return c;
+    };
+    // Whole hours past the recorder's, while the chain has gone past their end; then the hour running now.
+    for (let i = hours.length; i < df.field.nodes.length - 1; i++) {
+      const t0 = df.start + i * H, t1 = t0 + H;
+      if (t0 < B.ts[0]) return { hours, partial: null };
+      if (tip < t1) return { hours, partial: tip > t0 && now >= t0 ? { i, blocks: count(t0, t1), hh: cutFor(t1), t0, t1 } : null };
+      hours.push({ blocks: count(t0, t1), hh: cutFor(t1), recorded: false });
+    }
+    return { hours, partial: null };
+  }
+  function result(df) { return RULER ? L.rulerCutsFrom(df.field, df.hours || []) : L.cutsFrom(df.field, (df.hours || []).map((h) => ({ blocks: h.blocks, hh: h.hh }))); }
+  /** The ruler's view of an event: the recorded cuts (final once each hour's card is in) and, for the hour running now,
+   *  an ESTIMATE of each standing node's luck from the blocks so far (its blocks ÷ its share of the field's blocks, by
+   *  the field card's VHP). The ruler's own card for the hour decides; the page never cuts anyone itself. */
+  function rulerView(df, now = nowT()) {
+    const res = result(df), outAt = new Set(res.cuts.map((c) => c.a));
+    const standing = df.field.nodes.filter((x) => !outAt.has(x.a));
+    const i = (df.hours || []).length, t0 = df.start + i * H, t1 = t0 + H;
+    const luck = new Map(), blocks = new Map();
+    let live = false;
+    if (!res.done && B && B.ts.length && now >= t0 && now < t1 + 2 * H) {
+      const own = new Map(standing.map((x) => [x.a, Number(BigInt(x.own) / 1000000n)])), sumOwn = [...own.values()].reduce((a, b) => a + b, 0);
+      let n = 0;
+      for (let k = M.lowerBound(B.ts, t0); k < B.ts.length && B.ts[k] < t1; k++) { const a = B.signers[B.sig[k]]; if (own.has(a)) { blocks.set(a, (blocks.get(a) || 0) + 1); n++; } }
+      if (n >= 20 && sumOwn > 0) { live = true; for (const [a, o] of own) luck.set(a, (blocks.get(a) || 0) / ((n * o) / sumOwn)); }
+    }
+    if (!live && i > 0) {
+      // between hours: the last recorded hour's credited ÷ expected (what its card measured)
+      const rows = df.hours[i - 1].rows || {};
+      for (const x of standing) { const r = rows[x.a]; if (r && BigInt(r.expected) > 0n) { luck.set(x.a, Number((BigInt(r.credited) * 10000n) / BigInt(r.expected)) / 10000); blocks.set(x.a, Number(BigInt(r.credited) / 1000000n)); } }
+    }
+    const order = [...standing].sort((a, b) => (luck.get(b.a) ?? 1) - (luck.get(a.a) ?? 1) || (a.a < b.a ? -1 : 1));
+    const wouldGo = live && order.length >= 2 ? order[order.length - 1].a : null;
+    return { res, standing: order, luck, blocks, live, wouldGo, hour: i };
+  }
+
+  // ── loading ──
+  async function loadDay(day) {
+    const ev0 = L.eventOf(day);
+    try {
+      const j = await fetchJson(`${DATA}D${day}.json`);
+      // Audit LN-24/LN-32: the event's own start, and no more nodes than the rules allow.
+      if (j && j.v === 1 && j.day === day && ev0 && j.start === ev0.start && (j.field === null || (j.field && Array.isArray(j.field.nodes) && j.field.nodes.length <= L.MAX_FIELD))) {
+        // Fix-check LNF-15: one bad node and the whole file is refused (never a field with a node quietly left out).
+        const nodeOk = RULER ? (n) => n && isAddr(n.a) && typeof n.own === "string" && /^(0|[1-9][0-9]{0,40})$/.test(n.own)
+          : (n) => n && isAddr(n.a) && Number.isFinite(n.h) && n.h > 0 && (n.r === undefined || (Number.isFinite(n.r) && n.r >= L.FORM_MIN && n.r <= L.FORM_MAX));
+        if (!j.field || j.field.nodes.every(nodeOk)) { days.set(day, j); return; }
+      }
+    } catch (e) {
+      // Audit LN-29: a failed read (not "not published yet") keeps the recorder's file the page already has.
+      const have = days.get(day);
+      if (String((e && e.message) || e) !== "404" && have) return;
+    }
+    // No recorder file yet: the field waits for it (it needs each node's form, from 48 hours of blocks).
+  }
+  async function loadAll() {
+    const now = nowT();
+    const cur = L.eventOf(now);
+    await Promise.all([L.eventOf(cur.start - L.PERIOD).day, cur.day, L.nextEvent(cur).day].map(loadDay));
+    if (!RULER) try { card = await raceCardNow(); } catch { /* keep */ }
+    try { const b = await fetchJson(DATA + "board.json"); if (b && b.v === 1) board = b; } catch { /* none yet */ }
+  }
+  async function raceCardNow() {
+    const now = nowT(), ra = M.raceAt(now), w = M.weekOf(ra.start);
+    const wf = await fetchJson(`${RACE_DATA}W${String(w).padStart(3, "0")}.json`);
+    const race = wf && Array.isArray(wf.races) ? wf.races.find((r) => r && r.id === ra.id) : null;
+    const all = [];
+    for (const r of wf && Array.isArray(wf.races) ? wf.races : []) for (const c of r && Array.isArray(r.cards) ? r.cards : []) if (c && Number.isFinite(Number(c.at)) && Array.isArray(c.field)) all.push(c);
+    weekCards = all.sort((x, y) => Number(x.at) - Number(y.at));
+    return race && Array.isArray(race.cards) ? M.cardForLeg(race.cards, M.legOf(ra.start, now, M.legsOf(race.cards))) : null;
+  }
+  async function loadBlocks() {
+    // A copy: the block loader trims and re-reads its newest blocks while it updates, and the page must never draw
+    // from that half-updated list (it showed a cut disappear and come back, and announced it twice).
+    try { const r = await KBlocks.ensure(provider, { blocks: 31000 }); B = { ts: r.B.ts.slice(), sig: r.B.sig.slice(), signers: r.B.signers.slice() }; if (B.ts.length) noteChainTime(B.ts[B.ts.length - 1]); say(""); } catch { say("Couldn't reach the Koinos network. Trying again in a moment…"); }
+  }
+
+  /** Each node's blocks over the last day ÷ what its VHP share says (the current race card, field and paddock). */
+  function reliability(df) {
+    const out = new Map();
+    if (RULER) {
+      // The ruler: the last day's blocks against each field node's share of the field (the field card's VHP).
+      if (!B || B.ts.length < 1000 || !df || !df.field) return out;
+      const own = new Map(df.field.nodes.map((x) => [x.a, Number(BigInt(x.own) / 1000000n)])), sumOwn = [...own.values()].reduce((a, b) => a + b, 0);
+      const from = M.lowerBound(B.ts, B.ts[B.ts.length - 1] - L.DAY), c = new Map(); let n = 0;
+      for (let i = from; i < B.ts.length; i++) { const a = B.signers[B.sig[i]]; if (own.has(a)) { c.set(a, (c.get(a) || 0) + 1); n++; } }
+      if (n && sumOwn) for (const [a, o] of own) out.set(a, (c.get(a) || 0) / ((n * o) / sumOwn));
+      return out;
+    }
+    if (!B || !card || B.ts.length < 1000) return out;
+    const vhp = new Map();
+    for (const r of [...(card.field || []), ...(card.paddock || [])]) if (r && isAddr(r.a) && r.vhp > 0) vhp.set(r.a, r.vhp);
+    const tot = [...vhp.values()].reduce((s, v) => s + v, 0);
+    const from = M.lowerBound(B.ts, B.ts[B.ts.length - 1] - L.DAY), n = B.ts.length - from, c = new Map();
+    for (let i = from; i < B.ts.length; i++) { const a = B.signers[B.sig[i]]; c.set(a, (c.get(a) || 0) + 1); }
+    for (const [a, v] of vhp) out.set(a, (c.get(a) || 0) / (n * v / tot));
+    return out;
+  }
+
+  // ── drawing: the night arena (lastnode.css) ──
+  /** Each node's own colour and badge letters, from its address, so a node looks the same everywhere on the page. */
+  const hueOf = (a) => { let h = 7; for (const ch of String(a)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return 25 + (h % 290); };   // never the storm's red
+  const colorOf = (a) => `hsl(${hueOf(a)} 82% 68%)`;
+  const callsign = (a) => (NAMES[a] ? NAMES[a].replace(/[^A-Z]/g, "").slice(0, 2) || "KG" : String(a).slice(1, 3));
+  const badge = (a, size = "") => el("span", { class: `ln-badge${size ? " " + size : ""}`, style: `--node:${colorOf(a)}`, "aria-hidden": "true", text: callsign(a) });
+  /** The big clock: m:ss, or h:mm:ss over an hour. */
+  const timer = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
+  /** Audit LN-7: a node's field entry (handicap) in the event being picked for. */
+  function nodeInfo(a, df) { return (df && df.field && df.field.nodes.find((x) => x.a === a)) || null; }
+  let seen = null;                 // { day, cuts, done }: the most cuts drawn so far, to spot a new cut
+  const announced = new Set();     // "event:cut" notes already shown (each cut is announced once)
+
+  function render() {
+    const now = nowT(), { ev, df } = shownEvent(now);
+    $("ev-title").textContent = `${new Date(ev.start).toLocaleDateString(undefined, { weekday: "long" })} ${clock(ev.start)} event`;
+    const track = $("track");
+    const tag = (text, cls) => { $("ev-tag").textContent = text; $("ev-tag").className = `ln-tag ${cls}`; };
+    if (!df || !df.field) {
+      tag(df && df.void ? "Void" : "Field soon", "done");
+      const nx = now < ev.start ? ev : L.nextEvent(ev);
+      $("ev-clockbox").className = "ln-clock";
+      $("ev-clock").textContent = timer(nx.start - now);
+      $("ev-clock-label").textContent = `until the ${clock(nx.start)} drop`;
+      $("ev-sub").textContent = df && df.void ? `No race this time: ${df.void}.` : RULER ? "The field is set from the VHP ruler's field card (the biggest 23 producers with entry), before picks open." : "The field is set from a Producer Race card and each node's form, a few minutes after picks open.";
+      track.replaceChildren(el("p", { class: "note", style: "margin:6px 2px", text: `No race in the arena right now. The next one starts at ${clock(nx.start)}: pick your node below.` }));
+      $("fallen").replaceChildren();
+      legendYou(ev, null);
+      renderField(null); renderMe(ev, null, null); return;
+    }
+    if (RULER) return renderRuler(now, ev, df, track, tag);
+    const { hours, partial } = liveHours(df, now);
+    const res = L.cutsFrom(df.field, hours);
+    // Live standings including the window running now (who would go if the cut were now).
+    const live = partial ? L.cutsFrom(df.field, [...hours, { blocks: partial.blocks, hh: partial.hh }]) : res;
+    const nextCut = res.done ? null : df.start + (res.cuts.length + 1) * H;
+    const n = df.field.nodes.length;
+    tag(res.done ? "Finished" : now < ev.start ? "Picks open" : "Live", res.done ? "done" : now < ev.start ? "wait" : "live");
+    $("ev-clockbox").className = `ln-clock${res.done ? " done" : now >= ev.start && nextCut - now < 60000 ? " hot" : ""}`;
+    $("ev-clock").textContent = res.done ? nameOf(res.winner) : timer((now < ev.start ? ev.start : nextCut) - now);
+    $("ev-clock-label").textContent = res.done ? "last node standing" : now < ev.start ? "until the drop" : `until cut ${res.cuts.length + 1} of ${n - 1}`;
+    const recorded = (df.hours || []).length;
+    $("ev-sub").textContent = res.done ? `${res.cuts.length} cuts, ${clock(ev.start)} to ${clock(df.start + res.cuts.length * H)}.`
+      : now < ev.start ? `${n} nodes. Picks close at ${clock(cutoff(ev.round))}, first cut at ${clock(ev.start + H)}.`
+      : `${res.standing.length} of ${n} still standing${recorded < res.cuts.length ? " · latest cut not final yet" : ""}`;
+    const mine = myState(ev, df, res);
+    legendYou(ev, mine);
+    const tot = new Map(live.totals.map((t) => [t.a, t]));
+    // The node that would go if the cut were now: the live cut beyond the recorded ones (none before the start).
+    const wouldGo = partial && live.cuts.length > res.cuts.length ? live.cuts[res.cuts.length].a : null;
+    const max = Math.max(1, ...live.totals.map((t) => t.steps));
+    const outAt = new Map(res.cuts.map((c) => [c.a, c]));
+    const standing = df.field.nodes.filter((x) => !outAt.has(x.a)).sort((a, b) => tot.get(b.a).steps - tot.get(a.a).steps);
+    // The cut line: the node furthest back, once the event is running.
+    const line = now >= ev.start && !res.done && standing.length ? Math.min(...standing.map((x) => tot.get(x.a).steps)) : 0;
+    // Bars show only each node's lead over the slowest one (the cut line), so the whole bar is the gap that matters.
+    const base = line > 0 ? line : 0;
+    const pctOf = (x) => Math.max(0, Math.min(100, ((x - base) / Math.max(1, max - base)) * 100));
+    const just = seen && seen.day === ev.day && res.cuts.length > seen.cuts ? res.cuts[res.cuts.length - 1] : null;
+    track.replaceChildren(...[...standing, ...(just ? [df.field.nodes.find((x) => x.a === just.a)] : [])].map((nd) => {
+      const t = tot.get(nd.a), danger = !res.done && wouldGo === nd.a && now >= ev.start, isMine = mine && mine.node === nd.a, won = res.done && res.winner === nd.a;
+      const gone = just && just.a === nd.a;
+      const cls = ["ln-lane", danger ? "danger" : "", isMine ? "mine" : "", won ? "winner" : "", gone ? "just-out" : ""].filter(Boolean).join(" ");
+      const run = el("div", { class: "ln-run", role: "img", "aria-label": `${steps(t.steps)} steps` },
+        el("i", { style: `--node:${colorOf(nd.a)};width:${Math.max(2, Math.round(pctOf(t.steps)))}%` }));
+      return el("div", { class: cls },
+        badge(nd.a),
+        el("div", { class: "ln-who" }, el("b", {}, (won ? "👑 " : "") + nameOf(nd.a), isMine ? el("span", { class: "ln-you", text: "you" }) : null),
+          el("small", { text: gone ? "knocked out" : won ? "last node standing" : danger ? "out if the cut were now" : `×${fmt(nd.h, 2)} a block` })),
+        run,
+        el("div", { class: "ln-num", text: steps(t.steps) }, el("em", { text: `${fmt(t.blocks)} blocks` })));
+    }));
+    // The fallen: knocked-out nodes, latest cut first.
+    const myPath = mine ? new Set(mine.path.map((p) => p.a)) : new Set();
+    $("fallen").replaceChildren(...(res.cuts.length ? [el("p", { class: "ln-fallen-title", text: "Knocked out" })] : []),
+      ...[...res.cuts].reverse().map((c, i) => el("span", { class: `ln-ko${myPath.has(c.a) ? " mine" : ""}`, title: `Out at cut ${res.cuts.length - i} (${clock(df.start + c.at * H)})` },
+        badge(c.a, "sm"), el("s", { text: nameOf(c.a) }), `cut ${res.cuts.length - i}`)));
+    // A short note when a cut happens while you watch: once per cut, only within 5 minutes of it, never covering the race.
+    const fresh = (c) => now - (df.start + c.at * H) < 5 * 60000;
+    // Audit LN-4: whether the cut was yours is told only once your picks have been read (else the note waits for them).
+    // (fix-check) While the note waits, the cut isn't marked as seen, so the note still comes once the picks are read.
+    const holdNote = !!(me() && picksContract && !mineOk && just && fresh(just));
+    if (seen && seen.day === ev.day && !holdNote) {
+      if (res.done && !seen.done && !announced.has(`${ev.day}:won`) && fresh(res.cuts[res.cuts.length - 1]) && announced.add(`${ev.day}:won`)) flash(`${nameOf(res.winner)} wins`, mine && mine.rode ? `You rode it home: +${mine.points} points` : "The last node standing", "gold");
+      else if (just && !announced.has(`${ev.day}:${res.cuts.length}`) && fresh(just) && announced.add(`${ev.day}:${res.cuts.length}`)) {
+        const hit = mine && mine.entered && (mine.path[mine.path.length - 1].a === just.a || (mine.out && mine.out === res.cuts.length));
+        const backedUp = mine && mine.jumped && mine.path.some((p) => p.at === just.at);
+        flash(`${nameOf(just.a)} is out`, backedUp ? `Your backup took over: now riding ${nameOf(mine.node)}` : hit ? "That was your node: your run ends here" : mine && mine.entered && !mine.out ? `You survived cut ${res.cuts.length}` : `Cut ${res.cuts.length} of ${n - 1}`, hit || backedUp ? "you" : "");
+      }
+    }
+    if (!holdNote) seen = { day: ev.day, cuts: Math.max(res.cuts.length, seen && seen.day === ev.day ? seen.cuts : 0), done: res.done };
+    renderField(df);
+    renderMe(ev, df, res, mine);
+  }
+  /** The arena on the ruler: the standing nodes by this hour's luck (an estimate until the hour's card is in), the
+   *  knocked-out ones with why (luck, void, no entry), the clock to the next cut. */
+  /** The status line while an hour's ruler card is due (Last Node chat, 15 Nov 2026). The card usually lands within minutes;
+   *  past 30 minutes the page says plainly that the ruler is late, and what the 48-hour fallback does (owner, 14 Nov). */
+  const RULER_LATE = 30 * 60000, RULER_GRACE = 48 * 3600000;
+  function lateNote(late) {
+    if (!(late >= RULER_LATE)) return " · waiting for the hour's ruler card (it decides the cut)";
+    const hrs = late / 3600000, left = Math.max(0, RULER_GRACE - late) / 3600000;
+    const ago = hrs < 1.5 ? `${Math.round(late / 60000)} minutes` : `about ${Math.round(hrs)} hours`;
+    return ` · the VHP ruler is running late (this hour's card is ${ago} overdue). The cut waits for it: nothing is decided without it.` +
+      (left > 0 ? ` If it's still missing in about ${Math.max(1, Math.round(left))} hours, today's event is cancelled and no one scores.` : " Today's event is being cancelled: no one scores.");
+  }
+  function renderRuler(now, ev, df, track, tag) {
+    const V = rulerView(df, now), res = V.res, n = df.field.nodes.length;
+    const nextCut = res.done ? null : df.start + (V.hour + 1) * H;
+    tag(res.done ? "Finished" : now < ev.start ? "Picks open" : "Live", res.done ? "done" : now < ev.start ? "wait" : "live");
+    $("ev-clockbox").className = `ln-clock${res.done ? " done" : now >= ev.start && nextCut - now < 60000 ? " hot" : ""}`;
+    $("ev-clock").textContent = res.done ? (res.winner ? nameOf(res.winner) : "No winner") : timer((now < ev.start ? ev.start : nextCut) - now);
+    $("ev-clock-label").textContent = res.done ? "last node standing" : now < ev.start ? "until the drop" : `until hour ${V.hour + 1}'s cut`;
+    $("ev-sub").textContent = res.done ? `${res.cuts.length} nodes out over ${V.hour} hours, ${clock(ev.start)} to ${clock(df.start + V.hour * H)}.`
+      : now < ev.start ? `${n} nodes. Picks close at ${clock(cutoff(ev.round))}, first cut at ${clock(ev.start + H)}.`
+      : `${V.standing.length} of ${n} still standing${now >= nextCut ? lateNote(now - nextCut) : V.live ? " · luck this hour is an estimate until the hour's card is in" : ""}`;
+    const mine = myState(ev, df, res);
+    legendYou(ev, mine);
+    const just = seen && seen.day === ev.day && res.cuts.length > seen.cuts ? res.cuts[res.cuts.length - 1] : null;
+    const lanes = [...V.standing, ...(just ? df.field.nodes.filter((x) => res.cuts.some((c) => c.a === x.a && c.at === just.at)) : [])];
+    const maxL = Math.max(1.2, ...[...V.luck.values()]);
+    track.replaceChildren(...lanes.map((nd) => {
+      const lk = V.luck.get(nd.a), danger = !res.done && V.wouldGo === nd.a && now >= ev.start, isMine = mine && mine.node === nd.a, won = res.done && res.winner === nd.a;
+      const cut = res.cuts.find((c) => c.a === nd.a), gone = !!cut;
+      const cls = ["ln-lane", danger ? "danger" : "", isMine ? "mine" : "", won ? "winner" : "", gone ? "just-out" : ""].filter(Boolean).join(" ");
+      const pct = Number.isFinite(lk) ? Math.round(lk * 100) : null;
+      return el("div", { class: cls },
+        badge(nd.a),
+        el("div", { class: "ln-who" }, el("b", {}, (won ? "👑 " : "") + nameOf(nd.a), isMine ? el("span", { class: "ln-you", text: "you" }) : null),
+          el("small", { text: gone ? `knocked out (${cut.why === "luck" ? "worst luck that hour" : cut.why === "void" ? "its VHP left the band: void" : "no entry that hour"})` : won ? "last node standing" : danger ? "worst luck so far this hour" : `${fmt(Number(BigInt(nd.own) / 100000000n), 0)} VHP` })),
+        el("div", { class: "ln-run", role: "img", "aria-label": pct == null ? "no blocks yet" : `${pct}% luck` },
+          el("i", { style: `--node:${colorOf(nd.a)};width:${pct == null ? 2 : Math.max(2, Math.min(100, Math.round((lk / maxL) * 100)))}%` })),
+        el("div", { class: "ln-num", text: pct == null ? "–" : `${pct}%` }, el("em", { text: `${fmt(V.blocks.get(nd.a) || 0)} blocks` })));
+    }));
+    const myPath = mine ? new Set(mine.path.map((p) => p.a)) : new Set();
+    $("fallen").replaceChildren(...(res.cuts.length ? [el("p", { class: "ln-fallen-title", text: "Knocked out" })] : []),
+      ...[...res.cuts].reverse().map((c) => el("span", { class: `ln-ko${myPath.has(c.a) ? " mine" : ""}`, title: `Out in hour ${c.at} (${clock(df.start + c.at * H)}): ${c.why === "luck" ? "worst luck that hour" : c.why}` },
+        badge(c.a, "sm"), el("s", { text: nameOf(c.a) }), `hour ${c.at}${c.why === "luck" ? "" : ` (${c.why})`}`)));
+    const fresh = (c) => now - (df.start + c.at * H) < 3 * H;
+    const holdNote = !!(me() && picksContract && !mineOk && just && fresh(just));
+    if (seen && seen.day === ev.day && !holdNote) {
+      if (res.done && !seen.done && !announced.has(`${ev.day}:won`) && res.winner && announced.add(`${ev.day}:won`)) flash(`${nameOf(res.winner)} wins`, mine && mine.rode ? `You rode it home: +${mine.points} points` : "The last node standing", "gold");
+      else if (just && !announced.has(`${ev.day}:${res.cuts.length}`) && fresh(just) && announced.add(`${ev.day}:${res.cuts.length}`)) {
+        const hit = mine && mine.entered && mine.out && res.cuts[mine.out - 1] && res.cuts[mine.out - 1].at === just.at;
+        const backedUp = mine && mine.jumped && mine.path.some((p) => p.at === just.at);
+        flash(`${nameOf(just.a)} is out`, backedUp ? `Your backup took over: now riding ${nameOf(mine.node)}` : hit ? "That was your node: your run ends here" : mine && mine.entered && !mine.out ? `You survived hour ${just.at}` : `Hour ${just.at} of the race`, hit || backedUp ? "you" : "");
+      }
+    }
+    if (!holdNote) seen = { day: ev.day, cuts: Math.max(res.cuts.length, seen && seen.day === ev.day ? seen.cuts : 0), done: res.done };
+    renderField(df);
+    renderMe(ev, df, res, mine);
+  }
+  /** The legend's "Your node": shown when you're in the race on screen. With a pick only for a later event, it says
+   *  which one, so a missing highlight isn't a surprise. */
+  function legendYou(ev, mine) {
+    const box = $("legend-you"), txt = $("legend-you-text");
+    if (!box || !txt) return;
+    if (mine && mine.entered) { box.hidden = false; txt.textContent = "Your node"; return; }
+    let later = null;
+    for (let e = L.nextEvent(ev), k = 0; k < 3 && !later; k++, e = L.nextEvent(e)) if (myPicks.has(e.round)) later = e;
+    box.hidden = !later;
+    if (later) txt.textContent = `Your pick, ${nameOf(myPicks.get(later.round).start)}, races in the ${dayTime(later.start)} event, not this one`;
+  }
+  function flash(big, small, kind) {
+    const box = $("arena");
+    if (!box) return;
+    for (const old of box.querySelectorAll(".ln-flash")) old.remove();
+    const f = el("div", { class: `ln-flash${kind ? " " + kind : ""}`, role: "status" }, el("b", { text: big }), el("span", { text: small }));
+    box.prepend(f);
+    setTimeout(() => f.remove(), 6000);
+  }
+
+  /** Once a second: only the clock (a full redraw comes with new blocks, every 30 seconds). */
+  function tick() {
+    const now = nowT(), { ev, df } = shownEvent(now);
+    if (!df || !df.field) { $("ev-clock").textContent = timer((now < ev.start ? ev : L.nextEvent(ev)).start - now); return; }
+    const res = RULER ? result(df) : L.cutsFrom(df.field, liveHours(df, now).hours);
+    if (res.done) return;
+    const nextCut = df.start + ((RULER ? (df.hours || []).length : res.cuts.length) + 1) * H;
+    $("ev-clock").textContent = timer((now < ev.start ? ev.start : nextCut) - now);
+    $("ev-clockbox").className = `ln-clock${now >= ev.start && nextCut - now < 60000 ? " hot" : ""}`;
+    // Audit LN-17: while the blocks are late after a cut, redraw at most every 15 seconds (not every second), so taps
+    // on the cards aren't lost to a redraw.
+    if ((now >= ev.start && $("ev-tag").textContent !== "Live") || (now >= nextCut + 2 * 60000 && now - lastStale >= 15000)) { lastStale = now; render(); }
+  }
+  let lastStale = 0;
+
+  function renderField(df) {
+    if (RULER) {
+      const rel = reliability(df);
+      $("field-sub").textContent = !df || !df.field ? "The field is published before picks open." : `${df.field.nodes.length} nodes, from the VHP ruler's field card (VHP measured in the hour before ${clock(df.field.at)} the day before). Every node has the same chance: each hour's cut is by luck against the whole network, not by size.`;
+      $("field-rows").replaceChildren(...(df && df.field ? df.field.nodes : []).map((nd) => {
+        const r = rel.get(nd.a), pct = Number.isFinite(r) ? r * 100 : null, last = df.hours && df.hours.length ? df.hours[df.hours.length - 1].rows[nd.a] : null;
+        return el("tr", {},
+          el("td", { class: "who" }, el("span", { class: "ln-whobox" }, badge(nd.a, "sm"), el("a", { href: EXPLORER + nd.a, target: "_blank", rel: "noopener noreferrer", text: nameOf(nd.a) }))),
+          el("td", { class: "num hide-sm", text: fmt(Number(BigInt(nd.own) / 100000000n), 0) }),
+          el("td", { class: "num hide-sm", text: last && BigInt(last.expected) > 0n ? fmt(Number(BigInt(last.expected) / 10000n) / 100, 1) : "–" }),
+          el("td", { class: "num", text: last ? (last.void ? "void" : last.fpct == null ? "–" : `${fmt(Number(BigInt(last.fpct) / 10000n), 0)}%`) : "–" }),
+          el("td", { class: "rel" }, pct == null ? "–" : el("span", { class: "relbar" }, el("i", { class: pct < 90 ? "lo" : pct < 98 ? "mid" : "hi", style: `width:${Math.min(100, Math.round(pct))}%` })), pct == null ? null : `${fmt(pct, 0)}%`));
+      }));
+      return;
+    }
+    const rel = reliability();
+    const fo = df && df.field && df.field.form;
+    $("field-sub").textContent = !df || !df.field ? "The field appears a few minutes after picks open." : `Each node's chance to be last standing: ${fmt(df.field.fairness[0] * 100, 1)}–${fmt(df.field.fairness[1] * 100, 1)}% (fair is ${fmt(100 / df.field.nodes.length, 1)}%). Luck trim c = ${fmt(df.field.c, 1)}.${fo && fo.hours ? ` Form from ${fo.hours} hours of blocks.` : fo && fo.note ? ` No form this event (${fo.note}).` : ""}`;
+    $("field-rows").replaceChildren(...(df && df.field ? df.field.nodes : []).map((nd) => {
+      // On par = signing what the handicap expects (its VHP share × its form).
+      const r = rel.get(nd.a), pct = Number.isFinite(r) ? (r / (nd.r || 1)) * 100 : null;
+      return el("tr", {},
+        el("td", { class: "who" }, el("span", { class: "ln-whobox" }, badge(nd.a, "sm"), el("a", { href: EXPLORER + nd.a, target: "_blank", rel: "noopener noreferrer", text: nameOf(nd.a) }))),
+        el("td", { class: "num hide-sm", text: fmt(nd.kh, 0) }), el("td", { class: "num hide-sm", text: Number.isFinite(nd.r) ? fmt(nd.r, 2) : "–" }), el("td", { class: "num", text: `×${fmt(nd.h, 2)}` }),
+        el("td", { class: "rel" }, pct == null ? "–" : el("span", { class: "relbar" }, el("i", { class: pct < 90 ? "lo" : pct < 98 ? "mid" : "hi", style: `width:${Math.min(100, Math.round(pct))}%` })), pct == null ? null : `${fmt(pct, 0)}%`));
+    }));
+  }
+
+  // ── you ──
+  /** Your one pick for an event (owner, 2026-10-29): { start, backup } or null. */
+  const picksFor = (ev) => myPicks.get(ev.round) || null;
+  function myState(ev, df, res) {
+    if (!me() || !df || !df.field) return null;
+    return L.playerResult(df.field, res, picksFor(ev));
+  }
+  const drafts = new Map();        // round → the node chosen on a card but not sent yet (kept across redraws)
+  /** Node cards to choose from, and one button that sends the choice. */
+  function picker(label, options, current, onPick, cls = "", round = null, df = null, withButton = true) {
+    const rel = reliability(df);
+    const want = round != null && drafts.has(round) ? drafts.get(round) : current;
+    const cards = el("div", { class: "ln-cards", role: "group", "aria-label": label }, ...options.map((a) => {
+      const info = nodeInfo(a, df), r0 = rel.get(a), r = Number.isFinite(r0) && info && info.r ? r0 / info.r : r0;
+      const b = el("button", { type: "button", class: "ln-card", style: `--node:${colorOf(a)}`, "aria-pressed": String(a === want),
+        onclick: () => { if (round != null) drafts.set(round, a); render(); } },
+        badge(a, "sm"), el("b", { text: NAMES[a] || `${a.slice(0, 4)}…${a.slice(-3)}` }),
+        el("small", {}, el("span", { text: info ? (RULER ? `${fmt(Number(BigInt(info.own) / 100000000n), 0)} VHP` : `×${fmt(info.h, 2)}`) : "" }), el("span", { text: Number.isFinite(r) ? `${fmt(r * 100, 0)}% on par` : "" })),
+        el("span", { class: "ln-rel", "aria-hidden": "true" }, el("i", { style: `width:${Number.isFinite(r) ? Math.min(100, Math.round(r * 100)) : 0}%` })));
+      if (sending) b.disabled = true;
+      return b;
+    }));
+    if (!withButton) return cards;
+    const go = el("button", { class: `ln-go${cls ? " " + cls : ""}`, type: "button", onclick: () => onPick(want) }, want && want !== current ? `${label}: ${nameOf(want)}` : current ? "Tap another node to switch" : "Choose a node");
+    if (sending || !want || want === current) go.disabled = true;
+    return el("div", { class: "ln-act" }, cards, go);
+  }
+  function runCard(st, df, res, extraCls = "") {
+    const n = df.field.nodes.length, pips = [];
+    for (let k = 1; k <= n - 1; k++) pips.push(el("i", { class: k <= res.cuts.length ? (st.out === k ? "ko" : st.out && k > st.out ? "" : k === n - 1 && st.rode ? "crown" : "ok") : "" }));
+    const bonus = st.jumped ? L.BONUS.jumped : L.BONUS.stayed;
+    const title = res.done && st.rode ? `You rode ${nameOf(st.node)} home` : st.out ? `Knocked out at cut ${st.out}` : `Riding ${nameOf(st.node)}`;
+    const line = res.done ? (st.rode ? `${st.survived} cuts survived + ${bonus} bonus${st.jumped ? " (after a jump)" : ""}.` : `${st.survived} cut${st.survived === 1 ? "" : "s"} survived.`)
+      : st.out ? `${st.survived} cut${st.survived === 1 ? "" : "s"} survived. Your points count.` : `${st.survived} cut${st.survived === 1 ? "" : "s"} survived${st.jumped ? " (after your backup took over)" : st.backup ? `; backup ${nameOf(st.backup)} takes over if ${nameOf(st.node)} is cut` : ""}. +${bonus} if it's the last node standing.`;
+    return el("div", { class: `ln-runcard${res.done && st.rode ? " won" : st.out ? " out" : ""}${extraCls}` },
+      badge(st.node, "lg"),
+      el("div", {}, el("h3", { text: title }), el("p", { text: line }), el("div", { class: "ln-pips", "aria-label": `${st.survived} of ${n - 1} cuts survived` }, ...pips)),
+      el("div", { class: "ln-pts" }, String(st.points), el("small", { text: st.points === 1 ? "point" : "points" })));
+  }
+  function renderMe(ev, df, res, st) {
+    const box = $("me"), now = nowT(), who = me(), parts = [];
+    $("me-who").textContent = !picksContract ? "" : who ? `as ${nameOf(who)}${W.kind === "guest" ? " (guest: can play, can't win; this is a staked game)" : ""}` : "";
+    if (!picksContract) { box.replaceChildren(); return; }
+    const nx = nextEntry(now), nf = days.get(nx.day);
+    if (!who) {
+      box.replaceChildren(el("p", { class: "ln-cta", text: `Pick a node for the ${clock(nx.start)} drop` }),
+        el("p", { class: "note", style: "margin:0", text: TESTNET ? "Play free gives you a Test wallet with test KOIN in one tap." : "Connect a wallet to pick (Kondor, KOIN Vault or a guest wallet)." }),
+        TESTNET ? el("button", { class: "ln-go", type: "button", onclick: () => walletButton() }, "Play free") : null);
+      return;
+    }
+    // Fix-check LNF-25: between the lock and the start, your locked pick for the race about to start.
+    const locked = df && df.field && now < ev.start && now >= lockAt(ev.round) ? picksFor(ev) : null;
+    if (locked) parts.push(el("p", { class: "ln-cta", text: `Locked in for the ${clock(ev.start)} race: ${nameOf(locked.start)}${locked.backup ? `, backup ${nameOf(locked.backup)}` : ", no backup"}` }));
+    // The event running now: your run (nothing can be picked or changed once it starts).
+    if (df && df.field && res && now >= ev.start && !res.done) {
+      // Audit LN-4: until your picks have been read, the page doesn't say you're not in (or out).
+      if (!mineOk) parts.push(el("p", { class: "note", style: "margin:0", text: mineErr ? "Couldn't read your picks. Retrying…" : "Reading your picks…" }));
+      else if (!st || !st.entered) parts.push(el("p", { class: "note", style: "margin:0", text: `You're not in the ${clock(ev.start)} event. Get in the next one below.` }));
+      else if (st.out) parts.push(runCard(st, df, res), el("p", { class: "note", style: "margin:0", text: `You're out: your node was cut at cut ${st.out}${st.backup && !st.jumped ? ` and your backup ${nameOf(st.backup)} was already out` : ""}. Points this event: ${st.points}.` }));
+      else parts.push(runCard(st, df, res));
+    } else if (df && df.field && res && res.done && st && st.entered) parts.push(runCard(st, df, res));
+    // The pick for the next event that is still open: your start node and an optional backup, sent together.
+    const mineNext = myPicks.get(nx.round) || null;
+    if (!nf || !nf.field) parts.push(el("p", { class: "note", style: "margin:0", text: `The field for the ${dayTime(nx.start)} event appears a few minutes after picks open, at ${clock(nx.opens)}.` }));
+    else if (!nx.open) parts.push(el("p", { class: "note", style: "margin:0", text: `Picks for the ${dayTime(nx.start)} event open at ${clock(nx.opens)} (in ${dur(nx.opens - now)}).` }));
+    else {
+      const nodes = nf.field.nodes.map((x) => x.a), kS = `s:${nx.round}`, kB = `b:${nx.round}`;
+      const start = drafts.has(kS) ? drafts.get(kS) : mineNext && mineNext.start;
+      const backup0 = drafts.has(kB) ? drafts.get(kB) : mineNext && mineNext.backup;
+      const backup = backup0 && backup0 !== start ? backup0 : null;
+      const same = !!mineNext && mineNext.start === start && (mineNext.backup || null) === backup;
+      const go = el("button", { class: "ln-go", type: "button", onclick: () => sendPick(nx.round, start, backup, `your pick for the ${clock(nx.start)} event`) },
+        !start ? "Choose your node" : same ? "Locked in. Tap a card to change it" : `Lock in: ${nameOf(start)}${backup ? `, backup ${nameOf(backup)}` : ", no backup"}`);
+      if (sending || !start || same) go.disabled = true;
+      parts.push(el("div", { class: "ln-act" },
+        el("p", { class: "ln-cta", text: mineNext ? `You drop in on ${nameOf(mineNext.start)} ${dayTime(nx.start)}${mineNext.backup ? `, backup ${nameOf(mineNext.backup)}` : ""}` : `Pick your node for the ${dayTime(nx.start)} drop` }),
+        el("p", { class: "note", style: "margin:0", text: `Picks close in ${dur(cutoff(nx.round) - now)}, at ${clock(cutoff(nx.round))}${mineNext ? "; you can change your pick until then" : ""}. Nothing can be picked or changed once the race starts. Tip: a node that signs every block it should is hard to knock out.` }),
+        el("h3", { class: "ln-pick-h", text: "Your node" }),
+        picker("Your node", nodes, mineNext && mineNext.start, null, "", kS, nf, false),
+        el("h3", { class: "ln-pick-h", text: "Backup (optional)" }),
+        el("p", { class: "note", style: "margin:0 0 8px", text: "The first time your node is cut, your backup takes over automatically if it's still standing. One jump per event; riding the last node after a jump scores +3 instead of +5." }),
+        picker("Backup", nodes.filter((a) => a !== start), backup, null, "ghost", kB, nf, false),
+        backup ? el("button", { class: "btn ghost", type: "button", onclick: () => { drafts.set(kB, null); render(); } }, "No backup") : null,
+        go));
+    }
+    box.replaceChildren(...parts);
+  }
+
+  /** Audit LN-22: the game as registered in the Picks contract. Its timing must be this page's rules; its lead and
+   *  ahead (which tighten_game can change) set the page's lock and open times. */
+  async function readRegistration() {
+    const g = (await picksContract.functions.get_game({ game: L.GAME_ID })).result?.game;
+    if (!g) return;                                 // not registered yet: the pick error explains it
+    if (String(g.round_size) !== String(L.PICKS_GAME.round_size) || String(g.round_offset) !== String(L.PICKS_GAME.round_offset) || Number(g.lock_mode) !== 2 || Number(g.kind) !== 2 || Number(g.list_size) !== 2) {
+      picksContract = null; say("This game's registration in the Picks contract doesn't match this page's rules. Picks are off here.");
+      return;
+    }
+    const lead = Number(g.lead), ahead = Number(g.ahead), mc = Number(g.max_changes);
+    if (Number.isInteger(mc) && mc >= 0) REG.maxChanges = mc;   // the card shows how many changes are left
+    if (Number.isFinite(lead) && lead > 0) REG.lead = lead;
+    if (Number.isFinite(ahead) && ahead > 0) REG.ahead = ahead;
+  }
+
+  // ── picks (live once picks-data/deployment.json is on the site; on the test page, the testnet Picks contract) ──
+  async function setupPicks() {
+    if (TESTNET) return setupTestnet();
+    let pdep = null, dep = null;
+    try { pdep = await fetchJson(new URL("picks-data/deployment.json", ROOT)); } catch { return; }
+    if (!pdep || !isAddr(pdep.contract)) return;
+    try { dep = await fetchJson(new URL("game-data/deployment.json", ROOT)); } catch { /* the wallet keeps its defaults */ }
+    const abi = await fetchJson(new URL("contracts/picks/abi/picks.koilib.json", ROOT));
+    picksContract = new lib.Contract({ id: pdep.contract, abi, provider });
+    await readRegistration().catch(() => { /* the rules' own settings */ });
+    if (!picksContract) return;
+    if (W) W.init({ provider, chainId: dep && dep.chainId, payer: dep && dep.payer, sponsor: dep && dep.sponsor, onChange: () => loadMine().then(render) });
+    $("picks-soon").hidden = true;
+  }
+  /** The test page: testnet settings, the testnet Picks contract and the testnet wallet. Refuses anything on mainnet. */
+  async function setupTestnet() {
+    const cfg = await fetchJson(new URL("testnet/lastnode.json", ROOT));
+    if (!cfg || cfg.network !== "koinos-foundation-testnet" || !cfg.chainId || cfg.chainId === MAINNET_CHAIN_ID) throw new Error("This page's testnet settings are missing or name mainnet.");
+    const g = Array.isArray(cfg.games) ? cfg.games.find((x) => x && x.id === L.GAME_ID) : null;
+    if (!g || ["cut", "lockBefore", "lead", "ahead", "period", "phase"].some((k) => g[k] !== L.GAME[k])) throw new Error(`Game ${L.GAME_ID}'s settings don't match the rules on this page.`);
+    // Audit LN-28: the faucet link must be an https address.
+    if (cfg.faucet != null && !/^https:\/\/[^\s"<>]+$/.test(String(cfg.faucet))) cfg.faucet = null;
+    NET = cfg;
+    const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    DATA = local ? new URL(`testnet-data/lastnode-${L.GAME_ID}/`, ROOT).href : `${cfg.data}lastnode-${L.GAME_ID}/`;
+    picksProvider = new lib.Provider([cfg.rpc]);
+    const id = await picksProvider.getChainId();
+    if (id === MAINNET_CHAIN_ID || id !== cfg.chainId) throw new Error("The testnet node isn't the testnet in this page's settings.");
+    renderGameTabs(cfg.games);
+    const bx = await fetchJson(new URL("testnet/blockx.json", ROOT)).catch(() => null);
+    if (!bx || bx.network !== "koinos-foundation-testnet" || !isAddr(bx.picks)) return;   // no testnet Picks contract yet
+    const abi = await fetchJson(new URL("contracts/picks/abi/picks.koilib.json", ROOT));
+    picksContract = new lib.Contract({ id: bx.picks, abi, provider: picksProvider });
+    await readRegistration().catch(() => { /* the rules' own settings */ });
+    if (!picksContract) return;
+    if (W) W.init({ provider: picksProvider, chainId: cfg.chainId, picks: bx.picks });
+    $("picks-soon").hidden = true;
+    renderWallet();
+  }
+  function renderGameTabs(games) {
+    const box = $("game-tabs");
+    if (!box) return;
+    box.hidden = false;
+    box.replaceChildren(...games.map((g) => el("a", { href: `#game-${g.id}`, class: "btn" + (g.id === L.GAME_ID ? "" : " ghost"), "aria-current": g.id === L.GAME_ID ? "page" : null, text: g.id === 94 ? "Fast test (cut every 20 min)" : "Real timing (daily, 14:00 UTC)" })));
+    window.addEventListener("hashchange", () => location.reload());
+  }
+  // ── test page: the wallet button and "Play free" (a Test wallet in this browser, funded by the local test server) ──
+  function renderWallet() {
+    const b = $("wallet-btn");
+    if (!b || !W || !TESTNET) return;
+    const who = me();
+    b.textContent = who ? nameOf(who) : "Play free";
+  }
+  async function walletButton() {
+    if (!W || !picksContract) return pickModal("info", "Picks aren't open yet", ["The testnet Picks contract isn't in this page's settings yet."], [okBtn("OK")]);
+    const who = me();
+    if (who) return pickModal("info", W.kind === "test" ? "Your Test wallet" : "Your wallet", [el("p", { class: "mono", text: who }),
+      NET && NET.faucet ? el("p", {}, "More test KOIN: send ", el("b", { text: `/faucet ${who}` }), " to ", el("a", { href: NET.faucet, target: "_blank", rel: "noopener noreferrer", text: "the faucet bot" }), ".") : null].filter(Boolean),
+      [el("button", { class: "btn ghost", type: "button", onclick: () => { closeModal(); W.disconnect(); } }, "Disconnect"), okBtn("Close")]);
+    let a;
+    try { a = W.quick(); } catch (e) { return pickModal("bad", "Couldn't make a wallet", [String((e && e.message) || e)], [el("button", { class: "btn", type: "button", onclick: () => { closeModal(); W.connect(); } }, "Use Kondor"), okBtn("OK")]); }
+    const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    if (!local) return fundHelp(a);
+    pickModal("busy", "Adding test KOIN…", ["Your Test wallet is ready. The test server on your computer is sending it 5 test KOIN (enough for about 100 picks)."]);
+    try {
+      const r = await fetch("/api/fund", { method: "POST", headers: { "Content-Type": "application/json", "X-KG-Testnet": "fund" }, body: JSON.stringify({ address: a }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || `the test server answered ${r.status}`);
+      pickModal("ok", "You're in", ["Your Test wallet has test KOIN. Pick your node under “Your node”."], [okBtn("Pick now")]);
+    } catch (e) { fundHelp(a, String((e && e.message) || e)); }
+  }
+  function fundHelp(who, why) {
+    pickModal("info", "One more step: test KOIN", [why ? `Couldn't add test KOIN automatically: ${why}` : "Your wallet is ready in this browser. It needs free test KOIN to pay for picks.",
+      el("p", {}, "In Telegram, send ", el("b", { text: `/faucet ${who}` }), " to ", el("a", { href: (NET && NET.faucet) || "https://t.me/KoinosTestnetFaucetBot", target: "_blank", rel: "noopener noreferrer", text: "@KoinosTestnetFaucetBot" }), ".")], [okBtn("Done")]);
+  }
+  if ($("wallet-btn")) $("wallet-btn").addEventListener("click", walletButton);
+
+  /** Your picks for the rounds that matter: the shown event's start and jump rounds, and the next event's start. */
+  // Audit LN-4: picks are read into a new map and swapped in only when every read worked; a failed read keeps the old
+  // ones, says so, and tries again in 8 seconds. The map is cleared only when the wallet changes.
+  let mineCall = 0, mineWho = null, mineOk = false, mineErr = false, mineRetry = null;
+  async function loadMine() {
+    const call = ++mineCall, who = me();
+    if (who !== mineWho) { drafts.clear(); myPicks.clear(); mineWho = who; mineOk = false; mineErr = false; }
+    if (!picksContract || !who) { mineOk = true; return; }
+    const { ev } = shownEvent(), nx = nextEntry();
+    // One round per event: the event on screen and the next one open for picks.
+    const rounds = new Set([nx.round, ev.round]);
+    try {
+      const got = await Promise.all([...rounds].map((r) => picksContract.functions.get_pick({ game: L.GAME_ID, round: String(r), player: who })
+        .then((x) => [r, x.result && x.result.pick && Array.isArray(x.result.pick.producers) ? x.result.pick.producers : null])));
+      if (call !== mineCall || me() !== who) return;      // a newer call (or another wallet) took over
+      myPicks.clear();
+      for (const [r, ps] of got) if (ps && isAddr(ps[0])) myPicks.set(r, { start: ps[0], backup: isAddr(ps[1]) && ps[1] !== ps[0] ? ps[1] : null });
+      mineOk = true; mineErr = false;
+    } catch {
+      if (call !== mineCall || me() !== who) return;
+      mineErr = true;
+      clearTimeout(mineRetry);
+      mineRetry = setTimeout(() => loadMine().then(render), 8000);
+    }
+  }
+
+  // ── the pick pop-up: wallet → sent → confirmed on the chain ──
+  let modal = null;
+  function pickModal(state, title, lines = [], actions = []) {
+    if (!modal) {
+      modal = el("div", { class: "pk-modal", role: "dialog", "aria-modal": "true", "aria-labelledby": "pk-m-title" });
+      modal.addEventListener("click", (e) => { if (e.target === modal && !modal.querySelector(".pk-spin")) closeModal(); });
+      document.body.append(modal);
+    }
+    const icon = { busy: el("span", { class: "pk-spin", "aria-hidden": "true" }), ok: el("span", { class: "pk-big ok", text: "✓" }), bad: el("span", { class: "pk-big bad", text: "✗" }), info: el("span", { class: "pk-big", text: "ℹ" }) }[state];
+    modal.replaceChildren(el("div", { class: `pk-box ${state}` }, icon, el("h3", { id: "pk-m-title", text: title }), ...lines.map((l) => (typeof l === "string" ? el("p", { text: l }) : l)),
+      actions.length ? el("div", { class: "pk-acts" }, ...actions) : null));
+    modal.hidden = false;
+    const b = modal.querySelector("button"); if (b) b.focus();
+  }
+  // A question still open (the card's "change it?") is answered "keep" when the pop-up is closed any other way.
+  let asking = null;
+  function closeModal() { if (modal) modal.hidden = true; if (asking) { const d = asking; asking = null; d(false); } }
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal && !modal.hidden && !modal.querySelector(".pk-spin")) closeModal(); });
+  const okBtn = (text = "Done") => el("button", { class: "btn", type: "button", onclick: closeModal }, text);
+
+  /** The pick on chain for this round, read right before sending (the card needs it, D-278; a failed read sends nothing). */
+  const READ_FAILED = "couldn't check your current pick";
+  async function readPickNow(who, round) {
+    let x;
+    try { x = await picksContract.functions.get_pick({ game: L.GAME_ID, round: String(round), player: who }); } catch { throw new Error(READ_FAILED); }
+    if (!x || typeof x !== "object") throw new Error(READ_FAILED);
+    const pk = x.result && x.result.pick, l = pk && pk.producers;
+    return { existing: Array.isArray(l) && l.length ? l : null, changes: pk ? Number(pk.changes || 0) : 0 };
+  }
+  const choice = (text, done, v, primary) => el("button", { class: primary ? "btn btn-primary" : "btn", type: "button", onclick: () => { asking = null; closeModal(); done(v); } }, text);
+
+  /** Sends your one pick for an event: [start] or [start, backup] (owner, 2026-10-29), through the shared card. */
+  async function sendPick(round, start, backup, what) {
+    const who = me();
+    if (!who || !picksContract || sending) return;
+    if (!isAddr(start)) return pickModal("info", "Choose a node first", ["Choose your node from the cards, then press the button."], [okBtn("OK")]);
+    const producers = isAddr(backup) && backup !== start ? [start, backup] : [start];
+    const cur = myPicks.get(round);
+    if (cur && cur.start === start && (cur.backup || null) === (producers[1] || null)) return pickModal("info", "That is already your pick", [`${nameOf(start)}${producers[1] ? `, backup ${nameOf(producers[1])}` : ""} is ${what}.`], [okBtn("OK")]);
+    if (!offsets.length) return pickModal("info", "Checking the time…", ["The page is still reading the chain's time. Try again in a moment."], [okBtn("OK")]);
+    // Fix-check LNF-29: the wallet that loaded these picks is the one sending.
+    if (who !== mineWho) return;
+    if (!pickable(round)) return pickModal("bad", nowT() < openAt(round) ? "Not open yet" : "Too close to the lock", [nowT() < openAt(round) ? `Picks for this event open at ${clock(openAt(round))}.` : "Picks lock in under a minute. Yours can't be sent safely now."], [okBtn("OK")]);
+    sending = true; render();
+    const line = `${nameOf(start)}${producers[1] ? `, backup ${nameOf(producers[1])}` : ", no backup"} as ${what} (locks ${clock(lockAt(round))})`;
+    const wallet = W.kind === "guest" ? "your guest wallet" : W.label ? W.label() : "your wallet";
+    const same = (ps) => Array.isArray(ps) && ps.length === producers.length && ps.every((a, i) => a === producers[i]);
+    try {
+      const cur = await readPickNow(who, round);
+      const { operation } = await picksContract.functions.pick({ player: who, game: L.GAME_ID, round: String(round), producers, number: "0" }, { onlyOperation: true });
+      const key = `${L.GAME_ID}:${round}`;
+      const p = SP.plan([{ key, label: `pick ${nameOf(start)}${producers[1] ? ` (backup ${nameOf(producers[1])})` : ""} as ${what}`, op: operation, existing: cur.existing, wanted: producers, open: pickable(round) }],
+        { maxChanges: REG.maxChanges, changesUsed: { [key]: cur.changes } });
+      if (p.same.length) return pickModal("info", "That is already your pick", [`${nameOf(start)}${producers[1] ? `, backup ${nameOf(producers[1])}` : ""} is ${what}.`], [okBtn("OK")]);
+      if (p.refused.some((r) => r.why === "no changes left")) throw new Error("changed again");
+      if (p.refused.length) throw new Error("locked");
+      // A change: "your pick this round is …; change it?" (a guest wallet can't change: it is told so, nothing is sent).
+      const ask = (lines) => new Promise((done) => { pickModal("info", "Change your pick?", lines, [choice("Change it", done, true, true), choice("Keep my pick", done, false)]); asking = done; });
+      const cannot = (lines) => new Promise((done) => { pickModal("info", "Your pick stays", lines, [choice("OK", done, false)]); asking = done; });
+      if (!(await SP.confirm(p, ask, nameOf, { guest: W.kind === "guest", cannot }))) return;
+      pickModal("busy", W.kind === "guest" ? "Sending your pick…" : `Confirm in ${wallet}`, [line, TESTNET ? "Testnet: the Mana comes from your test KOIN. Nothing here is real money."
+        : p.changes.length ? "A change: paid with your own Mana (Knode's Mana sponsor pays only for a first pick)." : "Free: the KnodeGames Mana sponsor pays the Mana."]);
+      const res = await SP.send(W, p, { label: p.fresh.concat(p.changes)[0].label, stillOpen: () => pickable(round) });
+      if (!res.sent && !res.changed) return pickModal("bad", "Too close to the lock", ["Picks lock in under a minute. Yours can't be sent safely now."], [okBtn("OK")]);
+      const id = res.ids[res.ids.length - 1];
+      pickModal("busy", "Sent. Checking the chain…", [line]);
+      let onChain = false;
+      for (let t = 0; t < 10 && !onChain; t++) {
+        try { const x = await picksContract.functions.get_pick({ game: L.GAME_ID, round: String(round), player: who }); onChain = !!(x.result && x.result.pick && same(x.result.pick.producers)); } catch { /* again */ }
+        if (!onChain) await new Promise((res) => setTimeout(res, 3000));
+      }
+      if (onChain) pickModal("ok", "Pick confirmed", [el("p", {}, el("b", { text: nameOf(start) }), producers[1] ? `, backup ${nameOf(producers[1])},` : "", ` is ${what}.`),
+        `You can change it until ${clock(cutoff(round))}.`,
+        id ? el("p", { class: "ago mono", text: `Transaction ${String(id).slice(0, 18)}…` }) : null].filter(Boolean), [okBtn()]);
+      else pickModal("info", "Sent, not seen on the chain yet", ["Your wallet sent it. It usually shows within a minute; this page updates by itself."], [okBtn("OK")]);
+    } catch (e) {
+      const m = String((e && e.message) || e);
+      const why = m.includes(READ_FAILED) ? "Couldn't check your current pick, so nothing was sent. Try again in a moment."
+        : m === SP.GUEST_CHANGE ? SP.GUEST_CHANGE
+        : /no such game/i.test(m) ? (TESTNET ? `Game ${L.GAME_ID} isn't switched on in the testnet Picks contract yet. Register it first (in PowerShell: npm run picks -- announce ${L.GAME_ID} --testnet --send, wait 10 minutes, then apply ${L.GAME_ID}).` : "This game isn't open in the Picks contract yet.")
+        : /game is closed/i.test(m) ? "This game is switched off in the Picks contract right now."
+        : /locked/i.test(m) ? "That pick is locked: picks close 10 minutes before the start."
+        : /not open yet/i.test(m) ? "That round isn't open yet."
+        : /used up/i.test(m) ? "Today's picks are used up (changes count). More after 00:00 UTC."
+        : /changed again/i.test(m) ? "That pick has been changed too many times already."
+        : /reject|denied|cancel/i.test(m) ? "Cancelled in your wallet. Nothing was sent."
+        : `Not sent: ${m.slice(0, 200)}`;
+      pickModal(/Cancelled/.test(why) ? "info" : "bad", /Cancelled/.test(why) ? "Cancelled" : "Pick not sent", [why], [okBtn("OK")]);
+    } finally { sending = false; drafts.delete(`s:${round}`); drafts.delete(`b:${round}`); await loadMine(); render(); }
+  }
+
+  // ── leaderboard (the recorder's board.json, shown by the shared board.js) ──
+  const lb = window.KBoard ? window.KBoard.create($("ln-board"), {
+    label: "Last Node Standing leaderboard",
+    columns: [{ key: "pts", label: "Points" }, { key: "rides", label: "Rides" }, { key: "jumps", label: "Jumps", wide: true }, { key: "events", label: "Events", wide: true }],
+    scored: (r) => r.pts > 0,
+    summary: (r) => `${fmt(r.pts)} pts · ${fmt(r.rides)} ride${r.rides === 1 ? "" : "s"}`,
+    name: nameOf, link: (a) => EXPLORER + a,
+    me: (r, place) => `${place ? `You: #${place} with` : "Your score (only you see this):"} ${fmt(r.pts)} points from ${fmt(r.events)} event${r.events === 1 ? "" : "s"} (${fmt(r.rides)} rides, ${fmt(r.jumps)} jumps).`,
+    unranked: TESTNET ? "On the testnet, wallets holding at least 1 test KOIN are ranked. Nothing here is paid." : "The Staked board is for wallets with at least 1 VHP staked in Last Node Standing that week. Everyone else plays on Free play.",
+    // Free play (owner, 3 Nov; D-081): its own board. Its 2 + 1 VHP prize is switched OFF (prize-settings, game 13, from
+    // week 3; owner 10 Nov: a new game ships with the free prize off). The owner turns it on with `npm run prizes -- on 13`.
+    free: TESTNET ? null : { show: 6, prize: "The Free play board pays no VHP prize for now. Players staked in Last Node Standing share its weekly bucket." },
+    // Medals: last week's free winners as the recorder settled them (board.json lastWeek.prizes; ties share).
+    freeWinners: (part) => new Map((part && Array.isArray(part.prizes) ? part.prizes : []).filter((x) => x && isAddr(x.player) && (x.place === 1 || x.place === 2)).map((x) => [x.player, x.place])),
+  }) : null;
+  // Capacity (12 Nov): each list shows its top 2,000; a wallet below that finds its own row (and true place) in
+  // me/<char code of its address's second character>.json, read only then.
+  let meRows = null;   // { who, file }
+  const CAPPED = 2000;
+  async function loadMeRows() {
+    const who = me();
+    if (!who || !board || TESTNET) { meRows = null; return; }
+    const parts = ["today", "week", "lastWeek", "allTime"].map((k) => board[k]).filter(Boolean);
+    if (!parts.some((p) => Array.isArray(p.rows) && p.rows.length >= CAPPED && !p.rows.some((r) => r && r.a === who))) { meRows = null; return; }
+    if (meRows && meRows.who === who && meRows.updated === board.updated) return;
+    try { const f = await fetchJson(`${DATA}me/${who.charCodeAt(1)}.json`); meRows = f && f.v === 1 ? { who, updated: board.updated, file: f } : null; } catch { meRows = null; }
+  }
+  function boardWithMe() {
+    if (!meRows || meRows.who !== me()) return board;
+    const f = meRows.file, out = { ...board };
+    for (const k of ["today", "week", "lastWeek", "allTime"]) {
+      const p = board[k], extra = f[k];
+      if (!p || !extra || !Array.isArray(extra.rows) || p.rows.some((r) => r && r.a === meRows.who)) continue;
+      // only the same day / week as the list the page shows (an older file says nothing about this one)
+      if ((k === "today" && extra.day !== p.day) || ((k === "week" || k === "lastWeek") && extra.week !== p.week)) continue;
+      const mine = extra.rows.find((r) => r && r.a === meRows.who);
+      if (mine) out[k] = { ...p, rows: [...p.rows, mine] };
+    }
+    return out;
+  }
+  function renderBoard() { if (lb && board) { $("board-box").hidden = false; lb.setMe(me() || ""); lb.set(boardWithMe()); loadMeRows().then(() => { if (meRows) lb.set(boardWithMe()); }).catch(() => {}); } }
+  if (W && W.subscribe) W.subscribe(() => { renderWallet(); loadMine().then(render); renderBoard(); });
+  // Names arrive once per page (names.json): redraw what shows a producer or a player.
+  if (window.KNames && typeof window.KNames.onChange === "function") window.KNames.onChange(() => { for (const f of [render, renderBoard]) { try { f(); } catch { /* drawn later */ } } });
+  // Staking in Last Node Standing (owner, 3 Nov: Staked and Free play boards): the site's shared stake panel and the
+  // staked / free status bar, for game 13. They stay hidden until the vault has the game. Never on the testnet page.
+  if (!TESTNET && window.KStake) {
+    if (typeof window.KStake.badge === "function" && $("stake-badge")) window.KStake.badge($("stake-badge"), { game: L.GAME_ID });
+    if (typeof window.KStake.mount === "function" && $("lastnode-stake")) window.KStake.mount($("lastnode-stake"), { game: L.GAME_ID });
+  }
+
+  // ── start ──
+  (async () => {
+    const picksReady = setupPicks().catch((e) => { if (TESTNET) say(String((e && e.message) || e)); });
+    if (TESTNET) await picksReady;      // the test page's data folder comes from its testnet settings
+    await loadAll(); render(); renderBoard();
+    await loadBlocks(); render();
+    await picksReady; await loadMine(); render();
+    setInterval(() => { if (!document.hidden) loadBlocks().then(render); }, 30000);
+    // Fix-check LNF-11: after the tab or device sleeps, the steady timer may have stopped: read the chain's time again.
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) { offsets.length = 0; loadBlocks().then(render); } });
+    setInterval(() => { if (!document.hidden) loadAll().then(() => { render(); renderBoard(); }); }, 120000);
+    setInterval(() => { if (!document.hidden && picksContract) loadMine().then(render); }, 60000);
+    setInterval(() => { if (!document.hidden) tick(); }, 1000);
+  })();
+})();

@@ -9,13 +9,13 @@ const sec = p.match(/id="each-game"[\s\S]*?<\/section>/)[0];
 const LABELS = ["What the game asks you", "What it reads from the Ruler", "How that becomes your score", "Why it's fair", "If the Ruler can't measure a"];
 
 test("one block per game on the Ruler, each with the five lines, no block for a game that is not on the Ruler yet", () => {
-  for (const id of ["race", "blockx", "bracket", "fantasy"]) {
+  for (const id of ["race", "blockx", "bracket", "fantasy", "lastnode"]) {
     const b = sec.match(new RegExp(`id="${id}"[\\s\\S]*?</article>`));
     assert.ok(b, `${id} block`);
     for (const l of LABELS) assert.ok(b[0].includes(l), `${id}: ${l}`);
   }
   const ids = [...sec.matchAll(/<article class="panel" id="([a-z]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(ids, ["race", "blockx", "bracket", "fantasy"], "in the Ruler chat's order");
+  assert.deepEqual(ids, ["race", "blockx", "bracket", "fantasy", "lastnode"], "in the Ruler chat's order");
   assert.doesNotMatch(sec, /Producer Bracket joins this list/);
 });
 test("Block X: the owner's 48-hour rule (decision 23), word for word; no 3-day void", () => {

@@ -50,8 +50,9 @@ test("every game can be staked on, stopped and have its free prize switched, fro
   // Bracket changed to OFF on 11 Nov (Repo Lens G30-1). Game 13 (Last Node) is ON in every doc; the stored switch is the
   // thing to check (the glance table flags any difference).
   // Owner 14 Nov: the Bracket is ON again, from vault week 5.
-  assert.deepEqual(GAMES.filter((g) => g.freePrize === "on").map((g) => g.id), [1, 2, 7, 9, 13]);
-  assert.deepEqual(GAMES.filter((g) => g.freePrize === "off").map((g) => g.id), [3, 4, 6, 8]);
+  assert.deepEqual(GAMES.filter((g) => g.freePrize === "on").map((g) => g.id), [1, 2, 7, 9]);
+  // Last Node (game 13): free prize OFF (owner, 10 and 13 Nov; Vault M-46: the planned value matches prize-settings).
+  assert.deepEqual(GAMES.filter((g) => g.freePrize === "off").map((g) => g.id), [3, 4, 6, 8, 13]);
   const bracket = LAUNCH.find((l) => l.game === 9)!.steps.map((x) => x.text).join(" ");
   assert.match(bracket, /free prize ON \(owner, 14 Nov/); assert.match(bracket, /prizes -- on 9 --send --from 5/); assert.doesNotMatch(bracket, /free prize OFF/i);
   assert.match(bracket, /vault week 4.*Mon 16 to Sun 22 Nov/);

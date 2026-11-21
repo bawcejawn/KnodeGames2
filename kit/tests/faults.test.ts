@@ -77,6 +77,13 @@ test("nodes: agree(), budgets, retries", async () => {
   let n = 0;
   assert.equal(await withRetries("x", async () => { if (++n < 3) throw new Error("fetch failed"); return 5; }, 4, 1000, async () => {}), 5);
   await assert.rejects(withRetries("x", async () => { throw new Error("contract refused"); }, 4, 1000, async () => {}), /contract refused/);
+  // A web page instead of JSON (a node's busy or rate-limit page, Fri 20 Nov) is retried, and still stops after `tries`.
+  const page = "invalid json response body at https://api.koinos.io/ reason: Unexpected token '<', \"<html>\" is not valid JSON";
+  let k = 0;
+  assert.equal(await withRetries("x", async () => { if (++k < 3) throw new Error(page); return 7; }, 4, 1000, async () => {}), 7);
+  let m = 0;
+  await assert.rejects(withRetries("x", async () => { m++; throw new Error(page); }, 3, 1000, async () => {}), /invalid json response body/);
+  assert.equal(m, 3, "tried exactly `tries` times");
 });
 
 test("vault-stakes: game 1 refused, read only after the week, a failed read is never 'not staked'", async () => {

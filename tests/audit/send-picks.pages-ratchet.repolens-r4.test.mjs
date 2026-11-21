@@ -15,11 +15,8 @@ export const PENDING = [
   // ·
   "bracket.js",
   // ·
-  "combo.js",
-  // ·
   "race.js",
   // ·
-  "survivor.js",
   // ·
   "overunder.js",
 ];

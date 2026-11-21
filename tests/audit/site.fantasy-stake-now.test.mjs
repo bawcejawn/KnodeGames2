@@ -31,9 +31,10 @@ test("Fantasy page: the wording follows the site's rules", () => {
 
 // Repo Lens #R4-4: the same claim was also in the test-week banner (nav.js, shown on the Fantasy page to Sun 29 Nov), the
 // All games card (games.json) and the Home rules panel (index.html). None may still say weeks 4 and 5 take no stakes.
-test("the banner, the All games card and the Home rules say 'Stake now', not 'no stakes'", () => {
+test("the All games card and the Home rules say 'Stake now', not 'no stakes' (the nav.js banner is gone, #51)", () => {
+  assert.doesNotMatch(fs.readFileSync(`${APP}/web/nav.js`, "utf8"), /no stakes|Fantasy Producers: free play/);
   const SN = "Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET).";
-  for (const f of ["web/nav.js", "web/games.json", "web/index.html"]) {
+  for (const f of ["web/games.json", "web/index.html"]) {
     const s = fs.readFileSync(`${APP}/${f}`, "utf8");
     assert.doesNotMatch(s, /take no stakes|no stakes are taken|with no stakes/i, f);
     assert.ok(s.includes(SN), `${f} has Vault's sentence`);

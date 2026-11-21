@@ -20,6 +20,7 @@ Since cutover (Sun 22 Nov 2026, D-239/D-240) the hourly workflows run on the sam
 | `stats.yml` | `17 */2 * * *` | `STATS_ENABLED` |
 | `watch.yml` | `*/30 * * * *` | none (read-only node watch) |
 | `capacity.yml` | `23 13 * * *` | none (read-only report) |
+| `lastnode.yml` | `2-57/5 13-23 * * *`, `2-57/5 0-3 * * *`, `7 4-12 * * *` (no Cloudflare backstop yet) | `LASTNODE_ENABLED` and `LASTNODE_FROM_WEEK` |
 
 GitHub skips some scheduled runs. The Cloudflare Worker (`ops/cloudflare/kg-dispatch-worker.js`) starts the missed ones.
 

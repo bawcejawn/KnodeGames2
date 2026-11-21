@@ -89,3 +89,11 @@ test("conformance: the Fantasy-shaped kit-ruler-example passes every check (Pick
   const bad = r.filter((x) => !x.pass).map((x) => x.msg);
   assert.deepEqual(bad, [], bad.join("\n"));
 });
+
+test("conformance: the rolling-rounds kit-rolling-example passes every check (each round's schedule from its own scheduleFor, ctx.schedule in resultOf, the week final through the real publish check)", async () => {
+  const ROLL_ROOT = fileURLToPath(new URL("../testing/example-rolling/", import.meta.url));
+  const r = await conformance("kit-rolling-example", ROLL_ROOT);
+  const bad = r.filter((x) => !x.pass).map((x) => x.msg);
+  assert.deepEqual(bad, [], bad.join("\n"));
+  assert.ok(r.some((x) => /rolling game has scheduleFor/.test(x.msg) && x.pass));
+});

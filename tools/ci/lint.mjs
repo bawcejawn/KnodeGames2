@@ -11,6 +11,8 @@ const TIMERS = {
   "race.yml": ["37 * * * *"], "games.yml": ["47 * * * *"], "combo.yml": ["52 * * * *"], "golf.yml": ["57 * * * *"],
   "kit-games.yml": ["27,57 * * * *"], "vhp-ruler.yml": ["12 * * * *"], "names.yml": ["4 * * * *"], "stats.yml": ["17 */2 * * *"],
   "race-samples.yml": ["*/15 * * * *"], "watch.yml": ["*/30 * * * *"], "capacity.yml": ["23 13 * * *"],
+  // Last Node Standing (game 13): every 5 minutes during the event and its late cuts, hourly overnight (as in the old repository).
+  "lastnode.yml": ["2-57/5 13-23 * * *", "2-57/5 0-3 * * *", "7 4-12 * * *"],
 };
 const say = (m) => problems.push(m);
 
