@@ -33,7 +33,7 @@ const prev = opt("--prev") ?? "", next = R.effectiveSchedule(opt("--all") ?? "",
 parse(prev); parse(next);   // strict: a bad schedule stops here
 const monday = (w) => new Date((GENESIS + w * WEEK) * 1000).toUTCString().slice(0, 16);
 const weeks = [...new Set([now, now + 1, now + 2, ...(parse(prev) || []).map((x) => x[0]), ...(parse(next) || []).map((x) => x[0])])].filter((w) => w >= 0).sort((a, b) => a - b);
-console.log(`Now: vault week ${now} (from ${monday(now)} 00:00 UTC; ${now >= 4 ? `players' Week ${now - 3}` : "before players' Week 1"}).`);
+console.log(`Now: vault week ${now} (from ${monday(now)} 00:00 UTC; ${now >= 4 ? `players' Week ${now}` : "before players' Week 4"}).`);
 console.log(`${V ? "Version schedule" : "Schedule"}: ${JSON.stringify(prev)} -> ${JSON.stringify(next)}${opt("--all") !== undefined ? ` (the game's ${nextText === "" ? "all-games value" : "own value, which replaces the all-games one"})` : ""}`);
 for (const w of weeks) {
   const a = at(w, prev), b = at(w, next);
