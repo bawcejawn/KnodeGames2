@@ -51,12 +51,14 @@ test("the page's stroke key matches the shared rules", () => {
   const G = box.window.KGolf;
   assert.equal(JSON.stringify(G.BANDS.map((b) => b[0])), "[5,25,65,90,100]");
   for (const pct of [5, 25, 65, 90]) assert.ok(html.includes(`Top ${pct}%`) || js.includes(`Top ${pct}%`), `${pct}% in the key`);
-  assert.match(html, /at least 5 Block Golf stakers with at least 10 VHP/);
-  assert.match(html, /In practice weeks every player who scored counts, and 3 make a hole/, "Repo Lens G-6");
+  // D-586: Block Golf is free to play: everyone who scored is in the field, one place per wallet, 3 make a hole.
+  assert.match(html, /Everyone who scored on that game that week, one place per wallet/);
+  assert.match(html, /A hole needs at least 3 players who scored/);
   assert.equal(G.PRACTICE_MIN_FIELD, 3);
   assert.doesNotMatch(html + js, /at least 1 VHP\)|hold at least 1 VHP or stake in Knode Games/, "Repo Lens G-6: Golf's own staking rule");
-  assert.match(html, /counted by the VHP they have staked/);
-  assert.equal(G.MIN_FIELD, 5);
+  assert.doesNotMatch(html, /counted by the VHP they have staked|Block Golf stakers|Two boards|Staked board/, "no staked rules on the page");
+  assert.match(html, /Block Golf is free to play\.<\/b> No staking and no prizes/);
+  assert.match(html, /<b>One board\.<\/b> Everyone plays on the same board/);
 });
 
 test("games.json: Block Golf is live, with its page and its leaderboard on games-data; the menus link it", () => {
@@ -73,9 +75,10 @@ test("standards every game page meets: nicknames (D-078), stake badge and panel 
   assert.match(js, /window\.KNames\.of\(a\)/, "names through names.js");
   assert.match(js, /name: nameOf,/, "the board shows nicknames");
   assert.match(js, /const GAME_ID = 6;/);
-  assert.match(js, /KStake\.badge\(\$\("stake-badge"\), \{ game: GAME_ID \}\)/);
-  assert.match(js, /KStake\.mount\(\$\("golf-stake"\), \{ game: GAME_ID \}\)/);
-  assert.match(html, /<main class="gf">\s*<div id="stake-badge" hidden><\/div>/, "badge at the top of <main>");
+  // D-586: no stake badge (nothing invites staking); the panel only for a wallet that still has stake in Block Golf.
+  assert.doesNotMatch(js + html, /KStake\.badge|stake-badge/);
+  assert.match(js, /KStake\.status\(GAME_ID, who\); if \(!mounted && st && st\.amount > 0n\) \{ mounted = true; window\.KStake\.mount\(\$\("golf-stake"\), \{ game: GAME_ID \}\)/);
+  assert.match(html, /<section class="gf-card" id="golf-stake" hidden>/);
   assert.match(html, /Sunday is review day: results are checked and paid from Monday\./);
   assert.doesNotMatch(html + js, /bawcejawn\.github\.io\/Knode|\/Knode\/|final 12 hours/, "no old repo address or 12-hour final");
 });
