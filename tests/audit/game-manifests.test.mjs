@@ -94,5 +94,14 @@ test("game:new copies the template and game:check reports what is left, in a tem
   fs.writeFileSync(path.join(tmp, "docs/games/TestGame.md"), "# Test Game\n");
   const res = checkGame("testgame", tmp);
   assert.deepEqual(res.filter((r) => !r.pass && r.required).map((r) => r.msg), []);
+  // A live game: its page and the games list are looked for under web/, where the site lives (Repo Lens 5, Fri 20 Nov).
+  const live = { ...good(), status: "live" };
+  fs.writeFileSync(path.join(dest, "game.json"), JSON.stringify(live, null, 2));
+  const bad = () => checkGame("testgame", tmp).filter((r) => !r.pass && r.required).map((r) => r.msg);
+  assert.deepEqual(bad(), [`web/games.json lists ${live.page}`, `page ${live.page} exists (web/${live.page})`]);
+  fs.mkdirSync(path.join(tmp, "web"), { recursive: true });
+  fs.writeFileSync(path.join(tmp, "web/games.json"), JSON.stringify({ games: [{ href: live.page }] }));
+  fs.writeFileSync(path.join(tmp, "web", live.page), "<!doctype html>");
+  assert.deepEqual(bad(), []);
   fs.rmSync(tmp, { recursive: true, force: true });
 });
