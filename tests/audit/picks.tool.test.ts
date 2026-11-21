@@ -27,7 +27,7 @@ test("mainnet upload: only the audited build", () => {
   assert.throws(() => uploadBuild(false, { mainnet: f, testnet: "", manifest: "" }), /not the audited Picks build/);
   assert.throws(() => uploadBuild(false, { mainnet: path.join(d, "missing.wasm"), testnet: "", manifest: "" }), /not found/);
   // (The Combo branch builds Picks v2, also audited: Repo Lens final audit 2026-10-30.)
-  if (fs.existsSync("picks/build/release/contract.wasm")) assert.ok([PICKS_SHA256, PICKS_V2_SHA256].includes(uploadBuild(false).sha256));
+  if (fs.existsSync("contracts/picks/build/release/contract.wasm")) assert.ok([PICKS_SHA256, PICKS_V2_SHA256].includes(uploadBuild(false).sha256));
 });
 
 test("testnet upload: only a build whose manifest says it came from the audited source, and never the mainnet build", () => {
@@ -176,7 +176,7 @@ test("upgrade: mainnet uploads only the audited v2 build, over v1", () => {
   fs.writeFileSync(f, Buffer.from("not v2"));
   assert.throws(() => upgradeBuilds(false, { mainnet: f, v2dir: "", v1manifest: "" }), /not the audited Picks v2 build/);
   assert.throws(() => upgradeBuilds(false, { mainnet: path.join(d, "none.wasm"), v2dir: "", v1manifest: "" }), /not found/);
-  if (fs.existsSync("picks/build/release/contract.wasm") && sha(fs.readFileSync("picks/build/release/contract.wasm")) === PICKS_V2_SHA256) {
+  if (fs.existsSync("contracts/picks/build/release/contract.wasm") && sha(fs.readFileSync("contracts/picks/build/release/contract.wasm")) === PICKS_V2_SHA256) {
     const b = upgradeBuilds(false);
     assert.equal(b.from, PICKS_SHA256); assert.equal(b.to.sha256, PICKS_V2_SHA256);
   }
