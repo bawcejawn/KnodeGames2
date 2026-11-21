@@ -3043,7 +3043,9 @@ jobs:
           main();
           KIT_CHECK_INLINE
           # KG parts v1: a parts week published again (pending or open) replaces its whole folder, so no stale part stays.
-          grep -oE '^[a-z][a-z0-9-]{1,23}/W([0-9]{3}|[1-9][0-9]{3})/' "$LIST" | sort -u | while IFS= read -r dir; do
+          # "|| true": a list with no week folder (only a price list, a vault file or a board) is normal; under pipefail a
+          # grep with no match would end the job before anything is published (Fantasy W5 price list, Fri 20 Nov).
+          { grep -oE '^[a-z][a-z0-9-]{1,23}/W([0-9]{3}|[1-9][0-9]{3})/' "$LIST" || true; } | sort -u | while IFS= read -r dir; do
             git ls-files -z -- "$dir" | xargs -0 -r git update-index --force-remove --
           done
           while IFS= read -r name; do
