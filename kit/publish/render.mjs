@@ -35,6 +35,10 @@ def names(d):
     i = os.path.join(d, "inputs")
     if os.path.isdir(i):
         out += ["inputs/" + f for f in sorted(os.listdir(i)) if re.fullmatch(r"W(0|[1-9][0-9]{0,3})[.]json", f)]
+    # Rolling rounds (R-5): a schedule file's cards (the line, a roster) are rebuilt like an inputs file's
+    sd = os.path.join(d, "schedule")
+    if os.path.isdir(sd) and not os.path.islink(sd):
+        out += ["schedule/" + f for f in sorted(os.listdir(sd)) if re.fullmatch(r"r[0-9]{5}[.]json", f)]
     # KG parts v1: a parts week's cards are in its wk part (extra.opt.cards)
     if os.path.isdir(d):
         for w in sorted(os.listdir(d)):
@@ -218,7 +222,7 @@ function fetchStep(branch, slug, dest = "prev", label = `Take ${slug}'s last fil
   return `      - name: ${label}
         run: |
           set -euo pipefail
-          P="$RUNNER_TEMP/${dest}"; mkdir -p "$P/vault" "$P/inputs"
+          P="$RUNNER_TEMP/${dest}"; mkdir -p "$P/vault" "$P/inputs" "$P/schedule"
           if git fetch -q --depth 1 "https://github.com/\${GITHUB_REPOSITORY}.git" ${branch} 2>/dev/null; then
             { git ls-tree --name-only FETCH_HEAD:${slug} 2>/dev/null || true; } | while IFS= read -r f; do
               if [[ "$f" =~ ^(board|alltime|${WEEK_SH})\\.json$ ]]; then git show "FETCH_HEAD:${slug}/$f" > "$P/$f"; fi
@@ -236,6 +240,10 @@ function fetchStep(branch, slug, dest = "prev", label = `Take ${slug}'s last fil
             done
             { git ls-tree --name-only FETCH_HEAD:${slug}/inputs 2>/dev/null || true; } | while IFS= read -r f; do
               if [[ "$f" =~ ^W(0|[1-9][0-9]{0,3})\\.json$ ]]; then git show "FETCH_HEAD:${slug}/inputs/$f" > "$P/inputs/$f"; fi
+            done
+            # Rolling rounds: the published schedule files (write-once)
+            { git ls-tree --name-only FETCH_HEAD:${slug}/schedule 2>/dev/null || true; } | while IFS= read -r f; do
+              if [[ "$f" =~ ^r[0-9]{5}\\.json$ ]]; then git show "FETCH_HEAD:${slug}/schedule/$f" > "$P/schedule/$f"; fi
             done
           else
             set +e; git ls-remote --exit-code --heads "https://github.com/\${GITHUB_REPOSITORY}.git" refs/heads/${branch} >/dev/null 2>&1; rc=$?; set -e
@@ -359,7 +367,7 @@ ${releaseEnv}
           if git fetch -q --depth 1 "$remote" ${branch} 2>/dev/null; then
             parent=$(git rev-parse FETCH_HEAD); git read-tree FETCH_HEAD
             for g in ${games.map((g) => g.slug).join(" ")}; do
-              mkdir -p "$PUB/$g/vault" "$PUB/$g/inputs"
+              mkdir -p "$PUB/$g/vault" "$PUB/$g/inputs" "$PUB/$g/schedule"
               { git ls-tree --name-only "$parent:$g" 2>/dev/null || true; } | while IFS= read -r f; do
                 if [[ "$f" =~ ^(board|alltime|${WEEK_SH})\\.json$ ]]; then git show "$parent:$g/$f" > "$PUB/$g/$f"; fi
                 if [[ "$f" =~ ^${WEEK_SH}$ ]]; then
@@ -372,6 +380,9 @@ ${releaseEnv}
               done
               { git ls-tree --name-only "$parent:$g/inputs" 2>/dev/null || true; } | while IFS= read -r f; do
                 if [[ "$f" =~ ^W(0|[1-9][0-9]{0,3})\\.json$ ]]; then git show "$parent:$g/inputs/$f" > "$PUB/$g/inputs/$f"; fi
+              done
+              { git ls-tree --name-only "$parent:$g/schedule" 2>/dev/null || true; } | while IFS= read -r f; do
+                if [[ "$f" =~ ^r[0-9]{5}\\.json$ ]]; then git show "$parent:$g/schedule/$f" > "$PUB/$g/schedule/$f"; fi
               done
               { git ls-tree --name-only "$parent:$g/vault" 2>/dev/null || true; } | while IFS= read -r f; do
                 if [[ "$f" =~ ^((HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3}))\\.json$ ]]; then git show "$parent:$g/vault/$f" > "$PUB/$g/vault/$f"; fi
@@ -398,7 +409,7 @@ ${ind(script, 10).replace(/\n$/, "")}
             git ls-files -z -- "$dir" | xargs -0 -r git update-index --force-remove --
           done
           while IFS= read -r name; do
-            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|alltime|${WEEK_SH})|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|${WEEK_SH}/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
+            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|alltime|${WEEK_SH})|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|schedule/r[0-9]{5}|${WEEK_SH}/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
             h=$(git hash-object -w "$IN/$name")
             git update-index --add --cacheinfo "100644,$h,$name"
           done < "$LIST"

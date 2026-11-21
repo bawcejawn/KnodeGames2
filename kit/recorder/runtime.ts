@@ -15,8 +15,8 @@
 // The module never sees the clock, files or the network except through what this passes it.
 import fs from "node:fs";
 import path from "node:path";
-import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_STATE_BYTES, MAX_EXTRAS_BYTES, rollingClock, rollingId, rollingNo, scheduleName, startDay, rollingProblem, MAX_SCHEDULE_BYTES } from "../publish/check.inline.mjs";
-import { clockFromState, type VaultClock } from "./clock.ts";
+import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_STATE_BYTES, MAX_EXTRAS_BYTES, rollingClock, rollingId, rollingNo, scheduleName, startDay, rollingProblem, MAX_SCHEDULE_BYTES, rollingCancelled, inScheduleWindow } from "../publish/check.inline.mjs";
+import { clockFromState, rollingRounds, type VaultClock } from "./clock.ts";
 import { agree, budgeted, Budget, DEFAULT_BUDGETS, Disagree, OutOfBudget, ReadFailed, sameJson, toJson, type Budgets, type KitNode } from "./nodes.ts";
 import { Prev, Out, MAX_WRITE_BYTES } from "./store.ts";
 import { decide, holdWeeks, releaseCode, releaseMatches } from "./lifecycle.ts";
@@ -53,20 +53,8 @@ export type KitGameCfg = {
   rolling?: { roundMin: number; gameMin: number; leadMin: number; scheduleFromMin: number; scheduleToMin: number; cancelAfterMin: number };
 };
 
-/** A rolling game's rounds for a week: every grid round whose START is in the week (Mon 00:00 UTC starts the new week),
- *  id r#####, day = the UTC day of its start, picks locking leadMin before it, decided gameMin after it. pickRound: the
- *  Picks contract round for round n (the game's own mapping). A rolling game's roundsFor returns exactly these. */
-export function rollingRounds(span: { start: number; end: number }, cfg: Pick2<KitGameCfg, "genesis" | "rolling">, pickRound?: (n: number, start: number) => number): Round[] {
-  if (!cfg.rolling) throw new Error("rollingRounds: the game has no rolling settings");
-  const c = rollingClock(cfg);
-  const out: Round[] = [];
-  for (let n = c.firstAtOrAfter(span.start); c.start(n) < span.end; n++) {
-    const start = c.start(n);
-    out.push({ id: rollingId(n), day: startDay(start), locksAt: c.locksAt(n), resolvesAt: c.resolvesAt(n), ...(pickRound ? { pickRound: pickRound(n, start) } : {}) });
-  }
-  return out;
-}
 type Pick2<T, K extends keyof T> = { [P in K]: T[P] };
+export { rollingRounds };
 
 /** "" when a rolling game's round is exactly its grid round inside the week, else why not (the runtime stops on it). */
 export function rollingRoundWhy(r: Round, cfg: Pick2<KitGameCfg, "genesis" | "rolling">, span: { start: number; end: number }): string {
@@ -256,7 +244,8 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
 
   // Phase 1b (G1/G2): the ruler's data, loaded once into one checked ledger. Data that can't be loaded gives the game a
   // ctx.vhp whose card() throws NotYet: rounds stay pending and the inputs file waits; nothing is guessed.
-  const usedInputCards = new Map<string, any>(), usedWeekCards = new Map<string, any>();
+  const usedInputCards = new Map<string, any>(), usedWeekCards = new Map<string, any>(), usedSchedCards = new Map<string, any>();
+  let vhpSched: any;
   let vhpIn: any, vhpWk: any, cardList: any = null, vhpRound: ((m: Map<string, any>) => any) | null = null;
   // #G-69 G69-3: cards already published are re-made from their own stored settings (set once the week is known).
   let weekPins: Map<string, any> | undefined, vhpInFor: (pins?: Map<string, any>) => any = () => vhpIn, pinsOf: (c: unknown) => Map<string, any> = () => new Map();
@@ -277,6 +266,7 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     vhpIn = L ? V.vhpFor(L, usedInputCards) : stub("the ruler's data isn't loaded this run");
     vhpInFor = (pins) => (L ? V.vhpFor(L, usedInputCards, pins) : vhpIn);
     vhpWk = L ? V.vhpFor(L, usedWeekCards) : stub("the ruler's data isn't loaded this run");
+    vhpSched = L ? V.vhpFor(L, usedSchedCards) : stub("the ruler's data isn't loaded this run");
     // One round's own ctx.vhp (cardPerRound): its cards go to that round's map, then to the week's.
     vhpRound = (mine) => (L ? V.vhpFor(L, mine, weekPins) : stub("the ruler's data isn't loaded this run"));
   }
@@ -349,13 +339,15 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     // The starts whose window holds now: scheduleFrom(n) <= now < scheduleTo(n).
     for (let n = c.firstAtOrAfter(now + cfg.rolling.scheduleToMin * MIN + 1); c.scheduleFrom(n) <= now; n++) {
       const id = rollingId(n), start = c.start(n);
-      if (!(c.scheduleFrom(n) <= now && now < c.scheduleTo(n)) || prev.schedule(id)) continue;
+      if (!inScheduleWindow(cfg, n, now) || prev.schedule(id)) continue;
       if (cfg.firstWeek !== undefined && clock.weekOf(start) < cfg.firstWeek) continue;
       try {
-        const ctxOf = (read: NodeReader) => ({ now, read, published, schedules: scheduleBodies!, ...(cfg.vhpData ? { vhp: vhpIn } : {}), blockAt: blockAtA });
+        // R-5: a ruler game's schedule lists the cards its body used; the publish job rebuilds them (G3).
+        usedSchedCards.clear();
+        const ctxOf = (read: NodeReader) => ({ now, read, published, schedules: scheduleBodies!, ...(cfg.vhpData ? { vhp: vhpSched } : {}), blockAt: blockAtA });
         const body = toJson(await agree(`round ${id}'s schedule`, () => m.scheduleFor!(n, start, ctxOf(va)), () => m.scheduleFor!(n, start, ctxOf(vb))));
         if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error(`round ${id}: scheduleFor must return a JSON object`);
-        const f = { v: 1, game: cfg.game, round: id, start, written: now, body };
+        const f = cfg.vhpData ? { v: 1, game: cfg.game, round: id, start, written: now, body, cards: cardList(usedSchedCards) } : { v: 1, game: cfg.game, round: id, start, written: now, body };
         if (Buffer.byteLength(canon(f)) > MAX_SCHEDULE_BYTES) throw new Error(`round ${id}: its schedule file would be over ${MAX_SCHEDULE_BYTES} bytes`);
         out.write(scheduleName(n), f);
         scheduleBodies!.set(id, body);
@@ -627,7 +619,7 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     let rows: [string, number, number][] = who.map((a) => [a, 0, 0]);
     // Rolling rounds (D-344): no published schedule file by its cancel time = cancelled for everyone (void); the queue
     // is unchanged (the game reads only the schedules that exist). The publish check refuses a later schedule file.
-    const cancelled = !!cfg.rolling && !prev.schedule(r.id) && now >= rollingClock(cfg).cancelAt(rollingNo(r.id)!);
+    const cancelled = !!cfg.rolling && rollingCancelled(cfg, rollingNo(r.id)!, now, !!prev.schedule(r.id));
     if (cancelled) { status = "v"; if (now >= r.resolvesAt && !pubRounds.get(r.id)) alerts.notes.push(`round ${r.id}: cancelled (no schedule file was published by its cancel time, D-344)`); }
     else if (now >= r.resolvesAt) {
       try {

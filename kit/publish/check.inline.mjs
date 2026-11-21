@@ -115,7 +115,8 @@ export function rollingProblem(r) {
   if (!(r.gameMin >= r.roundMin && r.gameMin % r.roundMin === 0 && r.gameMin <= 7 * 24 * 60)) return "rolling.gameMin: a whole number of rounds, at most a week";
   if (!(r.scheduleFromMin > r.scheduleToMin && r.scheduleToMin > r.cancelAfterMin && r.cancelAfterMin > r.leadMin)) return "rolling: scheduleFromMin > scheduleToMin > cancelAfterMin > leadMin";
   if (!(r.scheduleFromMin - r.scheduleToMin >= r.roundMin)) return "rolling: the schedule window (scheduleFromMin − scheduleToMin) must be at least one round, so a run every round always lands in it";
-  if (!(r.scheduleFromMin <= 24 * 60)) return "rolling.scheduleFromMin: at most a day";
+  // Up to 3 days: a daily game (VS) publishes its roster before picks open, 48 h ahead.
+  if (!(r.scheduleFromMin <= 3 * 24 * 60)) return "rolling.scheduleFromMin: at most 3 days (4320)";
   return "";
 }
 /** The grid of a rolling game (cfg: { genesis, rolling }). All times UTC ms. */
@@ -134,13 +135,22 @@ export function rollingClock(cfg) {
     cancelAt: (n) => start(n) - r.cancelAfterMin * M,
   };
 }
+/** D-344: round n is cancelled for everyone once `now` reaches its cancel time without a published schedule file. The
+ *  recorder uses this one rule. */
+export const rollingCancelled = (cfg, n, now, hasSchedule) => !hasSchedule && now >= rollingClock(cfg).cancelAt(n);
+/** The recorder's schedule window for round n: from scheduleFrom (inclusive) to scheduleTo (exclusive). */
+export const inScheduleWindow = (cfg, n, now) => { const c = rollingClock(cfg); return c.scheduleFrom(n) <= now && now < c.scheduleTo(n); };
 /** The UTC day a rolling round counts for: the day its START is in (not dayOf(locksAt): a 00:00 start is that day's). */
 export const startDay = (start) => Math.floor(start / DAY) * DAY;
 /** "" when a schedule file is in the kit's shape for this game and name, else why not. Its body is the game's own JSON. */
 export function scheduleShape(j, name, cfg) {
   const m = SCHEDULE_FILE.exec(name);
   if (!m) return "not a schedule file's name";
-  if (!j || typeof j !== "object" || Array.isArray(j) || Object.keys(j).join() !== SCHEDULE_KEYS.join()) return `not a schedule file's shape ({${SCHEDULE_KEYS.join(", ")}})`;
+  // R-5: a ruler game's schedule file also lists the ruler cards its body used ("cards", as an inputs file does), which
+  // the publish job rebuilds from the published vhp-data before it accepts the file.
+  const keys = cfg.vhpData ? [...SCHEDULE_KEYS, "cards"] : SCHEDULE_KEYS;
+  if (!j || typeof j !== "object" || Array.isArray(j) || Object.keys(j).join() !== keys.join()) return `not a schedule file's shape ({${keys.join(", ")}})`;
+  if (cfg.vhpData && !isCardList(j.cards)) return "its cards aren't a card list";
   const n = Number(m[1]), c = rollingClock(cfg);
   if (j.v !== 1 || j.game !== cfg.game || j.round !== rollingId(n)) return "wrong version, game or round";
   if (j.start !== c.start(n)) return "its start isn't its round's start on the grid";
@@ -161,6 +171,11 @@ export function rollingWeekWhy(j, cfg, sched) {
     if (!(s >= j.start && s < j.end)) return `round ${r[0]}: it starts outside week ${j.week} (a rolling round counts for the week it starts in)`;
     if (r[1] !== startDay(s)) return `round ${r[0]}: its day must be the UTC day of its start`;
     if (r[3] === "s" && !sched.has(r[0])) return `round ${r[0]}: scored, but it has no published schedule file (a round without one is cancelled, D-344)`;
+  }
+  // cardPerRound for a rolling ruler game: every round decided FROM its schedule (not a cancelled one) used a card.
+  if (cfg.cardPerRound && j.cards !== undefined) {
+    const decided = j.rounds.filter((r) => (r[3] === "s" || r[3] === "v") && sched.has(r[0])).length - (j.fallbacks?.length ?? 0);
+    if (j.cards.length < decided) return `${decided} rounds decided from a schedule file but only ${j.cards.length} ruler cards (cardPerRound)`;
   }
   return "";
 }
@@ -272,7 +287,8 @@ export function weekShape(j, name, cfg) {
         && Number.isSafeInteger(f[1]) && f[1] >= dayOfRound.get(f[0]) + FALLBACK_GRACE_MS && typeof f[2] === "string" && f[2].length >= 1 && f[2].length <= 200
         && (i === 0 || j.fallbacks[i - 1][0] < f[0]))) return "bad fallbacks (sorted [decided round, at, why], at least 48 h after the round's own day)";
   }
-  if (cfg.cardPerRound && j.cards !== undefined) {
+  // A rolling game counts only rounds decided from a schedule file (a cancelled round has no card): rollingWeekWhy.
+  if (cfg.cardPerRound && j.cards !== undefined && !cfg.rolling) {
     const decided = j.rounds.filter((r) => r[3] === "s" || r[3] === "v").length - (j.fallbacks?.length ?? 0);
     if (j.cards.length < decided) return `${decided} decided rounds but only ${j.cards.length} ruler cards (cardPerRound)`;
   }
@@ -770,6 +786,7 @@ export function checkGame(cfg, inDir, pubDir, now, release = "", cardsOk = null,
     if (now < c.scheduleFrom(n) - FUTURE_SLACK_MS) { hold(f, "a schedule file before its window, by this job's clock"); continue; }
     if (now > c.cancelAt(n)) { hold(f, "a schedule file after its round's cancel time (start − cancelAfterMin), by this job's clock: the round is cancelled for everyone (D-344)"); continue; }
     if (p.v.written > now + FUTURE_SLACK_MS) { hold(f, "written in the future by this job's clock"); continue; }
+    { const cw2 = cardsWhy(raw, old, p.v); if (cw2) { hold(f, cw2); continue; } }
     schedOk.add(id); publish.push(f);
   }
   for (const f of fs.existsSync(path.join(pubDir, "schedule")) ? fs.readdirSync(path.join(pubDir, "schedule")) : []) {
