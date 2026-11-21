@@ -79,7 +79,7 @@ test("the Ruler page says which games use it (Race live from Week 1; the others 
   for (const g of ["Producer Race", "Who Signs Block X", "Producer Bracket", "Fantasy Producers", "Last Node Standing", "Combo Card"]) assert.ok(text.includes(g), g);
   assert.match(text, /6-hour races: live from Week 1 \(Mon 16 Nov\)/);
   assert.match(text, /From Week 2 \(Mon 23 Nov\)\. Week 1 is a practice week for the Ruler\./);
-  assert.match(text, /From its first week, Week 2 \(from Tue 24 Nov\)\./);
+  assert.match(text, /From its first week, Week 2 \(from Mon 23 Nov\)\./);
   assert.match(text, /From its first week \(Mon 7 Dec\)\./);
   assert.doesNotMatch(text, /Planned:|next kit version/);
   assert.match(text, /luck against its own size/);
