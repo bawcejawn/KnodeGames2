@@ -129,3 +129,16 @@ test("listAt boundaries (J33-1): exactly 9 blocks out, exactly 10 in, 11 in; las
   assert.notDeepEqual(atLeast(10, H - 1), want, "active(H - 1) would add the producer whose last block is H - 7201");
   assert.deepEqual(JSON.parse(py(`L = V.Ledger(j["tl"]); print(json.dumps(V.list_at(L, j["H"])))`, { tl, H })), want, "JS = Python");
 });
+
+test("listAt window start (H - AVG): a 10th block exactly at H - 28800 is in, at H - 28801 is out; a start moved to H - AVG + 1 or H - AVG - 1 fails; JS = Python", () => {
+  const H = win.L, recent = (n, off) => Array.from({ length: n }, (_, i) => H - off - 100 * i);   // blocks inside the last 6 hours
+  const rows = [null, new Set([...recent(9, 1), H - 28800]), new Set([...recent(9, 2), H - 28801]), new Set([...recent(10, 3)])];   // ps[1]: 10th block at H-AVG; ps[2]: 10th block at H-AVG-1 (only 9 inside); ps[3]: 10 recent
+  const { tl, ps } = chain({ np: 4, signerOf: (k, ps) => { for (let j = 1; j < 4; j++) if (rows[j].has(FROM + k)) return ps[j]; return ps[0]; } }), L = R.ledger(tl);
+  const want = [ps[0], ps[1], ps[3]].sort();   // ps[0] signs the rest (always listed); ps[2] has 9 blocks in the 24 hours
+  assert.deepEqual([...R.listAt(L, H)], want);
+  assert.equal(L.signedIn(ps[1], H - 28800, H - 1), 10); assert.equal(L.signedIn(ps[2], H - 28800, H - 1), 9); assert.equal(L.signedIn(ps[2], H - 28801, H - 1), 10);
+  const from = (start) => [...L.active(H)].filter((a) => L.signedIn(a, start, H - 1) >= 10).sort();
+  assert.notDeepEqual(from(H - 28800 + 1), want, "a start at H - AVG + 1 would drop the producer whose 10th block is at H - AVG");
+  assert.notDeepEqual(from(H - 28800 - 1), want, "a start at H - AVG - 1 would add the producer whose 10th block is at H - AVG - 1");
+  assert.deepEqual(JSON.parse(py(`L = V.Ledger(j["tl"]); print(json.dumps(V.list_at(L, j["H"])))`, { tl, H })), want, "JS = Python");
+});
