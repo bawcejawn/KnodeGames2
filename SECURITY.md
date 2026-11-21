@@ -18,7 +18,8 @@ Use GitHub: **Security → Report a vulnerability** on this repository. Say what
 
 - A player withdraws their own stake. Pause stops new deposits. It does not trap a withdrawal.
 - The vault checks, after a payout, that it still holds enough to pay everyone else.
-- Owner changes and code upgrades are announced on chain and wait.
+- The vault, the Swap Desk and Picks announce a code upgrade or an owner change on chain and wait before it can take effect: about 48 hours for code, about a day for the vault's owner, and 48 hours for the desk's and Picks' owner.
+- The Race picks contract and the Mana sponsor do not wait. Their own contract key can upload new code at once, and the Race owner's settings take effect at once. Neither holds player stakes: Race holds no tokens, and the sponsor holds only the project's KOIN for Mana (audit AB-064). A timelock for Race is planned (Race v3).
 - The operator key can post and seal. It cannot withdraw player stakes.
 - Recorders read two nodes. If they disagree, the week is held.
 - The owner has a correction window after a seal, and not after finalizing starts.

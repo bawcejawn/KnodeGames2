@@ -158,23 +158,41 @@ async function readSigners(node: any, headId: string, from: number, to: number) 
   return { signers: [...signers], first, last, n };
 }
 const PICKS_ABI = () => JSON.parse(fs.readFileSync(new URL("../../contracts/picks/abi/picks.koilib.json", import.meta.url), "utf8"));
-async function readPicks(node: any, contract: string, game: number, round: number, tries = 6, beforeRead: () => void = () => {}): Promise<RawPick[]> {
-  const c = new Contract({ id: contract, abi: PICKS_ABI(), provider: node });
+/** Capacity (13 Nov): the most picks one target may hold. Past it the read stops LOUDLY (an error: the target is not
+ *  recorded this run, the run's alert fires, and it is tried again next run), never a quiet cut at the limit. */
+export const MAX_PICKS_PER_TARGET = 100000;
+export class TooManyPicks extends Error {}
+/** The paging loop of readPicks, on its own so it can be tested with a fake page reader. `page(after)` returns one
+ *  page of list_picks rows (an empty page ends the list). */
+export async function pagePicks(page: (after: string | undefined) => Promise<any[]>, round: number, beforeRead: () => void = () => {}, max = MAX_PICKS_PER_TARGET): Promise<RawPick[]> {
   const out: RawPick[] = [];
-  let after: string | undefined;
-  for (let page = 0; page < 1000; page++) {
+  let after: string | undefined, rowsSeen = 0;
+  for (;;) {
     beforeRead();   // Repo Lens B4-2: before every page, not only the first
-    const r: any = await withRetry(`picks for round ${round}`, () => (c.functions as any).list_picks({ game, round: String(round), ...(after ? { start_after: after } : {}), limit: 100 }), tries);
-    const rows = r?.result?.rows ?? [];
+    const rows = (await page(after)) ?? [];
+    // Audit BX-18: keep going until an empty page (not "a page shorter than 100", which assumes the contract's page size).
+    if (!rows.length) break;
+    rowsSeen += rows.length;
+    // Rows are counted as read (valid or not), so the loop always ends, even on a node that never sends an empty page.
+    if (rowsSeen > max) throw new TooManyPicks(`round ${round} has more than ${max.toLocaleString("en-US")} picks: stopped reading it (nothing recorded for this target; tell the Block X chat)`);
     for (const x of rows) {
       const ps = x.pick?.producers;
       if (isAddr(x.player) && Array.isArray(ps) && ps.length === 1 && isAddr(ps[0])) out.push({ player: x.player, producer: ps[0], time: Number(x.pick.time || 0) });
     }
-    // Audit BX-18: keep going until an empty page (not "a page shorter than 100", which assumes the contract's page size).
-    if (!rows.length) break;
-    after = rows[rows.length - 1].player;
+    const next = rows[rows.length - 1]?.player;
+    // A page that doesn't move forward would loop for ever: stop loudly instead (only "the same key again" is checked:
+    // the contract orders by the address's bytes, which need not match string order; the row cap above ends the rest).
+    if (typeof next !== "string" || next === after) throw new Error(`round ${round}: the picks list didn't move forward after ${after ?? "the start"}; stopped reading it`);
+    after = next;
   }
   return out;
+}
+async function readPicks(node: any, contract: string, game: number, round: number, tries = 6, beforeRead: () => void = () => {}): Promise<RawPick[]> {
+  const c = new Contract({ id: contract, abi: PICKS_ABI(), provider: node });
+  return pagePicks(async (after) => {
+    const r: any = await withRetry(`picks for round ${round}`, () => (c.functions as any).list_picks({ game, round: String(round), ...(after ? { start_after: after } : {}), limit: 100 }), tries);
+    return r?.result?.rows ?? [];
+  }, round, beforeRead);
 }
 const MAINNET_KNODE_GAME = (() => { try { return JSON.parse(fs.readFileSync(new URL("../../game-data/deployment.json", import.meta.url), "utf8")).contract as string; } catch { return ""; } })();
 const GAME_ABI = () => JSON.parse(fs.readFileSync(new URL("../../contracts/vault/abi/kpred.koilib.json", import.meta.url), "utf8"));
