@@ -19,7 +19,7 @@ import * as V from "./math.js";
 
 const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
 const DAY = V.DAY;
-const CARD_BLOCKS = 7200;                                      // the card's size window: the 6 hours before the lock
+const CARD_BLOCKS = 7200, DAY_BLOCKS = 28800;   // one block every 3 s: 28,800 blocks a day                                      // the card's size window: the 6 hours before the lock
 const CARD = Object.freeze({ game: V.GAME, c: "500000", minK: 10, poolRule: "min", ownRule: "spot", paying: true, pooled: [POOL] });
 
 export type DayResult = { round: string; node: string | null; rows: Record<string, string | null> };
@@ -43,8 +43,12 @@ async function settingsFor(day: number, blockAt: (ms: number) => Promise<number>
 export async function listFor(week: { start: number }, ctx: any): Promise<string[]> {
   if (!ctx?.vhp || typeof ctx.blockAt !== "function") throw new NotYet("VS: no ruler data or block heights yet");
   const t0 = week.start - 2 * DAY;
-  const S0 = await ctx.blockAt(t0), L = S0 - 1;
-  const card = ctx.vhp.card({ game: CARD.game, round: 10_000_000_000 + Number(ymd(t0)), window: { W0: L - CARD_BLOCKS + 1, W1: L, L, S0, S1: S0 }, c: CARD.c, minK: CARD.minK,
+  // VS-9: the card's entry gate (k >= minK, 10 blocks) is measured over the card's scored range, so the range must be a
+  // game's size: one day, the 28,800 blocks that end just before t0 (a one-block range gave every producer k < 1 block,
+  // so nobody had entry and the week-5 roster came out empty). The ruler only makes a card whose whole range is in the
+  // data, so the range sits in the past, with the size window (W) the 7,200 blocks before it.
+  const S1 = (await ctx.blockAt(t0)) - 1, S0 = S1 - DAY_BLOCKS + 1, L = S0 - 1;
+  const card = ctx.vhp.card({ game: CARD.game, round: 10_000_000_000 + Number(ymd(t0)), window: { W0: L - CARD_BLOCKS + 1, W1: L, L, S0, S1 }, c: CARD.c, minK: CARD.minK,
     poolRule: CARD.poolRule, ownRule: CARD.ownRule, paying: CARD.paying, pooled: [...CARD.pooled] });
   return (card.producers as any[]).filter((p) => p.entry && p.a !== POOL).map((p) => p.a as string);
 }
