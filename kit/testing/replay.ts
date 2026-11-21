@@ -20,7 +20,9 @@ export async function rebuiltCards(out: string, pub: string, L: any): Promise<Se
   const { cardKey } = await import("../publish/check.inline.mjs");
   const ok = new Set<string>();
   const rels = [...(fs.existsSync(out) ? fs.readdirSync(out) : []).filter((f) => /^W[0-9]{3,4}\.json$/.test(f)),
-    ...(fs.existsSync(path.join(out, "inputs")) ? fs.readdirSync(path.join(out, "inputs")).map((f) => `inputs/${f}`) : [])];
+    ...(fs.existsSync(path.join(out, "inputs")) ? fs.readdirSync(path.join(out, "inputs")).map((f) => `inputs/${f}`) : []),
+    // R-5: rolling games' schedule files carry cards too
+    ...(fs.existsSync(path.join(out, "schedule")) ? fs.readdirSync(path.join(out, "schedule")).filter((f) => /^r[0-9]{5}\.json$/.test(f)).map((f) => `schedule/${f}`) : [])];
   for (const rel of rels) {
     const raw = fs.readFileSync(path.join(out, rel), "utf8"), q = path.join(pub, rel);
     if (fs.existsSync(q) && fs.readFileSync(q, "utf8") === raw) continue;

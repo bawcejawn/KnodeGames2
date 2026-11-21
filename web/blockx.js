@@ -41,9 +41,9 @@
     if (!TESTNET) {
       let picks = null;
       try { const d = await fetchJson(new URL("picks-data/deployment.json", ROOT)); if (isAddr(d.contract)) picks = d.contract; } catch { /* not live yet */ }
-      NET = { rpc: Math.random() < 0.5 ? ["https://koinos.armana.io", "https://api.koinosblocks.com"] : ["https://api.koinosblocks.com", "https://koinos.armana.io"], data: "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/blockx/", raceData: "https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/",
+      NET = { rpc: Math.random() < 0.5 ? ["https://koinos.armana.io", "https://api.koinosblocks.com"] : ["https://api.koinosblocks.com", "https://koinos.armana.io"], data: "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/blockx/", raceData: "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/",
         cards: "race", picks, explorer: "https://koinosscan.com/address/", chainId: MAINNET_CHAIN_ID,
-        prize: "1st and 2nd at the end of the week win the free-play prize (2 and 1 VHP, from Week 1, the week of Mon 16 Nov)." };
+        prize: "1st and 2nd at the end of the week win the free-play prize (2 and 1 VHP, from Week 4, the week of Mon 16 Nov)." };
       // The game whose weeks contain now, or the one the #game-N link asks for; both as tabs around the switch.
       const now = Date.now(), want = /^#game-(\d+)$/.exec(location.hash);
       const games = X.MAINNET_SCHEDULE.map((e) => ({ ...e.game, ...X.periodOf(e), name: e.game.id === X.MAINNET_HOURLY.id ? `Hourly (from ${new Date(X.periodOf(e).from).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })})` : "Every 2 hours" }));
@@ -635,7 +635,7 @@
     renderResults(); renderMults();
     const rows = files.flatMap((j) => j.targets.map((e) => ({ ...e, shadow: j.shadow }))).sort((a, b) => b.height - a.height).slice(0, 8);
     $("ruler-list").replaceChildren(...rows.map((e) => {
-      const what = e.void ? "void: no pick on it counts" : e.card ? `${nameOf(e.signer)} signed: a right pick scores ×${(e.points / 100).toFixed(2)}` : "the ruler's score comes in once the block's data is in";
+      const what = e.void ? "void: no pick on it counts" : isFallback(e) ? "the ruler's data was late: scored the old way" : e.card ? `${nameOf(e.signer)} signed: a right pick scores ×${(e.points / 100).toFixed(2)}` : "the ruler's score comes in once the block's data is in";
       return el("div", { class: "bx-row" }, el("b", { text: `Block ${fmt(e.height)}` }), el("span", { text: ` ${what}${e.shadow ? " (trial)" : ""}` }));
     }));
   }
@@ -646,9 +646,14 @@
   // (an older index.json; then a week is ON when the page has any ON entry), null = unset, N = on from vault week N.
   let rulerFromIdx;
   const weekOn = (t) => (rulerFromIdx === undefined ? rulerOn.size > 0 : rulerFromIdx !== null && Number.isFinite(t.time) && M.weekOf(t.time) >= rulerFromIdx);
+  // The 48-hour old-points fallback (owner, 18 Nov 2026; FALLBACK_WHY in bot/blockx-ruler.ts, tested): the ruler's entry has no
+  // card, is not void and carries this text; a right pick then keeps the points in the week file.
+  const FALLBACK_WHY = "old points: the ruler couldn't score this target within 48 hours, so a right pick keeps its old-rule points";
+  const isFallback = (e) => !!e && e.card === null && e.void === false && e.why === FALLBACK_WHY;
   const shownPts = (t, p) => {
     const e = rulerOn.get(t.height);
     if (!e) return weekOn(t) ? undefined : p[3];   // an ON-week target the page has no ruler entry for: "…", never old-rule points
+    if (isFallback(e)) return p[3];
     if (!e.card && !e.void) return undefined;
     return !e.void && p[1] === e.signer ? e.points : 0;
   };

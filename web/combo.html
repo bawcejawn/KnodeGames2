@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <!-- Only these sources may run scripts, load data or be framed. 'unsafe-eval' is needed by koilib (its protobuf
        encoder builds functions at run time); CDN scripts are pinned by their integrity hash. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/ https://koinos.armana.io https://api.koinos.io https://api.koinosblocks.com https://raw.githubusercontent.com/bawcejawn/KnodeGames/blocks-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/names-data/ https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/game-data/ https://koinos.armana.io https://api.koinos.io https://api.koinosblocks.com https://raw.githubusercontent.com/bawcejawn/KnodeGames2/blocks-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/names-data/ https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Combo Card · Build a parlay of Koinos producer calls</title>
   <!-- seo:start (written by tools/site-seo.mjs; edit there) -->
@@ -43,6 +44,14 @@
     .lede { color: var(--muted); margin: 0 0 16px; max-width: 62ch; font-size: 17px; }
     .soon { border-left: 4px solid var(--tang); background: var(--surface); border-radius: 0 12px 12px 0; padding: 10px 14px; font-size: 14px; margin: 0 0 16px; color: var(--muted); }
     .soon b { color: var(--ink); }
+    .cb-modal { position: fixed; inset: 0; z-index: 1000; background: rgba(8, 14, 30, .6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .cb-modal[hidden] { display: none; }
+    .cb-box { background: var(--surface); color: var(--ink); width: 100%; max-width: 420px; border-radius: 22px; padding: 24px 22px 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .4); text-align: center; }
+    .cb-box h3 { margin: 0 0 8px; font-size: 20px; font-weight: 900; }
+    .cb-box p { margin: 6px 0; font-size: 14px; color: var(--muted); }
+    .cb-box .acts { margin-top: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .cb-box .btn { border: 0; border-radius: 99px; padding: 11px 24px; font-weight: 800; background: var(--ink); color: var(--surface); cursor: pointer; }
+    .cb-box .btn.alt { background: transparent; color: var(--ink); border: 1px solid var(--muted); }
     .status { font-size: 14px; color: var(--muted); margin: 0 0 8px; }
     .status:empty { display: none; }
     .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
@@ -246,6 +255,8 @@
             <a href="bracket.html">Producer Bracket</a>
             <a href="golf.html">Block Golf</a>
             <a href="fantasy.html">Fantasy Producers</a>
+            <a href="lastnode.html">Last Node Standing</a>
+            <a href="vs.html">Knode Games VS</a>
             <a href="combo.html" aria-current="page">Combo Card · Preview</a>
           </div>
         </details>
@@ -278,6 +289,7 @@
   <main class="pr">
     <h1>Combo Card</h1>
     <p class="lede">Stack 2 to 10 calls on one card from the next day's races and Block X targets. Every leg has to hit. Harder legs and longer cards pay more points. Anyone can play: staked players (at least 1 VHP staked in the Combo Card) rank on the Staked board, everyone else on the Free play board.</p>
+    <p class="soon" id="practice-note" hidden><b>Practice week.</b> Free play only: nothing is paid. Staking opens later, when the Combo Card is ready. A first card is free (Knode pays the Mana); a change to a card is paid with your own Mana.</p>
     <p class="soon" id="cards-soon"><b>Preview.</b> Build and share cards now. Sending them opens when the Combo upgrade of the Knode Games Picks contract is live.</p>
     <p class="status" id="status" role="status">Reading the chain…</p>
 
@@ -344,9 +356,10 @@
       <summary><h2 style="color:var(--ink);display:inline">How it works</h2></summary>
       <p><b>The legs.</b> <b>Win</b>: the horse wins the race. <b>Show</b>: it finishes in the top 3. <b>Top half</b>: it finishes in the top half of the field. <b>Block X</b>: the producer signs that block (every 2,400th block). A horse must sign at least one block to count. More games add their own legs as they launch.</p>
       <p><b>What a leg is worth.</b> Each leg is priced from its chance, using the Producer Race's latest handicap card when your card is sent:</p>
-      <p><span class="formula">leg worth = 0.5 ÷ chance, from ×0.25 to ×3</span></p>
-      <p>A leg keeps the worth it had when you sent the card. Only if the leg's chance has risen by more than 10% by the time it locks (for example because VHP moved to its producer) does it take the lower worth from the race card in force at the lock. Worths can drop, never rise, so a long shot can't keep its ×3 after its producer gets bigger.</p>
-      <p>A leg that hits half the time is worth ×1. An easy leg, like a big producer finishing in the top half, is worth less than ×1; a hard one up to ×3. Race chances come from 4,000 simulated races on the card; Block X from each producer's share of VHP.</p>
+      <p><span class="formula">race leg worth = 0.5 ÷ chance, from ×0.25 to ×3</span></p>
+      <p><span class="formula">Block X leg worth = 0.25 ÷ chance, from ×0.25 to ×6</span></p>
+      <p>A leg keeps the worth it had when you sent the card. Only if the leg's chance has risen by more than 10% by the time it locks (for example because VHP moved to its producer) does it take the lower worth from the race card in force at the lock. Worths can drop, never rise, so a long shot can't keep its top worth after its producer gets bigger.</p>
+      <p>A race leg that hits half the time is worth ×1. An easy leg, like a big producer finishing in the top half, is worth less than ×1; a hard one up to ×3. A Block X leg starts lower and reaches higher: the biggest producer (about 18% of VHP) is worth about ×1.40, and a small one (about 4% of VHP or less) ×6. Race chances come from 16,000 simulated races on the card; Block X from each producer's share of VHP.</p>
       <p><b>The card.</b> Points = the base for its number of legs × every leg's worth. There's no cap: if you can build it, you can win it.</p>
       <table class="base" id="base-table"></table>
       <p><b>Fair rules.</b> A race takes up to 3 legs, one of each type, on different horses; a block takes one. Each producer can be on your card only once, since one good day would carry all its legs together. If a race or block is void, that leg is dropped and the card scores on the rest (with at least 2 legs). On the VHP ruler (below), a leg on a producer the ruler voids for that race counts as a loss, as it does in the Producer Race. A card is final when every leg is final; results come from irreversible blocks that match on two independent nodes.</p>
@@ -370,6 +383,8 @@
       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
+      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+      <a href="vs.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h12l-3-3"></path><path d="M20 17H8l3 3"></path></svg><span>Knode Games VS</span></a>
       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
@@ -417,7 +432,7 @@
   <script src="race-math.js"></script>
   <script src="blockx-math.js"></script>
   <script src="combo-math.js"></script>
-  <script src="combo.js"></script>
+  <script type="module" src="combo.js"></script>
   <script src="vendor/posthog-1.438.13.js"></script>
   <script src="analytics.js"></script>
 </body>

@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <!-- Only these sources may run scripts, load data or be framed. 'unsafe-eval' is needed by koilib (its protobuf
        encoder builds functions at run time); CDN scripts are pinned by their integrity hash. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/ https://koinos.armana.io https://api.koinosblocks.com https://api.koinos.io https://koinvault.app https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames/names-data/ https://us.i.posthog.com https://raw.githubusercontent.com/bawcejawn/KnodeGames/stats-data/ https://data.knodegames.com/ https://live.knodegames.com/live.json; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/game-data/ https://koinos.armana.io https://api.koinosblocks.com https://api.koinos.io https://koinvault.app https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/names-data/ https://us.i.posthog.com https://raw.githubusercontent.com/bawcejawn/KnodeGames2/stats-data/ https://data.knodegames.com/ https://live.knodegames.com/live.json; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Knode Games: the daily Koinos prediction game</title>
   <!-- seo:start (written by tools/site-seo.mjs; edit there) -->
@@ -60,6 +61,8 @@
             <a href="bracket.html">Producer Bracket</a>
             <a href="golf.html">Block Golf</a>
             <a href="fantasy.html">Fantasy Producers</a>
+            <a href="lastnode.html">Last Node Standing</a>
+            <a href="vs.html">Knode Games VS</a>
             <a href="combo.html">Combo Card · Preview</a>
           </div>
         </details>
@@ -122,8 +125,10 @@
           <a class="also-card gtile" href="#play"><span aria-hidden="true">🎯</span><div><b>Daily Questions</b><p>Quick questions, Monday to Saturday.</p></div></a>
           <a class="also-card gtile" href="blockx.html"><span aria-hidden="true">🧱</span><div><b>Who Signs Block X</b><p>Pick who signs the next milestone block.</p></div></a>
           <a class="also-card gtile" href="bracket.html"><span aria-hidden="true">🏆</span><div><b>Producer Bracket</b><p>Pick every matchup in a weekly knockout.</p></div></a>
-          <a class="also-card gtile" href="golf.html"><span aria-hidden="true">⛳</span><div><b>Block Golf</b><p>Your places in the other games set your score. Practice in Week 1 (from Mon 16 Nov).</p></div></a>
+          <a class="also-card gtile" href="golf.html"><span aria-hidden="true">⛳</span><div><b>Block Golf</b><p>Your places in the other games set your score. Practice in Week 4 (from Mon 16 Nov).</p></div></a>
           <a class="also-card gtile" href="fantasy.html"><span aria-hidden="true">📋</span><div><b>Fantasy Producers</b><p>Draft 5 producers under a salary cap.</p></div></a>
+          <a class="also-card gtile" href="lastnode.html"><span aria-hidden="true">🏁</span><div><b>Last Node Standing</b><p>Every hour the unluckiest node is knocked out. Ride the last one standing.</p></div></a>
+          <a class="also-card gtile" href="vs.html"><span aria-hidden="true">🆚</span><div><b>Knode Games VS</b><p>Pick which producers beat our node. One call a day.</p></div></a>
           <a class="also-card gtile" href="combo.html"><span aria-hidden="true">🎟️</span><div><b>Combo Card</b><p><span class="tile-tag">Preview</span> Build a card of 2 to 10 calls. Every leg must hit. Opens Mon 7 Dec.</p></div></a>
           <div class="also-card gtile soon" aria-disabled="true"><span aria-hidden="true">🛡️</span><div><b>Survivor</b><p>One producer a day, two lives.</p></div></div>
           <a class="also-more" href="games.html">See every game and your standing →</a>
@@ -142,7 +147,7 @@
         <ol class="welcome-steps">
           <li><span>1</span><div><b>Pick a horse (free, no sign-up)</b><p>Open the Race and tap a producer. You're playing as a guest on this device. Nothing to install.</p></div></li>
           <li><span>2</span><div><b>Watch it run</b><p>Each block a producer signs moves its horse forward. <span id="rt-step2">After 6 hours, the horse furthest ahead wins.</span></p></div></li>
-          <li><span>3</span><div><b>The best free players win VHP</b><p><span id="rt-free-pts">A win is 3 points and a 2nd or 3rd is 1.</span> Each week the 2 best free players win 2 VHP and 1 VHP, starting with Week 1 (Mon 16 Nov).</p></div></li>
+          <li><span>3</span><div><b>The best free players win VHP</b><p><span id="rt-free-pts">A win is 3 points and a 2nd or 3rd is 1.</span> Each week the 2 best free players win 2 VHP and 1 VHP, starting with Week 4 (Mon 16 Nov).</p></div></li>
           <li class="last"><span>4</span><div><b>Want more? Stake to share the pool</b><p>With a Koinos wallet (KOIN Vault on a phone, Kondor on a computer), stake 1 VHP or more in a game to share that game's part of the week's rewards. Your stake is never spent: take it back any time. <a href="get.html">No wallet or VHP yet?</a></p></div></li>
         </ol>
         </details>
@@ -284,7 +289,7 @@
           <li><span class="ri" aria-hidden="true">🔒</span><div><b>Stake 1 VHP or more, or play free</b><p>Staking lets you share the weekly pool. Your stake is never spent: take it back any time.</p></div></li>
           <li><span class="ri" aria-hidden="true">✍️</span><div><b>Answer the day's questions</b><p>Two rounds a day, Monday to Saturday, at <b class="lt" data-utc-hour="0">00:00 UTC</b> and <b class="lt" data-utc-hour="12">12:00 UTC</b>: 4 questions each, 8 a day, 48 a week. Each round is open for 12 hours.</p></div></li>
           <li><span class="ri" aria-hidden="true">📈</span><div><b>Climb the weekly leaderboard</b><p>Results come straight from the blocks. Check them on the Results page.</p></div></li>
-          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Collect your reward</b><p>From Week 1 (the week of 16 November) Daily Questions is paid like every vault game: each week's results are posted by Thursday <b class="lt" data-utc-hour="0">00:00 UTC</b> and are final 24 hours later, and you collect on the <a href="stake.html#g1">Stake page</a>. Rewards are paid in VHP and never expire.</p></div></li>
+          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Collect your reward</b><p>From Week 4 (the week of 16 November) Daily Questions is paid like every vault game: each week's results are posted by Thursday <b class="lt" data-utc-hour="0">00:00 UTC</b> and are final 24 hours later, and you collect on the <a href="stake.html#g1">Stake page</a>. Rewards are paid in VHP and never expire.</p></div></li>
         </ol>
         <div class="rules-good"><h3>Good to know</h3><ul>
           <li><b>Free to play.</b> Knode Games pays the Mana (the network's transaction fee) for you, within daily limits.</li>
@@ -295,10 +300,10 @@
         <h3 class="rules-more">The details</h3>
         <details class="rules-d"><summary>How rewards are worked out</summary>
       <ol class="steps">
-        <li><h3>Play free, or stake VHP</h3><p>Anyone can answer and climb the leaderboard for free, and each week the 2 best free players win 2 VHP for 1st and 1 VHP for 2nd (from Week 1, the week of 16 November; ties share; from 16 November, up to 10 wallets share a place, and if more tie, the 10 whose last point came earliest, then by wallet address, so ties at the same time go to the lower address; a free player is one who never held the minimum stake that week; from the October 2026 contract update). To share in the rewards, stake at least 1 VHP (whole numbers only), or KOIN, which is burned into VHP. A stake counts from the next week. You can withdraw any amount at any time, down to the last decimal. Withdraw part during a week and you keep playing with the lower stake; withdraw everything and you're out for that week.</p></li>
+        <li><h3>Play free, or stake VHP</h3><p>Anyone can answer and climb the leaderboard for free, and each week the 2 best free players win 2 VHP for 1st and 1 VHP for 2nd (from Week 4, the week of 16 November; ties share; from 16 November, up to 10 wallets share a place, and if more tie, the 10 whose last point came earliest, then by wallet address, so ties at the same time go to the lower address; a free player is one who never held the minimum stake that week; from the October 2026 contract update). To share in the rewards, stake at least 1 VHP (whole numbers only), or KOIN, which is burned into VHP. A stake counts from the next week. You can withdraw any amount at any time, down to the last decimal. Withdraw part during a week and you keep playing with the lower stake; withdraw everything and you're out for that week.</p></li>
         <li><h3>Answer daily questions</h3><p>48 questions a week, Monday to Saturday, in two rounds a day: 4 at 00:00 UTC (answers close at 12:00 UTC) and 4 at 12:00 UTC (answers close at 00:00 UTC), each 12 hours later and before the blocks they ask about are produced. Every correct answer is one point. Sunday is results day.</p></li>
-        <li><h3>The week closes</h3><p><strong>The vault's block rewards go to the players</strong> after a flat 5% fee: first the free players' prizes, then the rest is split across the staked games by each game's stake. Daily Questions' part goes to the top 30% of its staked players who scored at least one point, ties included. Higher places win a bigger share: 40% is shared by place × stake counted up to 10 VHP per wallet, so a small stake still wins a real share, and 60% by place × full stake, so staking more pays more. From Week 1 (the week of 16 November) Daily Questions works like every vault game: the bot closes the week, its results are posted by Thursday 00:00 UTC and are final 24 hours later. No staked winners? The free players' prize is still paid, and the rest carries into next week.</p></li>
-        <li><h3>Collect your reward</h3><p>Your reward is paid in VHP. From Daily Questions' part of the week's rewards, the top 30% of staked players who scored at least one point win, counted by headcount, and ties at the line win too. Each place weighs 1/√rank, so first place weighs the most. The pot is two baskets: 40% shared by place weight times your stake counted up to 10 VHP per wallet (so a small stake still wins a real share), and 60% shared by place weight times your full stake. Every correct answer is one point, so the week's top score is the number of questions that week (48 in a normal week). (These rules apply from the first full week after the October 2026 contract update; before it, the first basket was shared by place alone.) Unclaimed rewards wait for you, and keep producing for the pool meanwhile. Rewards from weeks before 16 November are collected on this page; from Week 1 on, on the Stake page, with every game's.</p></li>
+        <li><h3>The week closes</h3><p><strong>The vault's block rewards go to the players</strong> after a flat 5% fee: first the free players' prizes, then the rest is split across the staked games by each game's stake. Daily Questions' part goes to the top 30% of its staked players who scored at least one point, ties included. Higher places win a bigger share: 40% is shared by place × stake counted up to 10 VHP per wallet, so a small stake still wins a real share, and 60% by place × full stake, so staking more pays more. From Week 4 (the week of 16 November) Daily Questions works like every vault game: the bot closes the week, its results are posted by Thursday 00:00 UTC and are final 24 hours later. No staked winners? The free players' prize is still paid, and the rest carries into next week.</p></li>
+        <li><h3>Collect your reward</h3><p>Your reward is paid in VHP. From Daily Questions' part of the week's rewards, the top 30% of staked players who scored at least one point win, counted by headcount, and ties at the line win too. Each place weighs 1/√rank, so first place weighs the most. The pot is two baskets: 40% shared by place weight times your stake counted up to 10 VHP per wallet (so a small stake still wins a real share), and 60% shared by place weight times your full stake. Every correct answer is one point, so the week's top score is the number of questions that week (48 in a normal week). (These rules apply from the first full week after the October 2026 contract update; before it, the first basket was shared by place alone.) Unclaimed rewards wait for you, and keep producing for the pool meanwhile. Rewards from weeks before 16 November are collected on this page; from Week 4 on, on the Stake page, with every game's.</p></li>
       </ol>
         </details>
         <details class="rules-d"><summary>Anyone can move the results: voids and the VHP rule</summary>
@@ -331,8 +336,8 @@
         <div class="rules-good"><h3>Good to know</h3><ul>
           <li><b>Free.</b> No entry fee, no wager, no prize pool. Knode Games pays the Mana for picks.</li>
           <li><b>Picks are limited by your Mana, not by a count.</b> Knode Games gives every wallet a daily Mana allowance (a rolling 24 hours) for picks and everything else on the platform.</li>
-          <li><b>Two boards:</b> Staked (at least 1 VHP staked in the Race, sharing its weekly rewards) and Free play (everyone else; from Week 1, the week of Mon 16 Nov, 1st and 2nd win 2 VHP and 1 VHP).</li>
-          <li><b>Scored by the VHP Ruler</b> from Week 1 (Mon 16 Nov): each producer is measured against its own size, so a big and a small producer have the same chance to win. The horses are a live estimate; the final 1st, 2nd and 3rd come from the Ruler once the race's blocks are in (usually 1 to 2 hours). <a href="ruler.html">How the Ruler works</a>.</li>
+          <li><b>Two boards:</b> Staked (at least 1 VHP staked in the Race, sharing its weekly rewards) and Free play (everyone else; from Week 4, the week of Mon 16 Nov, 1st and 2nd win 2 VHP and 1 VHP).</li>
+          <li><b>Scored by the VHP Ruler</b> from Week 4 (Mon 16 Nov): each producer is measured against its own size, so a big and a small producer have the same chance to win. The horses are a live estimate; the final 1st, 2nd and 3rd come from the Ruler once the race's blocks are in (usually 1 to 2 hours). <a href="ruler.html">How the Ruler works</a>.</li>
           <li><b>Results are final</b> once the race's blocks are irreversible and match on two independent Koinos nodes.</li>
         </ul></div>
         <div class="rules-good rules-soon" id="race-types-soon"><h3 id="rt-soon-h">Coming soon: more races</h3><ul>
@@ -355,7 +360,7 @@
           <li><span class="ri" aria-hidden="true">👛</span><div><b>Connect, or play as a guest</b><p>Kondor, KOIN Vault, or a free guest wallet. Knode Games pays the Mana (the network fee) for your picks.</p></div></li>
           <li><span class="ri" aria-hidden="true">👆</span><div><b>Pick who signs a target</b><p>About a day of targets is always open: every block whose number is a multiple of 1,200, about one an hour. Change a pick until it locks, 100 blocks before the target.</p></div></li>
           <li><span class="ri" aria-hidden="true">📈</span><div><b>Score when you're right</b><p>A right pick scores from ×1 for the biggest producer up to ×5 for the smallest. A wrong pick scores 0.</p></div></li>
-          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Climb the weekly board</b><p>The Free play board's top 2 win 2 VHP and 1 VHP every week, from Week 1 (Mon 16 Nov). Players staked in Block X share its weekly rewards.</p></div></li>
+          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Climb the weekly board</b><p>The Free play board's top 2 win 2 VHP and 1 VHP every week, from Week 4 (Mon 16 Nov). Players staked in Block X share its weekly rewards.</p></div></li>
         </ol>
         <div class="rules-good"><h3>Good to know</h3><ul>
           <li><b>Picks are limited by your Mana, not by a count.</b> Knode Games gives every wallet a daily Mana allowance (a rolling 24 hours) for picks and everything else on the platform.</li>
@@ -371,7 +376,7 @@
           <li><span class="ri" aria-hidden="true">👛</span><div><b>Connect, or play as a guest</b><p>Kondor, KOIN Vault, or a free guest wallet. Knode Games pays the Mana (the network fee) for your bracket.</p></div></li>
           <li><span class="ri" aria-hidden="true">👆</span><div><b>Fill in your bracket</b><p>From Sunday 00:00 UTC, tap the winner of every matchup, from the first round to the champion. Your whole bracket is sent in one go, and you can change it until Monday 23:55 UTC.</p></div></li>
           <li><span class="ri" aria-hidden="true">📈</span><div><b>Score as the rounds are played</b><p>A right winner scores 1, 2, 4, 8 or 16 points by round, plus 2 for the champion.</p></div></li>
-          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Climb the weekly board</b><p>Players staked in the Bracket share its weekly rewards. On the Free play board, 1st and 2nd (with at least 1 point) win 2 and 1 VHP in each week there is a bracket, from Week 2 (the week of Mon 23 Nov).</p></div></li>
+          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Climb the weekly board</b><p>Players staked in the Bracket share its weekly rewards. On the Free play board, 1st and 2nd (with at least 1 point) win 2 and 1 VHP in each week there is a bracket, from Week 5 (the week of Mon 23 Nov).</p></div></li>
         </ol>
         <div class="rules-good"><h3>Good to know</h3><ul>
           <li><b>Ties:</b> points first, then a right champion, then more right picks, then whoever sent their bracket first.</li>
@@ -384,7 +389,7 @@
         <div class="rules-short"><h2>In short</h2><p>Draft five Koinos block producers under a salary cap, pick a captain, and score on how reliably they sign their blocks. There is a weekly league and a Weekly Rival.</p></div>
         <div class="rules-good"><h3>Good to know</h3><ul>
           <li><b>Your score:</b> the total of your five producers' day scores, with the captain counted twice.</li>
-          <li><b>Week 4 is a free test week</b> (to Sun 22 Nov, 7 PM ET). From week 5 every week is real. The full rules are on the Fantasy page.</li>
+          <li><b>Week 4 is a free test week</b> (to Sun 22 Nov, 7 PM ET). Week 5 (to Sun 29 Nov, 7 PM ET) is free play too, with no stakes. The full rules are on the Fantasy page.</li>
         </ul></div>
         <p class="rules-cta"><a class="btn btn-primary btn-big" href="fantasy.html">Go to Fantasy Producers</a></p>
       </div>
@@ -425,6 +430,8 @@
       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
+      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+      <a href="vs.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h12l-3-3"></path><path d="M20 17H8l3 3"></path></svg><span>Knode Games VS</span></a>
       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
       <a href="#results" data-view="results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
       <a href="#how" data-view="how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>

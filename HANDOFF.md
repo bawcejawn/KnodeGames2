@@ -23,7 +23,7 @@ Knode Games is a set of prediction games on the Koinos blockchain. Players stake
 - Public fairness page: `web/fairness.html`.
 - Question files are not on `main`. `bot.yml` publish is aimed at branch `game-data`. That branch does not exist yet.
 - A future desk deploy refuses a treasury that is missing or equal to the owner. The live desk was not touched.
-- No workflow has a `schedule:`. Only CI runs on a pull request. Website publish stays off until Carl sets `KG_ENABLE_PAGES` to `true`.
+- The hourly workflows have the old repository's timers (cutover, D-240; list in `docs/WORKFLOWS.md`), each behind its `*_ENABLED` switch. Only CI and the full test suite run on a pull request. Website publish stays off until Carl sets `KG_ENABLE_PAGES` to `true`.
 - `.ai/` is not in this repo. `/site/` redirects are gone. One-off fund scripts and finished v6 rehearsals are gone. See [docs/DROPPED.md](docs/DROPPED.md).
 - Contract builds: CI rebuilds all five (`npm run test:hashes`) against `contracts/hashes.json`. Vault, desk, race and sponsor match the live code. Picks builds `92d555d0…`, the planned Picks v2; live v1 is `700c296a…`.
 - `npm test` passes **51** tests: question scorer, early-view, desk treasury rule, workflow guard, no timers, VHP-swing wording, Inter font, static page checks. `npm run lint` passes. `npm audit --audit-level=high` is clean (moderate findings remain).
@@ -78,7 +78,7 @@ node tools/ci/assemble-site.mjs
 
 CI is `.github/workflows/ci.yml`. It runs on `pull_request` and `workflow_dispatch` only. One job. **The status check name Carl should require is `ci`.** Workflow name is also `CI`.
 
-`npm run test:hashes` builds the five contracts, each from its own folder and `package-lock.json` (they are not workspaces: the contract builder needs its tools inside the contract folder), and checks each wasm sha256 against `contracts/hashes.json`, plus the vault's pinned withdrawals-only build (`04c27c1a…`). It runs on Linux and Windows (on your PC: `npm run test:hashes`; it needs yarn, sends nothing). CI runs it. `npm run test:contracts` runs each contract's own unit tests (as-pect). They stop at start-up today (a `binaryen` RuntimeError, on Node 20 and 22), and the old repo's CI never ran them either. Get them running before the v6.2 vault change. Neither command touches a chain.
+`npm run test:hashes` builds the five contracts, each from its own folder and `package-lock.json` (they are not workspaces: the contract builder needs its tools inside the contract folder), and checks each wasm sha256 against `contracts/hashes.json`, plus the vault's pinned withdrawals-only build (`04c27c1a…`). It runs on Linux and Windows (on your PC: `npm run test:hashes`; it needs yarn, sends nothing). CI runs it. `npm run test:contracts` runs each contract's own unit tests (as-pect). CI runs them on every push and pull request that touches a contract (Contract tests, Desk, Picks, Race and Sponsor contract tests), with the vault's and desk's upgrade-compatibility tests; a skipped compatibility test fails the run. (The "binaryen" start-up error was a wrong path in the vault's test config, fixed.) Neither command touches a chain.
 
 ## Remaining work
 

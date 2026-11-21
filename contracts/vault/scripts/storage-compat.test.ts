@@ -22,7 +22,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { Signer } from "koilib";
-import { SimChain } from "../../bot/chain.ts";
+import { SimChain } from "../../../bot/chain.ts";
 
 const OLD = "contracts/vault/test-fixtures/kpred-live-test-build.wasm";
 const NEW = "contracts/vault/build/sim/contract.wasm";

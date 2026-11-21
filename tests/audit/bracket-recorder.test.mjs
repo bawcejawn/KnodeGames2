@@ -285,7 +285,7 @@ const shapeOk = (dir, opt) => { try { checkRun(dir, opt); return true; } catch (
 
 test("workflow: records the bracket with the same prev/out/race folders and publishes only its own files", () => {
   assert.ok(bracketPy, "a bracket shape check in the publish job");
-  assert.match(yml, /run: npm run bracket\n\s+env:\n\s+RPC: .*\n\s+RPC_CHECK: .*\n\s+BRACKET_PREV: \$\{\{ runner\.temp \}\}\/prev\/bracket\n\s+BRACKET_OUT: \$\{\{ runner\.temp \}\}\/games-data\/bracket\n/);
+  assert.match(yml, /run: npm run bracket\n\s+env:\n\s+RPC: .*\n\s+RPC_CHECK: .*\n\s+RPC_SPARE: \$\{\{ vars\.RPC_SPARE \}\}.*\n\s+BRACKET_PREV: \$\{\{ runner\.temp \}\}\/prev\/bracket\n\s+BRACKET_OUT: \$\{\{ runner\.temp \}\}\/games-data\/bracket\n/);
   assert.match(yml, /"\$IN"\/bracket\/\*\.json "\$IN"\/bracket\/vault\/\*\.json/, "the push loop takes the Bracket's files (vault files write-once)");
   assert.match(yml, /git show "FETCH_HEAD:bracket\/vault\/\$f" > "\$RUNNER_TEMP\/prev\/bracket\/vault\/\$f"/);
   assert.match(yml, /\/usr\/bin\/python3 - "\$IN\/bracket" "\$PUB\/bracket" "\$HELD" <<'PY'/);

@@ -439,11 +439,11 @@ test("the page: scripts in order, the shared board, reads only the bracket files
   assert.match(page, /<script src="names\.js"><\/script>\s*<script src="stake-panel\.js"><\/script>\s*<script src="vhp-standard\.js"><\/script>\s*<script src="bracket-math\.js"><\/script>\s*<script src="board\.js"><\/script>\s*<script src="bracket\.js"><\/script>/);
   assert.match(page, /<link rel="stylesheet" href="board\.css">/);
   const csp = page.match(/Content-Security-Policy" content="([^"]+)"/)[1];
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/games-data\//);
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/blocks-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/blocks-data\//);
   assert.doesNotMatch(page, /<script>(?!\s*<\/script>)|\son[a-z]+="/i, "no inline scripts or handlers");
   const urls = [...js.matchAll(/"(https:\/\/[^"]+)"/g)].map((m) => m[1]);
-  for (const u of urls) assert.ok(/^https:\/\/(raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/(games-data\/bracket\/|blocks-data\/recent-blocks\.json)|koinos\.armana\.io|api\.koinosblocks\.com|koinosscan\.com\/address\/)$/.test(u), u);
+  for (const u of urls) assert.ok(/^https:\/\/(raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/(games-data\/bracket\/|blocks-data\/recent-blocks\.json)|koinos\.armana\.io|api\.koinosblocks\.com|koinosscan\.com\/address\/)$/.test(u), u);
   const body = page.slice(page.indexOf("<body>"));
   assert.doesNotMatch(body + js, /bawcejawn\/Knode\/|bawcejawn\.github\.io\/Knode|api\.koinos\.io/, "no old URLs (#E-3 L-15)");
   assert.match(js, /new URL\("picks-data\/deployment\.json", ROOT\)/);
@@ -468,7 +468,7 @@ test("the page says what the contract and recorder do (sizes, lock, scoring, tie
     "32 or more play Tuesday to Saturday, 16 to 31 Wednesday to Saturday, 8 to 15 Thursday to Saturday", "Under 8, there is no bracket that week", "an exact tie goes to the lower seed",
     "1 point in the first round, then 2, 4, 8 (and 16 in a 32-producer bracket), plus 2 for the right champion", "ties go to a right champion, then more right picks",
     "the lower of that average and its average at the last seeding (a producer that wasn't there counts zero)", "No rule can stop a producer from losing on purpose", "averaged over its round's day, is less than half its seeding VHP", "If both seeds are under half, the blocks decide",
-    "Brackets sent in the same block share a place", "On the Free play board, 1st and 2nd at the end of the week win 2 and 1 VHP, from Week 2",
+    "Brackets sent in the same block share a place", "On the Free play board, 1st and 2nd at the end of the week win 2 and 1 VHP, from Week 5",
     "it never forfeits, and it is judged on a rate that no deposit or withdrawal can move"]) assert.ok(page.includes(s), s);
   assert.match(page, /Disclosure: a Knode Games node is in this bracket/);
   const main = page.slice(page.indexOf("<main"), page.indexOf("</main>"));
@@ -478,8 +478,8 @@ test("the page says what the contract and recorder do (sizes, lock, scoring, tie
   // owner 14 Nov: free prize ON from Week 2 (vault week 5), so the page, the board and Leaders say so, and nothing still says no prize
   const games = JSON.parse(read("web/games.json")).games.find((g) => g.id === "bracket");
   for (const [where, t] of [["page", page], ["bracket.js", js], ["games.json", JSON.stringify(games)], ["index.html", read("web/index.html")]]) assert.doesNotMatch(t, /pays no VHP prize|no free prize|Producer Bracket share its weekly bucket/i, where);
-  assert.match(games.board.free.prize, /^1st and 2nd at the end of the week win 2 and 1 VHP \(from Week 2, the week of Mon 23 Nov; at least 1 point\)\.$/);
-  assert.match(js, /free: \{ show: 6, prize: "1st and 2nd at the end of the week win 2 and 1 VHP \(from Week 2/);
+  assert.match(games.board.free.prize, /^1st and 2nd at the end of the week win 2 and 1 VHP \(from Week 5, the week of Mon 23 Nov; at least 1 point\)\.$/);
+  assert.match(js, /free: \{ show: 6, prize: "1st and 2nd at the end of the week win 2 and 1 VHP \(from Week 5/);
 });
 
 // ── the page and the recorder score the same way ──

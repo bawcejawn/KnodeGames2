@@ -3,6 +3,8 @@
    file the recorder (bot/games/combo.ts) will score with, and draws a share image on the page.
    Sending a card waits for the Combo upgrade of the Picks contract (CARD choice type): until then the page is a
    builder and never sends anything. Nothing leaves the browser except reads of public data. */
+import * as SP from "./js/lib/send-picks.js";
+
 (() => {
   "use strict";
   const C = window.KCombo, M = window.KRaceMath, X = window.KBlockX;
@@ -10,8 +12,8 @@
 
   const lib = window.koilib || window.koinos || window;
   const RPC = "https://koinos.armana.io";
-  const RACE_DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/";
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/combo/";
+  const RACE_DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/combo/";
   const EXPLORER = "https://koinosscan.com/address/";
   const PAGE = "https://knodegames.com/combo.html";
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Swap" };
@@ -319,6 +321,7 @@
     } catch { return; }
     if (W) W.init({ provider, chainId: dep && dep.chainId, payer: dep && dep.payer, sponsor: dep && dep.sponsor, game: dep && dep.contract, onChange: () => loadMine() });
     $("cards-soon").hidden = true;
+    const pn = $("practice-note"); if (pn) pn.hidden = false;
     await loadMine();
   }
   /** Today's 3 cards, today's usage, and the stake in the Combo Card (from the Vault, once it can tell). */
@@ -441,6 +444,20 @@
     sending = true; render();
     try { await sendCardOnce(); } finally { sending = false; await loadMine(); render(); }
   }
+  /** The shared card's question as a small pop-up (no browser dialog). Resolves with the chosen button's value; Escape or a click outside answers "keep". */
+  function popup(title, lines, buttons) {
+    return new Promise((done) => {
+      const box = el("div", { class: "cb-box", role: "dialog", "aria-modal": "true", "aria-label": title }), wrap = el("div", { class: "cb-modal" }, box);
+      const end = (v) => { document.removeEventListener("keydown", onKey); wrap.remove(); done(v); };
+      const onKey = (e) => { if (e.key === "Escape") end(false); };
+      wrap.addEventListener("click", (e) => { if (e.target === wrap) end(false); });
+      document.addEventListener("keydown", onKey);
+      box.append(el("h3", { text: title }), ...lines.map((l) => el("p", { text: l })),
+        el("div", { class: "acts" }, ...buttons.map(([t, v], i) => el("button", { class: i === 0 ? "btn" : "btn alt", type: "button", onclick: () => end(v) }, t))));
+      document.body.append(wrap);
+      const keep = box.querySelectorAll("button"); (keep[keep.length - 1] || box).focus();
+    });
+  }
   async function sendCardOnce() {
     const who = me(), slot = targetSlot();
     if (!cardsLive || !who || slot === null || legs.length < C.MIN_LEGS) return;
@@ -466,11 +483,24 @@
     // Legs whose lock is under 2 minutes away may land after it: ask for a fresh card instead of a failed send.
     if (C.cardLockTime(legs, head) - Date.now() < 120000) { toast = "Your card locks in under 2 minutes; remove the leg that's about to lock."; render(); return; }
     const round = C.slotRound(day, slot), { sorted, pot } = cardStats();
-    toast = `Confirm in ${W.label ? W.label() : "your wallet"}…`; render();
     try {
       const { operation } = await picksC.functions.pick({ player: who, game: C.GAME_ID, round: String(round), producers: [], number: "0",
         legs: sorted.map((l) => ({ code: l.code, round: String(l.round), producer: l.producer })) }, { onlyOperation: true });
-      await W.send(`Combo card ${slot + 1}: ${sorted.length} legs, ${pts(pot.pts)} pts if every leg hits`, [operation]);
+      // The shared card (D-255 / D-278 / D-307): a change shows "your pick this round" and is paid with the player's own Mana.
+      const legKey = (l) => `${Number(l.code)}:${Number(l.round)}:${l.producer}`;
+      const existing = editing !== null && slots[editing] ? slots[editing].legs.map(legKey) : null;
+      const open = () => sameDay() && C.cardLockTime(legs, head) - Date.now() >= 120000;
+      const key = `${C.GAME_ID}:${round}`, label = `Combo card ${slot + 1}: ${sorted.length} legs, ${pts(pot.pts)} pts if every leg hits`;
+      const plan = SP.plan([{ key, label, op: operation, existing, wanted: sorted.map(legKey), open: open() }],
+        { maxChanges: C.MAX_CHANGES, changesUsed: { [key]: editing !== null && slots[editing] ? Number(slots[editing].changes || 0) : 0 } });
+      if (plan.same.length) { toast = "That's already your card."; render(); return; }
+      if (plan.refused.length) { toast = plan.refused.some((r) => r.why === "no changes left") ? "That card has been changed 3 times already." : "A leg locked before your card was sent. Nothing was sent."; render(); return; }
+      const legText = (k) => { const [c, r, pr] = String(k).split(":"); return `${c === "4" ? "block" : "race"} leg ${r} ${nameOf(pr)}`; };
+      const ask = (lines) => popup("Change your card?", lines, [["Change it", true], ["Keep my card", false]]);
+      const cannot = (lines) => popup("Can't change this card", lines, [["OK", false]]);
+      if (!(await SP.confirm(plan, ask, legText, { guest: W.kind === "guest", cannot }))) { toast = "Nothing was sent."; render(); return; }
+      toast = `Confirm in ${W.label ? W.label() : "your wallet"}…`; render();
+      await SP.send(W, plan, { label, stillOpen: open });
       toast = "Sent. Checking the chain…"; render();
       let seen = false;
       for (let t = 0; t < 10 && !seen; t++) {

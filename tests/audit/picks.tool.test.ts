@@ -73,7 +73,11 @@ test("the Block X game config: game 2 on mainnet is exactly the plan's settings;
   assert.throws(() => buildGameConfig({ ...base, name: "x".repeat(41) }), /1 to 40 bytes/);
   const mainnet = network(false);
   // Combo chat, 13 Nov: Combo Card (game 8, a card game, announced only after Picks v2) joins Fantasy's games 4 and 5; see its own test.
-  assert.equal(mainnet.games.length, 6, "on mainnet the tool registers Who Signs Block X (game 2, hourly game 12), Producer Bracket (game 9), Fantasy (games 4 and 5) and Combo Card (game 8)");
+  // Owner D-246, 18 Nov: Survivor (game 3) joins; its exact values are pinned in picks-survivor-game3.test.ts.
+  // Owner D-290/D-302, 19 Nov: Over Under (game 16) and Knode Games VS (game 17) join; pinned in picks-overunder-vs-16-17.test.ts.
+  // Last Node Standing (game 13) is pinned in picks-game13.test.ts.
+  assert.equal(mainnet.games.length, 10, "on mainnet the tool registers Who Signs Block X (game 2, hourly game 12), Producer Bracket (game 9), Fantasy (games 4 and 5), Combo Card (game 8), Survivor (game 3), Last Node Standing (game 13), Over Under (game 16) and Knode Games VS (game 17)");
+  assert.deepEqual(mainnet.games.map((g: any) => g.id), [2, 12, 9, 4, 5, 8, 3, 13, 16, 17], "no existing game is dropped or moved (Repo Lens #J-3, J3-1)");
   assert.deepEqual(buildGameConfig(mainnet.games[0]), c);
   assert.deepEqual(buildGameConfig(mainnet.games[1]), { id: 12, name: "Who Signs Block X (hourly)", kind: 1, list_size: 1, number_min: "0", number_max: "0", lock_mode: 1,
     round_size: "1200", round_offset: "0", lead: "100", ahead: "14500", max_picks_per_day: 48, max_changes: 1, enabled: true }, "R-BX-25: every 1,200 blocks, 48 picks a day; owner 14 Nov: 12 hours ahead (on chain by tighten 12 --ahead 14500)");
@@ -325,9 +329,13 @@ test("Repo Lens #D-12 F-1: owner-propose proposes only the pinned \"nextOwner\" 
   assert.throws(() => planPropose(view(), MAINNET_OWNER, OTHER, NOW, {}, NEW), /is not the planned new owner/);
   assert.match(planPropose(view(), MAINNET_OWNER, NEW, NOW, {}, NEW).join("\n"), new RegExp(groups4(NEW).replace(/ /g, " ")));
   assert.equal(groups4("1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd"), "1LMV 8EcR FLFG RMFS C7rK w3eQ 3PSz LRRF md");
+  // Owner D-268 / D-417: the Picks handover comes LAST, after the v2 upload and every Picks apply (earliest propose
+  // Wed 25 Nov). Until then no "nextOwner" is pinned, so upgrade-schedule and upgrade-upload are not blocked by a
+  // planned handover. It is pinned again, to the cold owner 1LMV8E…, by its own reviewed PR just before the propose.
   const dep = JSON.parse(fs.readFileSync("picks-data/deployment.json", "utf8"));
-  assert.equal(dep.nextOwner, "1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd", "the planned cold owner (KEYS_AND_ROLES.md), pinned in the deployment file");
-  assert.equal(network(false).nextOwner, dep.nextOwner);
+  assert.equal(dep.nextOwner, undefined, "no Picks handover is planned before the v2 upload (D-268, D-417)");
+  assert.equal(network(false).nextOwner, null);
+  assert.equal(handoverBlocksUpgrade({ owner: MAINNET_OWNER }, network(false).nextOwner), null, "so the v2 upgrade is not blocked");
 });
 
 test("Repo Lens #D-12 F-2: the read-back waits for a node one block behind; never catching up still saves the primary's owner as unchecked", async () => {

@@ -148,8 +148,8 @@ test("the cap keeps skill ahead of luck (seeded simulation on a 17-producer fiel
 test("blockx.html: strict CSP with the games-data and race-data branches, scripts from the site, no HTML sinks", () => {
   const h = read("web/blockx.html"), js = read("web/blockx.js");
   const csp = h.match(/http-equiv="Content-Security-Policy" content="([^"]*)"/)[1];
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/games-data\//);
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/race-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/race-data\//);
   assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/);
   assert.doesNotMatch(h, /<script>(?!<\/script>)|\son[a-z]+="/, "no inline scripts or handlers");
   const order = ["guest.js", "wallet.js", "header-wallet.js", "nav.js", "race-math.js", "blockx-math.js", "blockx.js"].map((f) => h.indexOf(`<script src="${f}"></script>`));
@@ -164,8 +164,8 @@ test("blockx.html: strict CSP with the games-data and race-data branches, script
   // (R-BX-14, as the Race #86): never "once the vault is live" any more.
   assert.match(h, /<script src="board\.js"><\/script>/);
   assert.match(js, /free: \{ show: 6/);
-  assert.match(js, /2 and 1 VHP, from Week 1, the week of Mon 16 Nov/);
-  assert.match(h, /paid from Week 1 \(the week of Mon 16 Nov\)/);
+  assert.match(js, /2 and 1 VHP, from Week 4, the week of Mon 16 Nov/);
+  assert.match(h, /paid from Week 4 \(the week of Mon 16 Nov\)/);
   for (const src of [h, js]) assert.doesNotMatch(src, /(paid )?once the (Knode Games )?vault is live\./);
 });
 
@@ -174,7 +174,7 @@ test("blockx-testnet.html: testnet only — its node and data branch, no mainnet
   const h = read("ops/testnet/blockx-testnet.html");
   const csp = h.match(/http-equiv="Content-Security-Policy" content="([^"]*)"/)[1];
   const conn = csp.match(/connect-src ([^;]*)/)[1].trim().split(/\s+/);
-  assert.deepEqual(conn, ["'self'", "https://testnet.koinosfoundation.org", "https://raw.githubusercontent.com/bawcejawn/KnodeGames/testnet-data/"]);
+  assert.deepEqual(conn, ["'self'", "https://testnet.koinosfoundation.org", "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/testnet-data/"]);
   assert.match(h, /<meta name="kg-network" content="testnet">/);
   assert.match(h, /<meta name="robots" content="noindex, nofollow">/);
   assert.match(h, /TESTNET · test KOIN only/);

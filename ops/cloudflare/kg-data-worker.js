@@ -3,7 +3,7 @@
 // paste this whole file -> Deploy. Steps: docs/capacity/OWNER-STEPS.md. Tests: tests/audit/capacity-worker.test.mjs.
 //
 // 1. Data mirror (A3). GET or HEAD /<branch>/<file>.json returns the same file, byte for byte, from
-//    https://raw.githubusercontent.com/bawcejawn/KnodeGames/<branch>/<file>.json, kept for 5 minutes (the same 5 minutes
+//    https://raw.githubusercontent.com/bawcejawn/KnodeGames2/<branch>/<file>.json, kept for 5 minutes (the same 5 minutes
 //    GitHub's raw server keeps it). Players' pages read game files from here, so GitHub sees about one request per file
 //    per 5 minutes per Cloudflare location however many players there are. It never changes a file: pages still show
 //    exactly what the recorders published (scores, cards and voids only from the published game files).
@@ -13,8 +13,8 @@
 //    for the live block strip and block counts only, never for scores.
 // Refused: other methods and paths, branches not listed, anything but .json, "..", a PUT without the right token or
 // with a body that isn't a small, well-formed live file. No keys are kept in this file: LIVE_TOKEN is a Worker secret.
-const BRANCHES = new Set(["games-data", "race-data", "blocks-data", "names-data", "stats-data", "prize-settings"]);
-const ORIGIN = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/";
+const BRANCHES = new Set(["games-data", "race-data", "blocks-data", "names-data", "stats-data", "prize-settings", "game-data"]);   // game-data: the question files (KnodeGames2)
+const ORIGIN = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/";
 const TTL = 300;               // seconds a mirrored file is kept
 const LIVE_MAX = 32 * 1024;    // bytes; a real live file is about 3 KB
 const LIVE_CACHE = "public, max-age=4";

@@ -53,15 +53,15 @@ const NETWORK_RPC = process.env.RPC || "https://koinos.armana.io";
 // HTML error page). The check is skipped only when none of them answers.
 const NETWORK_FALLBACKS = (process.env.HEAL_RPC_FALLBACKS ?? "https://api.koinos.io,https://api.koinosblocks.com").split(",").map((x) => x.trim()).filter(Boolean);
 const GITHUB_API = process.env.HEAL_GITHUB_API || "https://api.github.com";
-const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames";
+const REPO = process.env.HEAL_REPO || "bawcejawn/KnodeGames2";
 const BEHIND = 200;                    // blocks (~10 minutes at ~3 s per block)
 const COOLDOWN_MS = 50 * 60_000;       // wait after a restart before restarting the same node again
 const MAX_HEALS = 3, WINDOW_MS = 6 * 3600_000;
 const NAG_MS = 3 * 3600_000;           // repeat an "I can't fix this" email at most every 3 hours
 // Auto-repair (block-store crash loop → copy a healthy node's block data over the broken node's).
 const LOCK = path.join(DIR, "repair.lock");
-const TASK_INFO = path.join(DIR, "heal-task.json");   // written by node\install-heal.ps1 (the task's time limit)
-const REPAIR_SCRIPT = process.env.HEAL_REPAIR_SCRIPT || path.join(ROOT, "node", "repair-node-data.ps1");
+const TASK_INFO = path.join(DIR, "heal-task.json");   // written by ops\node\install-heal.ps1 (the task's time limit)
+const REPAIR_SCRIPT = process.env.HEAL_REPAIR_SCRIPT || path.join(ROOT, "ops", "node", "repair-node-data.ps1");   // ops\node\ in KnodeGames2
 const POWERSHELL = process.env.HEAL_POWERSHELL || "powershell.exe";
 const SOURCE_ORDER = ["desk", "game", "personal"];
 const SOURCE_MAX_BEHIND = 5;            // a source must be this close to the network, two checks in a row

@@ -5,7 +5,7 @@
   "use strict";
   const G = window.KGolf;
   if (!G || typeof document === "undefined" || !document.getElementById("card-rows")) return;
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/golf/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/golf/";
   const EXPLORER = "https://koinosscan.com/address/";
   const $ = (id) => document.getElementById(id);
   const el = (tag, attrs = {}, ...kids) => {
@@ -25,7 +25,7 @@
   const say = (t) => { $("status").textContent = t; $("status").hidden = !t; };
   async function fetchJson(url) { const r = await fetch(url, { cache: "no-cache" }); if (!r.ok) throw new Error(String(r.status)); return r.json(); }
   const wName = (w) => `W${String(w).padStart(3, "0")}.json`;
-  // What players call a week (D-063): weeks.js, "Week 1" = the week of Mon 16 Nov (vault week 4); Mon 9 Nov is the "Test week".
+  // What players call a week (D-063): weeks.js, "Week 4" = the week of Mon 16 Nov (vault week 4); Mon 9 Nov is the "Test week".
   const weekLabel = (w) => (window.KWeeks && typeof window.KWeeks.label === "function" ? window.KWeeks.label(w) : `Week ${w}`);
 
   let games = new Map();          // id → { name, href }

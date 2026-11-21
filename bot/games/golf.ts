@@ -38,6 +38,7 @@
  *   npm run golf     (RPC, RPC_CHECK, GOLF_PREV, GOLF_OUT, RACE_DATA, GAMES_DATA, GOLF_STAKED_FROM_WEEK)
  */
 import { Provider, Contract } from "koilib";
+import { nodeProvider } from "../node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
@@ -1076,7 +1077,7 @@ export async function run(o: Opts) {
 }
 
 // ── npm run golf -- status: a read-only look at what Block Golf has published (for the owner and the admin page) ──
-const PUBLISHED = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/golf/";
+const PUBLISHED = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/golf/";
 /** One line per week and per hole, in plain words, from the published index and week files. Reads only. */
 /** Text from the published files, made safe for a terminal (B13-B3): no control or bidi characters, at most 200. */
 export const plain = (x: unknown): string => String(x ?? "").replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").slice(0, 200);
@@ -1135,6 +1136,6 @@ if (isMain && process.argv[2] !== undefined && process.argv[2] !== "status") {
     // Repo Lens #J-13 J13-5: the two must be different nodes, or the check means nothing (said aloud in the run's problems).
     ...(E.GOLF_HISTORY_RPC === "off" ? {} : { hist: new Provider([E.GOLF_HISTORY_RPC || "https://api.koinos.io"]), histCheck: new Provider([E.GOLF_HISTORY_RPC_CHECK || RPC]),
       histSame: (E.GOLF_HISTORY_RPC || "https://api.koinos.io").replace(/\/+$/, "") === (E.GOLF_HISTORY_RPC_CHECK || RPC).replace(/\/+$/, "") }),
-    p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null,
+    p: nodeProvider(RPC), check: RPC_CHECK ? nodeProvider(RPC_CHECK) : null,
   }).catch((e) => { console.error(e); process.exit(1); });
 }

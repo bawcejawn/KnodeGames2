@@ -12,7 +12,7 @@
   "use strict";
   const G = typeof globalThis !== "undefined" ? globalThis : window;
 
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/names-data/names.json";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/names-data/names.json";
   const PREFIX = "Knode Games name: ";
   const ADDR = /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/;
   const DAY = 86400000;
@@ -27,8 +27,15 @@
   // ═══════════════ rules (pure) ═══════════════
   /** The form used to compare names: no case, no spaces or . - _ ', and lookalikes made the same (0/O, 1/l/I, 5/S…). */
   // Letter pairs that read as one letter (audit PN-13: "Arnnana" beside "Armana") are folded first, then digits.
+  // Audit AB-062: Unicode first. NFKD turns full-width and styled letters into plain ones and splits accents off
+  // (dropped); Cyrillic and Greek letters that look Latin become that Latin letter ("Кnode" = "Knode"); everything that
+  // isn't a letter or digit goes (punctuation, symbols, zero-width and direction marks), not only space . - _ '.
+  const CONFUSABLE = { "а": "a", "в": "b", "е": "e", "ё": "e", "з": "3", "к": "k", "м": "m", "н": "h", "о": "o", "р": "p", "с": "c",
+    "т": "t", "у": "y", "х": "x", "і": "i", "ї": "i", "ј": "j", "ѕ": "s", "ԁ": "d", "ԛ": "q", "ԝ": "w", "ɡ": "g", "ı": "i",
+    "α": "a", "β": "b", "ε": "e", "η": "n", "ι": "i", "κ": "k", "ν": "n", "ο": "o", "ρ": "p", "τ": "t", "υ": "u", "χ": "x", "ς": "s", "һ": "h", "ү": "y" };
   function fold(name) {
-    let s = String(name).toLowerCase().replace(/[ .\-_']/g, "");
+    let s = String(name).normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
+    s = s.replace(/[^\x00-\x7f]/g, (c) => CONFUSABLE[c] || c).replace(/[^\p{L}\p{N}]/gu, "");
     s = s.replace(/cl/g, "d").replace(/nn/g, "m").replace(/rn/g, "m").replace(/ri/g, "n").replace(/ii/g, "u").replace(/vv/g, "w");
     const LOOK = { 0: "o", 1: "l", i: "l", 2: "z", 3: "e", 4: "a", 5: "s", 6: "g", 7: "t", 8: "b", 9: "g" };
     s = s.replace(/[0-9i]/g, (c) => LOOK[c]);
@@ -105,7 +112,17 @@
   const emptyDb = () => ({ v: 1, updated: "", names: {}, hidden: {}, nicknames: {}, pools: {} });
   /** A block producer's pool name (the pool contract's own get_pool_params name), shown as it is: plain text, at most
    *  48 characters, never one imitating Knode Games or Koinos or shaped like an address. */
+  // Audit AB-062: also no invisible or format characters of any kind (\p{Cf}: soft hyphen, word joiner, BOM …), no
+  // private-use or unassigned ones, no space but the plain one, and no mix of Latin with Cyrillic or Greek letters
+  // ("Armаna" with a Cyrillic а beside the real "Armana"). A name all in one script is fine.
+  // Repo Lens J18-1: a name with any Latin letter must also fold to plain a-z / 0-9 (after the usual European letters that
+  // don't split into a base letter + accent), so lookalikes from any other script or Latin's own extensions (small
+  // capitals ᴏ, alpha ɑ; Armenian օ, Coptic ⲟ, Cherokee Ꮶ …) can't sit beside Latin. "Bjørn", "Łódź", "Straße" still show.
+  const LATIN_PLAIN = { "ß": "ss", "æ": "ae", "œ": "oe", "ø": "o", "ł": "l", "đ": "d", "ð": "d", "þ": "th", "ħ": "h", "ŋ": "n" };
+  const plainLatin = (n) => !/[^a-z0-9]/.test(fold(n).replace(/[ßæœøłđðþħŋ]/g, (c) => LATIN_PLAIN[c]));
+  const mixedScript = (n) => /\p{Script=Latin}/u.test(n) && (/[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(n) || !plainLatin(n));
   const okPool = (n) => typeof n === "string" && n.length >= 1 && n.length <= 48 && n.trim() === n && !/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(n)
+    && !/[\p{Cf}\p{Co}\p{Cn}\p{Zl}\p{Zp}]|(?! )\p{Zs}/u.test(n) && !mixedScript(n)
     && (n.match(/[\p{L}\p{N}]/gu) || []).length >= 2 && !reserved(n) && !addressLike(n);
   /** An on-chain Koinos nickname as the Nicknames contract allows it (shown with an @). Reserved ones are skipped. */
   const okNick = (n) => typeof n === "string" && /^[a-z0-9][a-z0-9.-]{0,31}$/.test(n) && !reserved(n) && !addressLike(n);

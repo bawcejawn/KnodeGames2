@@ -10,8 +10,8 @@ A parlay game for points, never money. A card holds 2 to 10 legs (owner, D-180) 
 - **Block X legs:** "producer P signs target block T" (T a multiple of 2,400).
 
 Every leg must hit. A miss scores 0, and a void leg is dropped. Points are base[legs] × the product of the leg worths,
-with base 3, 7, 15, 30, 60, 120, 240, 480, 960 for 2–10 legs. Each leg's worth is clamp(0.5 ÷ chance, 0.25, 3), priced when the card is
-sent. The limits are 3 cards a UTC day, each changeable 3 times.
+with base 3, 7, 15, 30, 60, 120, 240, 480, 960 for 2–10 legs. Each leg's worth is clamp(0.5 ÷ chance, 0.25, 3) for a race leg and
+clamp(0.25 ÷ chance, 0.25, 6) for a Block X leg (D-188), priced when the card is sent. The limits are 3 cards a UTC day, each changeable 3 times.
 
 A week is each player's best 10 cards. There are two boards: Staked, and Free play (anyone, guests included). The
 Staked board earns Combo's share of the Vault's weekly reward. The Free play board pays no VHP until the owner switches
@@ -135,7 +135,8 @@ This round (Thu 12 Nov), on top of `ba2d9b30`:
 ## 4. Key decisions
 | Ref | Decision |
 |---|---|
-| Build 8 brief, D-180 | 2–10 legs (D-180, 14 Nov; was 2–6); worth clamp 0.25–3; 3 cards/day, 3 changes; no points cap; locks race 25 min, Block X 500 blocks; ≥ 1 point to count |
+| Build 8 brief, D-180 | 2–10 legs (D-180, 14 Nov; was 2–6); worth clamp 0.25–3 (race legs); 3 cards/day, 3 changes; no points cap; locks race 25 min, Block X 500 blocks; ≥ 1 point to count |
+| D-188 | Block X leg worth = 0.25 ÷ chance, ×0.25 to ×6 (owner, 15 Nov); race legs unchanged. The publish job's `WORTH_MAX` matches `WORTH100` |
 | D-060 | Cards on mainnet wait for Picks v2 |
 | RL-15 / RL-16 | A horse missing from the field = void leg |
 | C-W-3 / FC-13 | One sponsor row for picks and cards: 0.2 → 0.25 Mana at Combo launch |
@@ -165,19 +166,23 @@ This round (Thu 12 Nov), on top of `ba2d9b30`:
   - The verify job and the publish job refuse a day whose `ruled` mark isn't the switch's.
 - **Tied to the Race (Repo Lens #G-37):** Combo is never on the ruler before the Race. The recorder, the verify job and
   the publish job each refuse `COMBO_RULER_FROM_WEEK` < `RACE_RULER_FROM_WEEK`, or a Combo switch with the Race's unset.
-- **A ruler card that never comes is an outage, not a void (G37-1).** In a ruled week, a race leg is given up
-  ("unresolved") only once the Race's ruler has published a card for a later race. Until then the card waits, with an
-  error, as for any other source outage (RL-9). If the race is final in the W file but its ruler card never comes:
-  - **when the Race skips it** (its week's end + the Race's `RULER_GRACE`, 48 h; owner, 15 Nov; Repo Lens #G-91
-    section 7), the leg is given up in the same run, provided the Race's published ruler file lists the race with no
-    card. Combo never counts a race the Race skipped, and never gives up earlier than the Race;
-  - **in any case 6 h before the card's week's Vault window closes** (G51-1), so the week keeps its Vault file. This
-    comes first only for a race in the next vault week (a Sunday card's Monday race), or when the Race publishes no
-    ruler file at all (its outage).
+- **A ruler card that never comes is an outage, not a void.** In a ruled week, a race leg whose ruler card hasn't
+  come waits, with an error, as for any other source outage (RL-9). At the deadline it is given up ("unresolved"):
+  - **when the Race itself has skipped the race** (Repo Lens #J-10, J10-2): the Race's own final Vault file for the
+    race's week (`race-data` `vault/W<week>.json`) lists the race in `skipped`. Combo reads it in the same hour, so it
+    never counts a race the Race skipped and never gives up one the Race counts (for example a ruler card that landed
+    while the Race's week was held). The three Combo jobs copy those files from `race-data`;
+  - **otherwise 6 h before the card's week's Vault window closes** (G51-1), if the race is final in the W file, so the
+    week keeps its Vault file. That covers a next-week race (a Sunday card's Monday race), a Race week still held then,
+    and the Race's own outage.
 
-  `ruledGiveUp` in `bot/games/combo-score.mjs`; test `tests/audit/combo-ruler-grace.test.mjs`.
-- **At launch:** N = 7 (vault week 7, Mon 7 Dec), set by Sun 6 Dec 23:59 UTC (6:59 PM ET), with or before
-  `COMBO_ENABLED`. `RACE_RULER_FROM_WEEK` must be 7 or lower. Check first with `node tools/vhp-ruler-switch.mjs 7`.
+  Before #J-10 it was predicted from the clock (week end + the Race's `RULER_GRACE`, 48 h, #338; and G37-1, a ruler card
+  for a later race). `ruledGiveUp` and `raceSkipped` in `bot/games/combo-score.mjs`; the publish job holds a card given
+  up any earlier (its own copy, J10-4). Tests: `tests/audit/combo-ruler-grace.test.mjs`,
+  `tests/audit/combo-ruler-grace.repolens-j10.test.mjs`.
+- **At launch (Plan A, D-207; O-28):** N = 6, so free play (vault week 6, from Mon 30 Nov) is on the ruler from its
+  first week, as the Race. Set it before week 6 starts (by Sun 29 Nov 6 PM ET), with or before `COMBO_ENABLED`.
+  `RACE_RULER_FROM_WEEK` (4) must stay 6 or lower. Check first with `node tools/vhp-ruler-switch.mjs 6`.
 
 ## 5. Dependencies and integration points
 | With | What Combo needs | Where |

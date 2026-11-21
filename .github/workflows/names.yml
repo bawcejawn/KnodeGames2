@@ -14,6 +14,8 @@
 name: Knode Games names
 
 on:
+  schedule:
+    - cron: "4 * * * *"          # the hourly @name and pool-name refresh
   workflow_dispatch: {}
 
 concurrency:
@@ -62,6 +64,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           NAMES_PREV: ${{ runner.temp }}/names.json
           NAMES_BASE_FILE: ${{ runner.temp }}/base
           PRODUCERS_DIR: ${{ runner.temp }}/prod

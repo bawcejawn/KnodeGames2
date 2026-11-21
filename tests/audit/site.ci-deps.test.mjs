@@ -53,8 +53,7 @@ test("(guard) no privileged triggers or script injection from event data", () =>
     assert.ok(!/secrets:\s*["']?inherit|tojson\(\s*secrets\s*\)|secrets\s*\[/i.test(y), `${f}: hands on all secrets`);
     assert.ok(!/\$\{\{\s*github\.(event\.(pull_request|issue|comment|review|head_commit|commits|pages|inputs)|head_ref)/.test(y), `${f}: event data expanded in the workflow`);
   }
-  assert.match(triggers(bot), /workflow_dispatch:/, "(the trigger parser finds bot.yml's manual run)");
-  assert.doesNotMatch(triggers(bot), /^\s*schedule:/m, "bot.yml must not start itself on a timer");
+  assert.match(triggers(bot), /schedule:/, "(the trigger parser finds bot.yml's schedule)");
 });
 
 test("(guard) no workflow holds an issues permission (R-HUB-5: the name-claim flow that read and answered issues is gone)", () => {
@@ -224,6 +223,7 @@ const WRITES = {
   "race.yml": { publish: ["contents"] }, "race-samples.yml": { publish: ["contents"] }, "names.yml": { publish: ["contents"] }, "stats.yml": { publish: ["contents"] },
   "vhp-ruler.yml": { publish: ["contents"] },   // the VHP ruler pushes only its vhp-data branch (R-RULER-1)
   "golf.yml": { publish: ["contents"] },        // Block Golf pushes only games-data/golf, like games.yml (R-GO-3)
+  "lastnode.yml": { publish: ["contents"] },    // Last Node Standing pushes only games-data/lastnode, like games.yml
   "combo.yml": { publish: ["contents"] },       // Combo Card pushes only games-data/combo, after the read-only verify job (FC3-3)
   "pages.yml": { deploy: ["pages", "id-token"] }, // website only, and only when KG_ENABLE_PAGES is true
 };
@@ -293,8 +293,8 @@ test("(guard, parsed YAML) triggers come from an allowlist; bot.yml runs only on
     const names = triggerNames(onOf(doc)).map((t) => String(t).trim());
     if (!names.length) bad.push(`${f}: no triggers found`);
     for (const t of names) if (!TRIGGERS_OK.includes(t)) bad.push(`${f}: trigger ${t}`);
-    if (names.includes("schedule")) bad.push(`${f}: a timer is off until the owner turns that one workflow on`);
-    if (f === "bot.yml") assert.deepEqual([...names].sort(), ["workflow_dispatch"], "bot.yml is manual until the owner turns the timer on");
+    // Timers are on from cutover (D-240); tools/ci/lint.mjs pins which files have one and the exact times.
+    if (f === "bot.yml") assert.deepEqual([...names].sort(), ["schedule", "workflow_dispatch"], "bot.yml triggers");
   }
   assert.deepEqual(bad, []);
 });

@@ -32,4 +32,4 @@ jobs:
       # (Repo Lens #D-10 L-2).
       - run: node --import tsx --test --test-concurrency=1 tests/audit/vhp-ruler.workflow.test.mjs
       # Combo's publish step (combo.yml) and its tests (fix-check FC-20).
-      - run: node --import tsx --test --test-concurrency=1 tests/audit/combo-recorder.test.mjs tests/audit/repolens-combo-recorder.test.mjs tests/audit/combo-verify.test.mjs tests/audit/combo-ruler.test.mjs tests/audit/combo-lastweek.test.mjs tests/audit/repolens-g51-*.test.mjs tests/audit/combo-ruler-grace.test.mjs tests/audit/repolens-fc-combo/*.test.mjs
+      - run: node --import tsx --test --test-concurrency=1 tests/audit/combo-recorder.test.mjs tests/audit/repolens-combo-recorder.test.mjs tests/audit/combo-verify.test.mjs tests/audit/combo-ruler.test.mjs tests/audit/combo-lastweek.test.mjs tests/audit/repolens-g51-*.test.mjs tests/audit/combo-ruler-grace.test.mjs tests/audit/combo-blockx-worth.test.mjs tests/audit/repolens-fc-combo/*.test.mjs

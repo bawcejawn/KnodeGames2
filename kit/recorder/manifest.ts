@@ -40,6 +40,8 @@ export const payoutPin = (m: any) => ({
   payoutRule: m.payoutRule, vaultValues: m.vaultValues, entry: { minRounds: m.entry.minRounds, minPoints: m.entry.minPoints },
   sundayFunRound: m.week.sundayFunRound, roundsCorrectable: m.roundsCorrectable === true, liveWeek: m.liveWeek === true,
   ...(m.seasonWeeks > 1 ? { seasonWeeks: m.seasonWeeks } : {}),
+  // Rolling rounds decide which rounds count and which are cancelled, so a paid rolling game pins them too.
+  ...(m.rolling !== undefined ? { rolling: m.rolling } : {}),
 });
 
 /** The kit's config for one game. */
@@ -70,11 +72,12 @@ export function kitConfig(m: any, dep = readDeployment()): KitGameCfg {
     ...(m.seasonWeeks > 1 ? { seasonWeeks: m.seasonWeeks } : {}),
     ...(m.parts !== undefined ? { parts: m.parts } : {}),
     ...(m.firstWeek !== undefined ? { firstWeek: m.firstWeek } : {}),
+    ...(m.rolling !== undefined ? { rolling: m.rolling } : {}),
   };
 }
 
 /** The publish job's per-game config (what check.inline.mjs reads from KIT_GAMES). */
 export function publishConfig(m: any, dep = readDeployment()) {
   const c = kitConfig(m, dep);
-  return { slug: c.slug, game: c.game, genesis: c.genesis, weekMs: c.weekMs, sundayFunRound: c.sundayFunRound, payoutRule: c.payoutRule, vaultValues: c.vaultValues, entry: c.entry, minPts: c.minPts, rowCap: c.rowCap, maxRoundPoints: c.maxRoundPoints, liveWeek: c.liveWeek, roundsCorrectable: c.roundsCorrectable, ...(c.inputsFile ? { inputsFile: true } : {}), ...(c.vhpData ? { vhpData: true, cardPerRound: !!c.cardPerRound } : {}), ...(c.seasonWeeks ? { seasonWeeks: c.seasonWeeks } : {}), ...(c.parts ? { parts: c.parts } : {}) };
+  return { slug: c.slug, game: c.game, genesis: c.genesis, weekMs: c.weekMs, sundayFunRound: c.sundayFunRound, payoutRule: c.payoutRule, vaultValues: c.vaultValues, entry: c.entry, minPts: c.minPts, rowCap: c.rowCap, maxRoundPoints: c.maxRoundPoints, liveWeek: c.liveWeek, roundsCorrectable: c.roundsCorrectable, ...(c.inputsFile ? { inputsFile: true } : {}), ...(c.vhpData ? { vhpData: true, cardPerRound: !!c.cardPerRound } : {}), ...(c.seasonWeeks ? { seasonWeeks: c.seasonWeeks } : {}), ...(c.parts ? { parts: c.parts } : {}), ...(c.rolling ? { rolling: c.rolling } : {}) };
 }

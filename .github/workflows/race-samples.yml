@@ -10,6 +10,11 @@
 name: Race VHP samples
 
 on:
+  schedule:
+    # Capacity (13 Nov, GATE-1500 #12): every 15 minutes, not 5. Each run already takes up to 12 samples over up to
+    # 48 minutes (below), so the samples per hour don't change; only the scheduled starts do (about 288 -> 96 a day,
+    # each queued start counting against GitHub's limits). Audit BX-42's short, random samples are kept inside the run.
+    - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
 concurrency:
@@ -71,6 +76,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           RACE_PREV: ${{ runner.temp }}/prev
           RACE_OUT: ${{ runner.temp }}/samples
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

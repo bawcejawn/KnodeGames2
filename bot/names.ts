@@ -22,6 +22,7 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Contract, Provider, utils } from "koilib";
+import { nodeProvider } from "./node.ts";
 await import("../web/names.js");
 const K: any = (globalThis as any).KNames;
 const R = K.rules;
@@ -122,7 +123,7 @@ export function chainAt(rpc: string): Chain {
     if (dead) throw new Error(`${rpc} didn't answer earlier in this run`);
     try { return await within(p()); } catch (e: any) { if (/no answer in/.test(String(e && e.message))) dead = true; throw e; }
   };
-  const provider = new Provider([rpc]);
+  const provider = nodeProvider(rpc);
   const vhp = new Contract({ id: VHP, provider, abi: READ_ABI as any }).functions;
   const game = new Contract({ id: GAME, provider, abi: READ_ABI as any }).functions;
   const nick = new Contract({ id: NICKNAMES, provider, abi: utils.nicknamesAbi }).functions;

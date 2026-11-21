@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <!-- Only these sources may run scripts, load data or be framed. 'unsafe-eval' is needed by koilib (its protobuf
        encoder builds functions at run time); CDN scripts are pinned by their integrity hash. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/ https://koinos.armana.io https://api.koinos.io https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/game-data/ https://koinos.armana.io https://api.koinos.io https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>How we measure producers fairly · Knode Games</title>
   <!-- seo:start (written by tools/site-seo.mjs; edit there) -->
@@ -55,6 +56,8 @@
             <a href="bracket.html">Producer Bracket</a>
             <a href="golf.html">Block Golf</a>
             <a href="fantasy.html">Fantasy Producers</a>
+            <a href="lastnode.html">Last Node Standing</a>
+            <a href="vs.html">Knode Games VS</a>
             <a href="combo.html">Combo Card · Preview</a>
           </div>
         </details>
@@ -88,7 +91,7 @@
     <section class="start-hero">
       <p class="week-pill">The Ruler</p>
       <h1>How we measure producers fairly.</h1>
-      <p class="lede">The Producer Race is scored this way from Week 1 (Monday 16 November). Every race here is about which block producer does best. A fair race should not favour a producer just because it is big or small, so every producer is measured the same way.</p>
+      <p class="lede">The Producer Race is scored this way from Week 4 (Monday 16 November). Every race here is about which block producer does best. A fair race should not favour a producer just because it is big or small, so every producer is measured the same way.</p>
     </section>
 
     <section class="start-sec">
@@ -97,11 +100,12 @@
         <table class="plain">
           <thead><tr><th scope="col">Game</th><th scope="col">What the Ruler does there</th><th scope="col">When</th></tr></thead>
           <tbody>
-            <tr><td><a href="race.html">Producer Race</a></td><td>Decides each race's 1st, 2nd and 3rd.</td><td>6-hour races: live from Week 1 (Mon 16 Nov). 1-hour, 2-hour, daily and weekly races: from Week 2 (Mon 23 Nov).</td></tr>
-            <tr><td><a href="blockx.html">Who Signs Block X</a></td><td>Sets how much a right pick is worth.</td><td>From Week 2 (Mon 23 Nov). Week 1 is a practice week for the Ruler.</td></tr>
-            <tr><td><a href="bracket.html">Producer Bracket</a></td><td>Decides each matchup by how each producer did against its own size.</td><td>From Week 2 (Mon 23 Nov). Week 1 is a practice week for the Ruler.</td></tr>
-            <tr><td><a href="fantasy.html">Fantasy Producers</a></td><td>Scores each producer's day against its own size.</td><td>From Week 2 (Mon 23 Nov), its first real week.</td></tr>
-            <tr><td>Last Node Standing</td><td>Decides who is knocked out each hour.</td><td>From its first week, Week 3 (Mon 30 Nov).</td></tr>
+            <tr><td><a href="race.html">Producer Race</a></td><td>Decides each race's 1st, 2nd and 3rd.</td><td>6-hour races: live from Week 4 (Mon 16 Nov). 1-hour, 2-hour, daily and weekly races: from Week 5 (Mon 23 Nov).</td></tr>
+            <tr><td><a href="blockx.html">Who Signs Block X</a></td><td>Sets how much a right pick is worth.</td><td>From Week 5 (Mon 23 Nov). Week 4 is a practice week for the Ruler.</td></tr>
+            <tr><td><a href="bracket.html">Producer Bracket</a></td><td>Decides each matchup by how each producer did against its own size.</td><td>From Week 5 (Mon 23 Nov). Week 4 is a practice week for the Ruler.</td></tr>
+            <tr><td><a href="fantasy.html">Fantasy Producers</a></td><td>Scores each producer's day against its own size.</td><td>From Week 5 (Mon 23 Nov), its first real week.</td></tr>
+            <tr><td><a href="lastnode.html">Last Node Standing</a></td><td>Decides who is knocked out each hour.</td><td>From its first week, Week 5 (from Mon 23 Nov).</td></tr>
+            <tr><td><a href="vs.html">Knode Games VS</a></td><td>Sets who wins each matchup against the pool node, from one 24-hour card a day.</td><td>TEST only, no prizes yet.</td></tr>
             <tr><td><a href="combo.html">Combo Card</a></td><td>Decides its race legs (Win, Show, Top half).</td><td>From its first week (Mon 7 Dec).</td></tr>
           </tbody>
         </table>
@@ -195,7 +199,18 @@
         </dl>
         <p class="muted"><a href="index.html#how/fantasy">Fantasy Producers rules</a></p>
       </article>
-      <p class="muted">Last Node Standing, Combo Card and Survivor are added here when each one opens.</p>
+      <article class="panel" id="lastnode">
+        <h3>Last Node Standing</h3>
+        <dl class="rg-list">
+          <dt>What the game asks you</dt><dd>pick the producer you think will last longest in the day's event, plus a backup if you like. Your backup takes over once, the first time your pick is knocked out, if it is still standing.</dd>
+          <dt>What it reads from the Ruler</dt><dd>one card fixed the day before, which decides who is in the event (up to 23 producers); then one card for every hour of the event, each fixed from the blocks just before that hour and scored over that hour's own blocks.</dd>
+          <dt>How that becomes your score</dt><dd>each hour, a producer whose size moved too far from its card, or that isn't in that hour's field, is knocked out. Of the rest, the one with the worst Ruler score that hour (its luck against its own size) is knocked out. You score a point for every producer knocked out while yours is still in. If yours is the last one standing, you get a bonus (+5, or +3 after your backup took over).</dd>
+          <dt>Why it's fair</dt><dd>same Ruler as every game; size-neutral, so the biggest producer doesn't simply last longest; each hour's card is fixed before that hour; checked again before results are published.</dd>
+          <dt>If the Ruler can't measure an hour</dt><dd>the event waits up to 48 hours. If an hour still can't be measured, that day's event is void: nobody scores. The event is also void, and nobody scores, if every producer still standing is knocked out in the same hour. Nobody's result is guessed.</dd>
+        </dl>
+        <p class="muted"><a href="lastnode.html">Last Node Standing page and rules</a></p>
+      </article>
+      <p class="muted">Combo Card and Survivor are added here when each one opens.</p>
     </section>
 
     <section class="start-sec">
@@ -233,6 +248,8 @@
       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
+      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+      <a href="vs.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h12l-3-3"></path><path d="M20 17H8l3 3"></path></svg><span>Knode Games VS</span></a>
       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>

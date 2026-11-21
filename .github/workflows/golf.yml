@@ -13,6 +13,8 @@
 name: Block Golf recorder
 
 on:
+  schedule:
+    - cron: "57 * * * *"     # every hour at minute 57 (after the race recorder at :37 and the games recorder at :47)
   workflow_dispatch: {}
 
 concurrency:
@@ -119,6 +121,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           GOLF_PREV: ${{ runner.temp }}/prev
           GOLF_OUT: ${{ runner.temp }}/out/golf
           RACE_DATA: ${{ runner.temp }}/race

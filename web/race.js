@@ -15,7 +15,7 @@
   // Free read split (Capacity): each page load starts on Armana or koinosblocks at random; the other is the failover.
   const RPCS = ["https://koinos.armana.io", "https://api.koinosblocks.com"];
   if (Math.random() < 0.5) RPCS.reverse();
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/race-data/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/";
   const VHP = "12Y5vW6gk8GceH53YfRkRre2Rrcsgw7Naq";
   const EXPLORER = "https://koinosscan.com/address/";
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode Games pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Games Swap" };
@@ -588,7 +588,7 @@
     name: nameOf, link: (a) => EXPLORER + a,
     me: (r, place) => `${place ? `You: #${place} with` : "Your score (only you see this):"} ${fmt(r.pts ?? 0)} points (${fmt(r.correct)} wins, ${fmt(r.shows ?? 0)} shows) from ${fmt(r.picks)} picks.`,
     unranked: "To play on the Staked board, stake at least 1 VHP in the Producer Race.",
-    free: { show: 6, prize: "1st and 2nd at the end of the week win 2 and 1 VHP, from Week 1 (the week of Mon 16 Nov). Weeks before that are practice: no prizes." },
+    free: { show: 6, prize: "1st and 2nd at the end of the week win 2 and 1 VHP, from Week 4 (the week of Mon 16 Nov). Weeks before that are practice: no prizes." },
   }) : null;
   async function loadBoard() {
     try { const b = await fetchJson(DATA + "board.json"); if (b && b.v === 1 && lb) { board = b; $("board-box").hidden = false; renderBoard(); } } catch { /* none yet */ }

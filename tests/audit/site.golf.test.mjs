@@ -31,8 +31,8 @@ test("golf.js builds nothing from HTML, sends nothing and stores nothing", () =>
   assert.doesNotMatch(js, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
   assert.doesNotMatch(js, /localStorage|sessionStorage|indexedDB|document\.cookie/);
   assert.doesNotMatch(js, /\.send\(|signTransaction|method:\s*"POST"/);
-  assert.match(js, /const DATA = "https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/games-data\/golf\/"/);
-  assert.ok(csp(html).includes("https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/"), "the page may read games-data");
+  assert.match(js, /const DATA = "https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\/golf\/"/);
+  assert.ok(csp(html).includes("https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/"), "the page may read games-data");
 });
 
 test("every element the script uses exists once in the page", () => {
@@ -80,7 +80,7 @@ test("standards every game page meets: nicknames (D-078), stake badge and panel 
   assert.doesNotMatch(html + js, /bawcejawn\.github\.io\/Knode|\/Knode\/|final 12 hours/, "no old repo address or 12-hour final");
 });
 
-test("week labels: Golf names weeks as players see them (D-063: vault week 4 is Week 1)", () => {
+test("week labels: Golf names weeks as players see them (D-063: vault week 4 is Week 4)", () => {
   assert.doesNotMatch(js, /wf\.week \+ 1/, "never vault week + 1");
   assert.match(js, /window\.KWeeks\.label\(w\)/);
   assert.match(js, /G\.shareText\(card, weekLabel\(wf\.week\)\)/);
@@ -89,7 +89,7 @@ test("week labels: Golf names weeks as players see them (D-063: vault week 4 is 
   assert.deepEqual(js.match(/`Week \$\{[^}]*\}/g), ["`Week ${w}"], "only weekLabel's own fallback");
   const box = { window: {} }; box.globalThis = box.window;
   new Function("window", "globalThis", fs.readFileSync(`${APP}/web/weeks.js`, "utf8"))(box.window, box.window);
-  assert.equal(box.window.KWeeks.label(4), "Week 1");   // owner, 9 Nov: Week 1 = Mon 16 (vault week 4)
+  assert.equal(box.window.KWeeks.label(4), "Week 4");   // owner, 9 Nov: Week 4 = Mon 16 (vault week 4)
 });
 
 test("npm run golf exists (golf.yml runs it every hour)", () => {

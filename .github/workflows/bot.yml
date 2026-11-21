@@ -20,6 +20,12 @@
 name: Knode Games bot
 
 on:
+  schedule:
+    - cron: "7 * * * *"      # every hour at minute 7
+    - cron: "48 11 * * 1-6"  # the daily release run, Mon-Sat: starts early and waits for 12:00 UTC (GitHub can start
+                             # scheduled runs late, so the PC also starts this run: bot/release-kick.mjs)
+    - cron: "48 23 * * 0-5"  # the 00:00 UTC round (from week 3, D-092): Sun-Fri 23:48, waits for 00:00 Mon-Sat.
+                             # Before week 3 it finds no round to post and only does the hourly work.
   workflow_dispatch: {}       # "Run workflow" button for a manual run
 
 concurrency:
@@ -89,8 +95,29 @@ jobs:
         with:
           ref: main
           persist-credentials: false
+      # The question files and the bot's state live on the game-data branch (docs/DATA.md), not on main. The bot must
+      # never run without them: with no question files it would void every live question as "unknown" and post the
+      # day's questions again (found by the KnodeGames2-shadow run, 18 Nov 2026). Read without a token (public), plain
+      # files only, and "start" is that branch's head, which the publish job compares against.
       - id: start
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        env:
+          DATA_REF: game-data
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/data-in"; rm -rf "$d"; git init -q "$d"
+          if ! git -C "$d" fetch -q --depth 1 "https://github.com/${GITHUB_REPOSITORY}.git" "$DATA_REF"; then
+            echo "::error::Could not read the $DATA_REF branch. The bot does not run without its question files and state."; exit 1
+          fi
+          git -C "$d" checkout -q FETCH_HEAD
+          for p in questions index.json state.json bot-state.json; do
+            [ -e "$d/game-data/$p" ] || { echo "::error::$DATA_REF has no game-data/$p. The bot does not run without it."; exit 1; }
+          done
+          if [ -n "$(find "$d/game-data" ! -type f ! -type d)" ]; then echo "::error::$DATA_REF holds something that is not a plain file."; exit 1; fi
+          mkdir -p game-data
+          rm -rf game-data/questions && cp -R "$d/game-data/questions" game-data/questions
+          cp "$d/game-data/index.json" "$d/game-data/state.json" "$d/game-data/bot-state.json" game-data/
+          echo "Question files and state from $DATA_REF at $(git -C "$d" rev-parse --short FETCH_HEAD): $(ls game-data/questions | wc -l) question files."
+          echo "sha=$(git -C "$d" rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -133,7 +160,11 @@ jobs:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           # A second, independent node: results are posted only when both agree on the window's blocks (audit M-9).
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}   # a second, independent node (audit M-4); set the variable to "off" to turn it off
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           GEN_DIR: game-data
+          # Repo Lens J16-1: question ids the owner OK'd to void although they are newer than the bot's saved state
+          # (normally empty; the bot's NEEDS ATTENTION message says when to set it).
+          BOT_VOID_ORPHANS: ${{ vars.BOT_VOID_ORPHANS }}
           BOT_GIT_PUSH: "1"
           # The producer lookup's block snapshot (display only); the publish job puts it on the blocks-data branch.
           SNAPSHOT_OUT: ${{ runner.temp }}/snapshot/recent-blocks.json
