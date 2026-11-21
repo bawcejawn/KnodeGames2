@@ -35,6 +35,8 @@ export const PAGES = [
     desc: "Knode Games pool node vs every Koinos block producer, every day. Pick the producers that beat it, or pick the pool node to beat them all. Free test.", image: "og-knode.png", priority: "0.7" },
   { file: "blockx.html", path: "blockx.html", title: "Who Signs Block X · Pick the Koinos producer of the next big blocks", short: "Who Signs Block X",
     desc: "A target about every hour (every 1,200 Koinos blocks). Pick the producer you think signs it; smaller producers score more. Free, with weekly VHP prizes.", image: "og-knode.png", priority: "0.6" },
+  { file: "lastnode.html", path: "lastnode.html", title: "Last Node Standing · Ride the last Koinos producer standing", short: "Last Node Standing",
+    desc: "Pick a Koinos block producer. Every hour the slowest node is knocked out; if yours goes, jump once to a node still standing. Ride the last node to win.", image: "og-knode.png", priority: "0.5" },
   { file: "combo.html", path: "combo.html", title: "Combo Card · Build a parlay of Koinos producer calls", short: "Combo Card",
     desc: "Build a card of 2 to 10 calls on Koinos producers: race wins, top-3 finishes, top half and who signs a block. Every leg must hit; harder legs pay more.", image: "og-knode.png", priority: "0.5" },
   { file: "pulse.html", path: "pulse.html", title: "Koinos network pulse · Blocks, transactions and producers, live", short: "Koinos network pulse",

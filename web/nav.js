@@ -1,26 +1,5 @@
 /* Phone navigation: the bottom tab bar (Games · Leaders · Results · Swap · More, written by tools/site-nav.mjs) and the "More" sheet with every other page.
    Marks the tab for the page you're on, and opens/closes the sheet. No data, no storage, no network. */
-/* Fantasy's free test week (owner, 14 Nov 2026: "week 4 is a free test week; week 5, from Sun 22 Nov 7 PM ET, is the
-   first real week"). The banner shows on All games and the Fantasy page (not Home: owner, 20 Nov) during weeks 4 and 5, both free play (D-238; Mon 16 Nov 00:00 UTC
-   to Mon 30 Nov 00:00 UTC = Sun 15 Nov 7 PM ET to Sun 29 Nov 7 PM ET). Never stored or sent anywhere. */
-(function () {
-  "use strict";
-  const FX_FROM = Date.UTC(2026, 10, 16), FX_UNTIL = Date.UTC(2026, 10, 30);   // weeks 4 and 5 (D-238)
-  const FX_PAGES = ["games.html", "fantasy.html"];
-  const page = location.pathname.split("/").pop() || "index.html";
-  const now = Date.now();
-  if (!FX_PAGES.includes(page) || now < FX_FROM || now >= FX_UNTIL) return;
-  const main = document.querySelector("main");
-  if (!main || main.querySelector(".fx-test-week")) return;
-  const p = document.createElement("p");
-  p.className = "test-week fx-test-week";
-  p.setAttribute("role", "note");
-  const b = document.createElement("b");
-  b.textContent = "Fantasy Producers: free play.";
-  p.append(b, " Weeks 4 and 5 take no stakes. Week 5 runs from Sunday 22 November to Sunday 29 November, 7 PM ET.");
-  main.prepend(p);
-})();
-
 (function () {
   "use strict";
   const bar = document.querySelector(".tabbar");

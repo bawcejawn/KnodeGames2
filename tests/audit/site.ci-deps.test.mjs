@@ -223,6 +223,7 @@ const WRITES = {
   "race.yml": { publish: ["contents"] }, "race-samples.yml": { publish: ["contents"] }, "names.yml": { publish: ["contents"] }, "stats.yml": { publish: ["contents"] },
   "vhp-ruler.yml": { publish: ["contents"] },   // the VHP ruler pushes only its vhp-data branch (R-RULER-1)
   "golf.yml": { publish: ["contents"] },        // Block Golf pushes only games-data/golf, like games.yml (R-GO-3)
+  "lastnode.yml": { publish: ["contents"] },    // Last Node Standing pushes only games-data/lastnode, like games.yml
   "combo.yml": { publish: ["contents"] },       // Combo Card pushes only games-data/combo, after the read-only verify job (FC3-3)
   "pages.yml": { deploy: ["pages", "id-token"] }, // website only, and only when KG_ENABLE_PAGES is true
 };

@@ -268,9 +268,9 @@ test("share text", () => {
 // ── the page (site/combo.html + combo.js) ──
 const page = read("web/combo.html"), js = read("web/combo.js");
 test("combo page: scripts in order (math before the page), shared board, nav and header like every page", () => {
-  const order = ["board.js", "race-math.js", "blockx-math.js", "combo-math.js", "combo.js"].map((f) => page.indexOf(`<script src="${f}"></script>`));
+  const order = ["board.js", "race-math.js", "blockx-math.js", "combo-math.js"].map((f) => page.indexOf(`<script src="${f}"></script>`)).concat(page.indexOf('<script type="module" src="combo.js"></script>'));
   assert.ok(order.every((i) => i > 0) && order.every((i, k) => k === 0 || i > order[k - 1]), "board, race-math, blockx-math, combo-math, combo");
-  assert.ok(page.indexOf('<script src="wallet.js"></script>') < page.indexOf('<script src="combo.js"></script>'));
+  assert.ok(page.indexOf('<script src="wallet.js"></script>') < page.indexOf('<script type="module" src="combo.js"></script>'));
   assert.match(page, /<link rel="stylesheet" href="board\.css">/);
   assert.match(page, /<nav class="tabbar"/);
 });
@@ -278,7 +278,9 @@ test("combo page: sends only a Combo card through the Picks contract's pick, onl
   // The only transaction: picks.pick for game 8, with no producers and no number, sent through the shared wallet.
   assert.equal((js.match(/functions\.pick\(/g) || []).length, 1);
   assert.match(js, /picksC\.functions\.pick\(\{ player: who, game: C\.GAME_ID, round: String\(round\), producers: \[\], number: "0",/);
-  assert.equal((js.match(/W\.send\(/g) || []).length, 1);
+  // D-307: the page sends through the shared card, never W.send itself.
+  assert.equal((js.match(/\bSP\.send\(/g) || []).length, 1);
+  assert.equal((js.match(/W\.send\(/g) || []).length, 0);
   assert.doesNotMatch(js, /sendTransaction|signTransaction|transfer|approve|burn/);
   assert.doesNotMatch(js, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
   // Live only when picks-data/deployment.json names the contract and game 8 on chain is an enabled kind-4 game.

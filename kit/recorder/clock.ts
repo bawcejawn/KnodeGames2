@@ -1,7 +1,7 @@
 // Shared Game Kit: the clock (WEEK_CYCLE.md §1–2, RECORDER §3.1). All UTC ms.
 // The recorder's "now" is the CHAIN's time (the lower of the two nodes' head times), never the runner's clock.
-import { weekClock, dayOf, isSunday, DAY, HOUR, STABLE_MS, RESULTS_DAYS } from "../publish/check.inline.mjs";
-import type { WeekSpan } from "./types.ts";
+import { weekClock, dayOf, isSunday, DAY, HOUR, STABLE_MS, RESULTS_DAYS, rollingClock, rollingId, startDay } from "../publish/check.inline.mjs";
+import type { Round, WeekSpan } from "./types.ts";
 
 export { dayOf, isSunday, DAY, HOUR, STABLE_MS, RESULTS_DAYS };
 
@@ -45,3 +45,18 @@ export function clockFromState(state: any): { clock: VaultClock; time: number; m
 
 /** Label for logs: vault week w is shown to players as "Week w − 2" (D-063). */
 export const siteWeek = (w: number) => w - 2;
+
+/** Rolling rounds (game.json "rolling", #38): a week's rounds, every grid round whose START is in the week (Mon 00:00 UTC
+ *  starts the new week), id r#####, day = the UTC day of its start, picks locking leadMin before it, decided gameMin
+ *  after it. pickRound: the Picks contract round for round n (the game's own mapping). A rolling game's roundsFor
+ *  returns exactly these (the runtime stops otherwise). Here, in clock.ts, so a game may import it. */
+export function rollingRounds(span: { start: number; end: number }, cfg: { genesis: number; rolling?: { roundMin: number; gameMin: number; leadMin: number; scheduleFromMin: number; scheduleToMin: number; cancelAfterMin: number } }, pickRound?: (n: number, start: number) => number): Round[] {
+  if (!cfg.rolling) throw new Error("rollingRounds: the game has no rolling settings");
+  const c = rollingClock(cfg);
+  const out: Round[] = [];
+  for (let n = c.firstAtOrAfter(span.start); c.start(n) < span.end; n++) {
+    const start = c.start(n);
+    out.push({ id: rollingId(n), day: startDay(start), locksAt: c.locksAt(n), resolvesAt: c.resolvesAt(n), ...(pickRound ? { pickRound: pickRound(n, start) } : {}) });
+  }
+  return out;
+}

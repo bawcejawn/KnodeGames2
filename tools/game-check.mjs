@@ -28,10 +28,12 @@ export function checkGame(slug, root = ROOT) {
   const live = m.status === "live" || m.status === "review";
   if (live) {
     let gj = null;
-    try { gj = JSON.parse(fs.readFileSync(path.join(root, "games.json"), "utf8")); } catch {}
+    // The site lives in web/ (web/games.json, web/<page>); the repo root is checked too for older layouts.
+    const gjFile = ["web/games.json", "games.json"].map((f) => path.join(root, f)).find((f) => fs.existsSync(f));
+    try { if (gjFile) gj = JSON.parse(fs.readFileSync(gjFile, "utf8")); } catch {}
     const entry = gj && Array.isArray(gj.games) ? gj.games.find((g) => g.href && g.href.startsWith(m.page)) : null;
-    ok(!!entry, `games.json lists ${m.page}`);
-    ok(fs.existsSync(path.join(root, m.page)) || fs.existsSync(path.join(dir, m.page)), `page ${m.page} exists`);
+    ok(!!entry, `web/games.json lists ${m.page}`);
+    ok([path.join(root, "web", m.page), path.join(root, m.page), path.join(dir, m.page)].some((f) => fs.existsSync(f)), `page ${m.page} exists (web/${m.page})`);
   }
   for (const r of checkSendPicks(m, root)) res.push(r);
   return res;
@@ -52,9 +54,9 @@ export function sendPicksProblems(src) {
   });
   return out;
 }
-/** Pages allowed to send picks themselves for now, each with the PR that removes it. Library (19 Nov): Survivor (#17)
- *  merges before the card; Survivor's follow-up PR moves it onto the card and deletes this line. Nothing else is added. */
-export const SEND_PICKS_ALLOW = { "web/survivor.js": "until Survivor's follow-up PR moves it onto the card (D-278)" };
+/** Pages allowed to send picks themselves for now, each with the PR that removes it. Empty since Survivor's follow-up PR
+ *  (#36) moved web/survivor.js onto the card; nothing else is added. */
+export const SEND_PICKS_ALLOW = {};
 export function checkSendPicks(m, root = ROOT) {
   if (!m || typeof m.page !== "string") return [];
   const js = path.join(root, "web", m.page.replace(/\.html$/, ".js"));

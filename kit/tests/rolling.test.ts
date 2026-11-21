@@ -1,0 +1,339 @@
+// Rolling rounds (Over/Under, D-342 to D-370; Architecture's kit draft): a new round every 30 minutes on the vault's
+// grid, each round's write-once schedule file made 213 to 183 minutes before its start, cancelled for everyone without
+// one by 135 minutes before it (queue unchanged, D-344), and every round counted for the week it STARTS in. Hour by
+// hour through the real publish check (Replay), plus the check's own rules on hand-made files.
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { rollingRounds, rollingRoundWhy, type KitGameCfg } from "../recorder/runtime.ts";
+import { Replay } from "../testing/replay.ts";
+import { fakeNode, world, type World } from "../testing/fake-nodes.ts";
+import { at, DAY, GENESIS, HOUR as H, WEEK } from "../testing/fake-clock.ts";
+import { type GameModule } from "../recorder/types.ts";
+import { checkGame, canon, cardKey, rollingClock, rollingId, rollingNo, rollingProblem, scheduleName, scheduleShape, startDay } from "../publish/check.inline.mjs";
+import { validateManifest } from "../../tools/game-manifest.mjs";
+
+const A = "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", B = "1BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
+const PICKS = 16, MIN = 60000;
+/** Over/Under's settings (D-342ff): 30-minute grid, 12-hour games, picks lock 5 min before, schedule 213–183 min, cancel 135. */
+const OU = { roundMin: 30, gameMin: 720, leadMin: 5, scheduleFromMin: 213, scheduleToMin: 183, cancelAfterMin: 135 };
+
+const cfg: KitGameCfg = {
+  slug: "rolling-test", game: 241, genesis: GENESIS, weekMs: WEEK, sundayFunRound: false, payoutRule: "d152", vaultValues: "dense255",
+  entry: { minRounds: 1, minPoints: 1 }, minPts: 0, rowCap: 0, liveWeek: false, roundsCorrectable: false, rolling: OU,
+};
+const C = rollingClock(cfg);
+
+/** A rolling game: the schedule's body is its queue position (how many schedules came before) and a line; the result is
+ *  1 (Over) on even rounds and 2 (Under) on odd ones, decided from the round's own schedule. */
+const seenCtx: any[] = [];
+const game: GameModule<{ n?: number }, number, unknown> = {
+  slug: "rolling-test",
+  picks: { source: "picks-contract", gameId: PICKS },
+  roundsFor(week) { return rollingRounds(week, cfg, (n) => n); },
+  async scheduleFor(n, start, ctx) {
+    await ctx.read.read("get_state", {});
+    return { n, start, queue: ctx.schedules!.size, line: 100 + (n % 7) };
+  },
+  async resultOf(round, _read, _inputs, ctx) {
+    seenCtx.push(ctx?.schedule);
+    if (!ctx?.schedule) throw new Error(`round ${round.id} asked for a result without its schedule`);
+    return rollingNo(round.id)! % 2 === 0 ? 1 : 2;
+  },
+  scoreRound(round, picks, result) {
+    return new Map(picks.map((p) => [p.wallet, Number(p.pick.n) === result ? { points: 1, at: round.locksAt } : { points: 0, at: 0 }]));
+  },
+};
+
+const N0 = 5 * 336 + 2 * 48 + 20;   // Wed of vault week 5, 10:00 UTC
+const nodes = (wd: World): [any, any] => [fakeNode("a", () => wd), fakeNode("b", () => wd)];
+const run = (rp: Replay, wd: World, t: number) => { wd.time = t; return rp.hour(nodes(wd), t + 5 * MIN); };
+function rworld(): World {
+  const wd = world(at(5));
+  wd.gamePlayers = { [A]: { week_stake: "500000000", peak_stake: "500000000" }, [B]: { week_stake: "0", peak_stake: "0" } };
+  wd.picks = {
+    [`${PICKS}:${N0}`]: [{ player: A, pick: { n: 1, time: String(C.locksAt(N0) - 600000) } }],
+    [`${PICKS}:${N0 + 1}`]: [{ player: B, pick: { n: 2, time: String(C.locksAt(N0 + 1) - 600000) } }],
+    [`${PICKS}:${N0 + 2}`]: [{ player: A, pick: { n: 1, time: String(C.locksAt(N0 + 2) - 600000) } }],
+  };
+  return wd;
+}
+
+test("rolling settings: Over/Under's pass; the order and the window rules are enforced", () => {
+  assert.equal(rollingProblem(OU), "");
+  assert.match(rollingProblem({ ...OU, scheduleToMin: 213 }), /scheduleFromMin > scheduleToMin/);
+  assert.match(rollingProblem({ ...OU, cancelAfterMin: 190 }), /scheduleToMin > cancelAfterMin/);
+  assert.match(rollingProblem({ ...OU, scheduleToMin: 200 }), /at least one round/);
+  assert.match(rollingProblem({ ...OU, gameMin: 725 }), /whole number of rounds/);
+  assert.match(rollingProblem({ ...OU, roundMin: 7 }), /rounds a day/);
+  const { leadMin: _l, ...noLead } = OU;
+  assert.match(rollingProblem(noLead), /in this order/);
+});
+
+test("rolling manifest: game.json's schema takes \"rolling\" and needs the Picks contract", () => {
+  const base = JSON.parse(fs.readFileSync(new URL("../../games/survivor/game.json", import.meta.url), "utf8"));
+  const m = { ...base, slug: "overunder", name: "Over Under", vaultGameId: 16, rolling: OU };
+  delete m.seasonWeeks; m.seasonWeeks = 1; delete m.parts;
+  assert.deepEqual(validateManifest(m, { kit: true }).filter((p: string) => /rolling/.test(p)), []);
+  assert.ok(validateManifest({ ...m, picks: { contract: "none" } }, { kit: true }).some((p: string) => /Picks contract/.test(p)));
+  assert.ok(validateManifest({ ...m, rolling: { ...OU, cancelAfterMin: 4 } }, { kit: true }).some((p: string) => /cancelAfterMin > leadMin/.test(p)));
+});
+
+test("rolling grid: 336 rounds a week, ids r#####, every round counted for the week and day it STARTS in (Mon 00:00 is the new week)", () => {
+  const span = { start: at(5), end: at(6) };
+  const rs = rollingRounds(span, cfg);
+  assert.equal(rs.length, 336);
+  assert.equal(rs[0].id, rollingId(5 * 336));
+  assert.equal(C.start(rollingNo(rs[0].id)!), at(5), "the round starting at Mon 00:00 is the new week's first");
+  assert.equal(rs[0].day, at(5), "and it counts for Monday (not dayOf(locksAt), which would be Sunday)");
+  assert.equal(rs[0].locksAt, at(5) - 5 * MIN);
+  assert.equal(rs[0].resolvesAt, at(5) + 12 * H);
+  const last = rs[rs.length - 1];
+  assert.equal(C.start(rollingNo(last.id)!), at(6) - 30 * MIN, "Sun 23:30 is the old week's last");
+  assert.equal(last.day, at(6) - DAY);
+  for (const r of rs) assert.equal(rollingRoundWhy(r, cfg, span), "");
+  assert.match(rollingRoundWhy({ ...rs[3], day: rs[3].day - DAY }, cfg, span), /grid round/);
+  assert.match(rollingRoundWhy(rs[0], cfg, { start: at(6), end: at(7) }), /outside the week/);
+  assert.match(rollingRoundWhy({ ...rs[0], id: "x1" }, cfg, span), /r#####/);
+  assert.equal(startDay(at(5) + 23 * H + 30 * MIN), at(5));
+  assert.throws(() => rollingId(100000));
+});
+
+test("rolling: each schedule file is made once inside its window (213–183 min before), on both nodes, seeing the earlier ones; a round without one by 135 min before is cancelled for everyone", async () => {
+  seenCtx.length = 0;
+  const wd = rworld(), rp = new Replay(game, cfg);
+  // N0's window: one run 200 min before its start makes it; a run 10 min later doesn't make it again.
+  let h = await run(rp, wd, C.start(N0) - 200 * MIN);
+  assert.equal(h.error, undefined, h.error);
+  assert.deepEqual(h.held, []);
+  assert.ok(h.published.includes(scheduleName(N0)), h.published.join());
+  assert.equal(h.published.filter((f) => f.startsWith("schedule/")).length, 1, "exactly one round's window holds this run");
+  const first = rp.raw(scheduleName(N0));
+  h = await run(rp, wd, C.start(N0) - 190 * MIN);
+  assert.deepEqual(h.published.filter((f) => f.startsWith("schedule/")), [], "made once, never again");
+  assert.deepEqual(h.held, [], "and nothing was offered again (a second copy would be a changed write-once file)");
+  assert.equal(rp.raw(scheduleName(N0)), first);
+  // N0 + 1's window: its body sees N0's schedule (the queue so far).
+  h = await run(rp, wd, C.start(N0 + 1) - 200 * MIN);
+  assert.ok(h.published.includes(scheduleName(N0 + 1)));
+  assert.equal(rp.read(scheduleName(N0 + 1)).body.queue, 1);
+  assert.equal(rp.read(scheduleName(N0)).body.queue, 0);
+  // N0 + 2: no run in its window (a missed run). It is cancelled; the queue is unchanged for N0 + 3.
+  h = await run(rp, wd, C.start(N0 + 3) - 200 * MIN);
+  assert.ok(h.published.includes(scheduleName(N0 + 3)));
+  assert.ok(!fs.existsSync(path.join(rp.pub, scheduleName(N0 + 2))));
+  assert.equal(rp.read(scheduleName(N0 + 3)).body.queue, 2, "the cancelled round didn't move the queue (D-344)");
+  // After the week ends: the scheduled rounds are decided from their schedules; N0 + 2 (and every unscheduled round) is void.
+  h = await run(rp, wd, at(6, 0, 13));
+  assert.equal(h.error, undefined, h.error);
+  assert.deepEqual(h.held, [], JSON.stringify(h.held));
+  const wk = rp.read("W005.json");
+  const st = new Map(wk.rounds.map((r: any) => [r[0], r[3]]));
+  assert.equal(st.get(rollingId(N0)), "s");
+  assert.equal(st.get(rollingId(N0 + 1)), "s");
+  assert.equal(st.get(rollingId(N0 + 2)), "v", "no schedule file: cancelled");
+  assert.equal(st.get(rollingId(N0 + 3)), "s");
+  assert.equal([...st.values()].filter((x) => x === "s").length, 3);
+  assert.equal(wk.rounds.length, 336);
+  assert.ok(seenCtx.every((x) => x && typeof x.line === "number"), "resultOf always got its round's schedule");
+  const row = (id: string) => wk.rounds.find((r: any) => r[0] === id)[4];
+  assert.deepEqual(row(rollingId(N0)).map((x: any) => x.slice(0, 2)), [[wk.players.findIndex((p: any) => p[0] === A), 1]], "A picked Over (1) on an even round: 1 point");
+  assert.deepEqual(row(rollingId(N0 + 2)).map((x: any) => x.slice(0, 2)), [[wk.players.findIndex((p: any) => p[0] === A), 0]], "a cancelled round scores nothing");
+});
+
+test("rolling publish check: a schedule file is write-once, only inside its window by the job's clock, never after its cancel time; a non-rolling game can't publish one", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-rolling-"));
+  const n = N0, inn = path.join(tmp, "in"), pub = path.join(tmp, "pub");
+  const put = (dir: string, rel: string, v: any) => { fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true }); fs.writeFileSync(path.join(dir, rel), typeof v === "string" ? v : canon(v)); };
+  const file = (written = C.scheduleFrom(n) + 5 * MIN, body: any = { line: 101 }) => ({ v: 1, game: cfg.game, round: rollingId(n), start: C.start(n), written, body });
+  const check = (now: number, c: any = cfg) => checkGame(c, inn, pub, now);
+  const reset = () => { fs.rmSync(tmp, { recursive: true, force: true }); fs.mkdirSync(inn, { recursive: true }); fs.mkdirSync(pub, { recursive: true }); };
+
+  reset(); put(inn, scheduleName(n), file());
+  assert.deepEqual(check(C.scheduleFrom(n) + 6 * MIN).publish, [scheduleName(n)], "inside its window: published");
+  assert.match(check(C.scheduleFrom(n) - 30 * MIN).held[0].why, /before its window/);
+  assert.match(check(C.cancelAt(n) + MIN).held[0].why, /after its round's cancel time.*cancelled for everyone \(D-344\)/);
+  assert.deepEqual(check(C.cancelAt(n)).publish, [scheduleName(n)], "a late publish job still makes it up to the cancel time itself");
+  assert.match(check(C.scheduleFrom(n) + 6 * MIN, { ...cfg, rolling: undefined }).held[0].why, /no rolling rounds/);
+  put(inn, scheduleName(n), file(C.scheduleFrom(n) - 30 * MIN));
+  assert.match(check(C.scheduleFrom(n) + 6 * MIN).held[0].why, /written outside its schedule window/);
+  put(inn, scheduleName(n), { ...file(), start: C.start(n) + 1 });
+  assert.match(check(C.scheduleFrom(n) + 6 * MIN).held[0].why, /grid/);
+  put(inn, scheduleName(n), { ...file(), body: [1] });
+  assert.match(check(C.scheduleFrom(n) + 6 * MIN).held[0].why, /JSON object/);
+  assert.equal(scheduleShape(file(), scheduleName(n + 1), cfg), "wrong version, game or round");
+
+  // Write-once: an unchanged copy is fine (nothing to publish); a changed one is held, even inside the window.
+  reset(); put(pub, scheduleName(n), file()); put(inn, scheduleName(n), file());
+  const r = check(C.scheduleFrom(n) + 6 * MIN);
+  assert.deepEqual([r.publish, r.held], [[], []]);
+  put(inn, scheduleName(n), file(undefined, { line: 102 }));
+  assert.match(check(C.scheduleFrom(n) + 6 * MIN).held[0].why, /changes a published schedule file \(write-once\)/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("rolling publish check: a week file that scores a round with no published schedule file is held (only a void round can lack one)", async () => {
+  const wd = rworld(), rp = new Replay(game, cfg);
+  await run(rp, wd, C.start(N0) - 200 * MIN);
+  const h = await run(rp, wd, at(6, 0, 13));
+  assert.deepEqual(h.held, []);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-rolling-wk-"));
+  fs.mkdirSync(path.join(tmp, "in"), { recursive: true }); fs.mkdirSync(path.join(tmp, "pub"), { recursive: true });
+  fs.writeFileSync(path.join(tmp, "in", "W005.json"), rp.raw("W005.json"));
+  const r = checkGame(cfg, path.join(tmp, "in"), path.join(tmp, "pub"), at(6, 0, 13) + 5 * MIN);
+  assert.equal(r.held.length, 1);
+  assert.match(r.held[0].why, new RegExp(`round ${rollingId(N0)}: scored, but it has no published schedule file`));
+  // With the schedule file published, the same week file passes.
+  fs.mkdirSync(path.join(tmp, "pub", "schedule"));
+  fs.writeFileSync(path.join(tmp, "pub", scheduleName(N0)), rp.raw(scheduleName(N0)));
+  assert.deepEqual(checkGame(cfg, path.join(tmp, "in"), path.join(tmp, "pub"), at(6, 0, 13) + 5 * MIN).held, []);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("rolling: a rolling game whose roundsFor leaves the grid stops the run (KC-30, rolling)", async () => {
+  const wd = rworld();
+  const bad: GameModule<any, any, any> = { ...game, roundsFor(week) { const rs = rollingRounds(week, cfg, (n) => n); rs[5] = { ...rs[5], resolvesAt: rs[5].resolvesAt + 1 }; return rs; } };
+  const rp = new Replay(bad, cfg);
+  const h = await run(rp, wd, at(6, 0, 13));
+  assert.match(h.error ?? "", /grid round.*KC-30, rolling/);
+});
+
+// ───────── R-5: a ruler game's schedule file lists its cards, and the publish job rebuilds them (G3) ─────────
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { makeChain } from "../../tests/audit/vhp-ruler.fixture.mjs";
+import { loadLedger, vhpFor, cardList, type CardSettings } from "../recorder/sources/vhp-ruler.ts";
+import { KIT_CARDS_PY } from "../publish/render.mjs";
+const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const PYTHON = (() => { try { execFileSync("python3", ["--version"]); return true; } catch { return false; } })();
+let rfx: { dir: string; L: any; s: CardSettings } | null = null;
+function rulerFixture() {
+  if (rfx) return rfx;
+  const f = makeChain({ seed: 5, hours: 354, np: 4, busy: 0.002 });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kit-roll-vd-"));
+  fs.mkdirSync(path.join(dir, "h"));
+  for (const t of f.texts) fs.writeFileSync(path.join(dir, "h", `${JSON.parse(t).n}.json`), t);
+  const L = loadLedger(dir), Lb = L.to - 20 - 1200 - 500;
+  const s: CardSettings = { game: 4, round: "2026111600", window: { W0: Lb - 7199, W1: Lb, L: Lb, S0: Lb + 1, S1: Lb + 1200 }, c: "500000", minK: 10, poolRule: "min", ownRule: "spot", paying: true, pooled: [] };
+  return (rfx = { dir, L, s });
+}
+const rcfg: KitGameCfg = { ...cfg, vhpData: true, cardPerRound: true };
+
+test("R-5: a ruler game's schedule file carries the cards its body used; made in JS, rebuilt byte for byte by the embedded vhp_ruler.py", { skip: !PYTHON && "needs python3 (the CI runner has it)" }, async () => {
+  const { dir, L, s } = rulerFixture();
+  const rgame: GameModule<any, any, any> = { ...game, async scheduleFor(n, start, ctx) { ctx.vhp!.card(s); return { n, start, line: 1 }; } };
+  const wd = rworld(), rp = new Replay(rgame, rcfg);
+  wd.time = C.start(N0) - 200 * MIN;
+  const h = await rp.hour(nodes(wd), wd.time + 5 * MIN, { vhpLedger: L });
+  assert.equal(h.error, undefined, h.error);
+  assert.deepEqual(h.held, [], JSON.stringify(h.held));
+  assert.ok(h.published.includes(scheduleName(N0)), h.published.join());
+  const f = rp.read(scheduleName(N0));
+  const used = new Map(); vhpFor(L, used).card(s);
+  assert.deepEqual(f.cards, cardList(used), "the schedule file lists exactly the card its body used");
+  // The publish job's Python glue finds it under schedule/ and rebuilds it.
+  const w = fs.mkdtempSync(path.join(os.tmpdir(), "kit-roll-g3-"));
+  for (const d of ["code", "in/schedule", "pub"]) fs.mkdirSync(path.join(w, d), { recursive: true });
+  fs.copyFileSync(path.join(ROOT, "ruler", "vhp_ruler.py"), path.join(w, "code", "vhp_ruler.py"));
+  fs.writeFileSync(path.join(w, "code", "kit_cards.py"), KIT_CARDS_PY);
+  fs.writeFileSync(path.join(w, "in", scheduleName(N0)), JSON.stringify(f));
+  execFileSync("python3", ["-I", "-B", path.join(w, "code", "kit_cards.py"), dir, path.join(w, "in"), path.join(w, "pub"), path.join(w, "out.json")], { encoding: "utf8" });
+  const out = JSON.parse(fs.readFileSync(path.join(w, "out.json"), "utf8"));
+  assert.deepEqual(out.ok, f.cards);
+  fs.rmSync(w, { recursive: true, force: true });
+});
+
+test("R-5: the publish check holds a ruler game's schedule file without cards, or with a card the job couldn't rebuild", () => {
+  const { L, s } = rulerFixture();
+  const used = new Map(); vhpFor(L, used).card(s);
+  const cards = cardList(used);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-roll-r5-"));
+  const inn = path.join(tmp, "in"), pub = path.join(tmp, "pub");
+  fs.mkdirSync(path.join(inn, "schedule"), { recursive: true }); fs.mkdirSync(pub, { recursive: true });
+  const base = { v: 1, game: rcfg.game, round: rollingId(N0), start: C.start(N0), written: C.scheduleFrom(N0) + 5 * MIN, body: { line: 1 } };
+  const now = C.scheduleFrom(N0) + 6 * MIN;
+  const put = (v: any) => fs.writeFileSync(path.join(inn, scheduleName(N0)), canon(v));
+  put(base);
+  assert.match(checkGame(rcfg, inn, pub, now, "", new Set()).held[0].why, /schedule file's shape/);
+  put({ ...base, cards });
+  assert.match(checkGame(rcfg, inn, pub, now, "", null).held[0].why, /couldn't be rebuilt/);
+  assert.match(checkGame(rcfg, inn, pub, now, "", new Set()).held[0].why, /aren't what the published ruler data gives/);
+  const ok = new Set(cards.map((c: any) => cardKey(c[0], c[1])));
+  assert.deepEqual(checkGame(rcfg, inn, pub, now, "", ok).publish, [scheduleName(N0)]);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+// ───────── KR-2 (Repo Lens 5): the exact edges, the week-file day rule, and a non-rolling game's contexts ─────────
+import { rollingWeekWhy, rollingCancelled, inScheduleWindow } from "../publish/check.inline.mjs";
+import { exampleGame, exampleCfg } from "../testing/example/index.ts";
+
+test("KR-2: the recorder's window starts AT scheduleFrom (inclusive) and ends before scheduleTo; a round is cancelled AT its cancel time (not a millisecond later)", async () => {
+  // The rules themselves, at the exact milliseconds (the recorder uses these two functions and nothing else).
+  assert.equal(inScheduleWindow(cfg, N0, C.scheduleFrom(N0)), true);
+  assert.equal(inScheduleWindow(cfg, N0, C.scheduleFrom(N0) - 1), false);
+  assert.equal(inScheduleWindow(cfg, N0, C.scheduleTo(N0) - 1), true);
+  assert.equal(inScheduleWindow(cfg, N0, C.scheduleTo(N0)), false);
+  assert.equal(rollingCancelled(cfg, N0, C.cancelAt(N0) - 1, false), false);
+  assert.equal(rollingCancelled(cfg, N0, C.cancelAt(N0), false), true);
+  assert.equal(rollingCancelled(cfg, N0, C.cancelAt(N0) + 1, true), false, "a published schedule file is never cancelled");
+  // And end to end: a run at exactly scheduleFrom(n) makes n's file.
+  const wd = rworld(), rp = new Replay(game, cfg);
+  const h = await run(rp, wd, C.scheduleFrom(N0));
+  assert.ok(h.published.includes(scheduleName(N0)), "made at exactly 213 min before");
+});
+
+test("KR-2: a rolling week file whose round counts for another day than its start's is held", () => {
+  const n = N0 + 3, s = C.start(n);
+  const j = { week: 5, start: at(5), end: at(6), rounds: [[rollingId(n), startDay(s), 0, "v", []]] };
+  assert.equal(rollingWeekWhy(j, cfg, new Set()), "");
+  assert.match(rollingWeekWhy({ ...j, rounds: [[rollingId(n), startDay(s) - DAY, 0, "v", []]] }, cfg, new Set()), /UTC day of its start/);
+});
+
+test("KR-2: a schedule file's written time has an upper edge (scheduleTo + the run slack)", () => {
+  const n = N0, f = (written: number) => ({ v: 1, game: cfg.game, round: rollingId(n), start: C.start(n), written, body: { x: 1 } });
+  assert.equal(scheduleShape(f(C.scheduleTo(n) + 10 * MIN), scheduleName(n), cfg), "");
+  assert.match(scheduleShape(f(C.scheduleTo(n) + 10 * MIN + 1), scheduleName(n), cfg), /outside its schedule window/);
+  assert.equal(scheduleShape(f(C.scheduleFrom(n) - 10 * MIN), scheduleName(n), cfg), "");
+  assert.match(scheduleShape(f(C.scheduleFrom(n) - 10 * MIN - 1), scheduleName(n), cfg), /outside its schedule window/);
+});
+
+test("KR-2 / R-1: a non-rolling game's roundsFor and resultOf get exactly the contexts they got before rolling rounds", async () => {
+  const seen = { rounds: new Set<string>(), result: new Set<string>() };
+  const spy: GameModule<any, any, any> = {
+    ...exampleGame,
+    roundsFor(week, ctx) { seen.rounds.add(Object.keys(ctx).sort().join()); return exampleGame.roundsFor(week, ctx); },
+    async resultOf(r, read, inputs, ctx) { seen.result.add(Object.keys(ctx ?? {}).sort().join()); return exampleGame.resultOf(r, read, inputs, ctx); },
+  };
+  const wd = world(at(5, 0, 2));
+  const s4 = at(4);
+  wd.questions[200] = { week: "3", outcome: 1, lock_time: String(s4 - DAY) };
+  for (let i = 0; i < 2; i++) wd.questions[201 + i] = { week: "4", outcome: 1, lock_time: String(s4 + (i + 1) * DAY / 2) };
+  wd.next = 203;
+  wd.players = [{ address: A, entry: { stake: "500000000", peak_stake: "500000000", voided: false, answers: [{ question_id: 201, option: 0 }] } }];
+  const rp = new Replay(spy, exampleCfg());
+  const h = await rp.hour([fakeNode("a", () => wd), fakeNode("b", () => wd)], wd.time + 5 * MIN);
+  assert.equal(h.error, undefined, h.error);
+  assert.deepEqual([...seen.rounds], ["inputs,now,published"]);
+  assert.deepEqual([...seen.result], ["blockAt"]);
+});
+
+// ───────── LR-1 (Repo Lens 5, #R5-4b): pins for the 3-day lead, a non-list cards value, and the rolling card count ─────────
+test("LR-1: the schedule lead is at most 3 days (4320 min accepted, 4321 refused)", () => {
+  assert.equal(rollingProblem({ ...OU, scheduleFromMin: 4320, scheduleToMin: 4290 }), "");
+  assert.match(rollingProblem({ ...OU, scheduleFromMin: 4321, scheduleToMin: 4290 }), /at most 3 days/);
+});
+
+test("LR-1: a ruler game's schedule file whose cards isn't a list is held by its shape", () => {
+  const f = { v: 1, game: rcfg.game, round: rollingId(N0), start: C.start(N0), written: C.scheduleFrom(N0) + 5 * MIN, body: { line: 1 }, cards: "x" };
+  assert.match(scheduleShape(f, scheduleName(N0), rcfg), /cards aren't a card list/);
+});
+
+test("LR-1: a rolling ruler week file with fewer cards than rounds decided from a schedule file is held (rollingWeekWhy's cardPerRound count)", () => {
+  const n = N0, s = C.start(n), sched = new Set([rollingId(n)]);
+  const j: any = { week: 5, start: at(5), end: at(6), rounds: [[rollingId(n), startDay(s), 0, "s", []], [rollingId(n + 1), startDay(C.start(n + 1)), 0, "v", []]], cards: [] };
+  assert.match(rollingWeekWhy(j, rcfg, sched), /1 rounds decided from a schedule file but only 0 ruler cards/);
+  assert.equal(rollingWeekWhy({ ...j, cards: [[{ game: 4 }, "a".repeat(64)]] }, rcfg, sched), "", "one card for the one scheduled round; the cancelled round needs none");
+  assert.equal(rollingWeekWhy(j, cfg, sched), "", "a non-ruler rolling game has no card count");
+});
