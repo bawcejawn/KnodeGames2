@@ -78,6 +78,7 @@ jobs:
         env:
           RPC: \${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: \${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: \${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           VHP_PREV: \${{ runner.temp }}/prev
           VHP_OUT: \${{ runner.temp }}/vhp-out
           VHP_KEEP_DAYS: \${{ vars.VHP_KEEP_DAYS || '30' }}
@@ -115,6 +116,7 @@ jobs:
           FILL_PART: plan
           RPC: \${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: \${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: \${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           FILL_STATE: \${{ runner.temp }}/fill-state
           FILL_DAYS: "30"
       - uses: ${UP}
@@ -155,6 +157,7 @@ jobs:
           FILL_CHUNK_TO: \${{ matrix.part.to }}
           RPC: \${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: \${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: \${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           FILL_STATE: \${{ runner.temp }}/fill-state
       - uses: ${UP}
         with:
@@ -189,6 +192,7 @@ jobs:
           FILL_PART: hours
           RPC: \${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: \${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: \${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           FILL_STATE: \${{ runner.temp }}/fill-state
           VHP_OUT: \${{ runner.temp }}/vhp-out
       - uses: ${UP}
@@ -217,6 +221,7 @@ jobs:
           KEEP: \${{ vars.VHP_KEEP_DAYS || '30' }}
           RPC: \${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: \${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: \${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           RPC_VERIFY: \${{ vars.RPC_VERIFY || '' }}
         run: |
           set -euo pipefail

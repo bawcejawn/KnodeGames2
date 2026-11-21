@@ -17,6 +17,7 @@
  *   npx tsx bot/vhp-ruler.ts
  */
 import { Contract, Provider, Serializer, utils } from "koilib";
+import { nodeProvider } from "./node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -72,7 +73,7 @@ export async function blockRecord(it: any): Promise<Blk> {
   return { h, id, s, burn: burns[0], events };
 }
 export function chainNode(url: string, name: string): RulerNode {
-  const p = new Provider([url]);
+  const p = nodeProvider(url);
   const abi: any = JSON.parse(JSON.stringify(tokenAbi));
   abi.methods.effective_balance_of = { ...abi.methods.balance_of, entry_point: 0x629f31e6 };   // vhp contract entry point
   const vhp = new Contract({ id: R.VHP_CONTRACT, abi, provider: p });

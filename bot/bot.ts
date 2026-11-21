@@ -41,6 +41,7 @@ import crypto from "node:crypto";
 import { spawnSync, execSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { Signer, Provider, Contract } from "koilib";
+import { nodeProvider } from "./node.ts";
 import { Chain, KoinosChain, SimChain, Call, showKoin, toSat, loadAbi, pagePlayers } from "./chain.ts";
 import { tokenAbi } from "./token-abi.ts";
 import { readCsv, syncBlocks, fetchRange, readVhp, MAINNET_VHP, type Blk } from "../questions/common.ts";
@@ -2247,7 +2248,7 @@ function liveCtx(dryRun: boolean): Ctx {
       return last < from ? [] : fetchRange(chain.provider, head.head_topology.id, from, last);
     },
     ...(rpcCheck ? { crossCheckBlocks: async (from: number, to: number) => {
-      const second = new Provider([rpcCheck]);
+      const second = nodeProvider(rpcCheck);
       const head: any = await second.getHeadInfo();
       const last = Math.min(to, Number(head.last_irreversible_block));
       return last < from ? [] : fetchRange(second, head.head_topology.id, from, last);
@@ -2260,7 +2261,7 @@ function liveCtx(dryRun: boolean): Ctx {
       const vhpAddr = isMainnet(rpc) ? MAINNET_VHP : (dep?.vhp ?? MAINNET_VHP);
       const a = await readVhp(chain.provider, vhpAddr, who);
       if (!rpcCheck) return a;
-      const b = await readVhp(new Provider([rpcCheck]), vhpAddr, who);
+      const b = await readVhp(nodeProvider(rpcCheck), vhpAddr, who);
       if (Math.abs(a.height - b.height) > 20) throw new Error(`the two nodes are ${Math.abs(a.height - b.height)} blocks apart (RPC ${a.height}, RPC_CHECK ${b.height}); VHP reading skipped this run`);
       for (const w of Object.keys(a.values)) {
         const x = BigInt(a.values[w]), y = BigInt(b.values[w] ?? "-1");

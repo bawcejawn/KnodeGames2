@@ -14,6 +14,7 @@ import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { Provider, Signer, Contract, Transaction, Serializer, utils } from "koilib";
+import { nodeProvider } from "./node.ts";
 
 export const ABI_FILE = "contracts/vault/abi/kpred.koilib.json";
 export const loadAbi = () => JSON.parse(fs.readFileSync(ABI_FILE, "utf8"));
@@ -74,7 +75,7 @@ export class KoinosChain implements Chain {
   private contract: Contract;
 
   constructor(readonly rpc: string, readonly contractId: string) {
-    this.provider = new Provider([rpc]);
+    this.provider = nodeProvider(rpc);
     this.contract = new Contract({ id: contractId, abi: this.abi, provider: this.provider });
   }
 

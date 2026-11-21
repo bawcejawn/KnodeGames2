@@ -38,6 +38,7 @@
  *   npm run golf     (RPC, RPC_CHECK, GOLF_PREV, GOLF_OUT, RACE_DATA, GAMES_DATA, GOLF_STAKED_FROM_WEEK)
  */
 import { Provider, Contract } from "koilib";
+import { nodeProvider } from "../node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
@@ -1001,6 +1002,6 @@ if (isMain && process.argv[2] !== undefined && process.argv[2] !== "status") {
   run({
     prev: E.GOLF_PREV, out: E.GOLF_OUT, stakedFromWeek: sf, raceDir: E.RACE_DATA, gamesDir: E.GAMES_DATA, holdWeeks: E.GOLF_HOLD_WEEKS,
     namesDir: E.NAMES_DATA, vhpDir: E.VHP_DATA,
-    p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null,
+    p: nodeProvider(RPC), check: RPC_CHECK ? nodeProvider(RPC_CHECK) : null,
   }).catch((e) => { console.error(e); process.exit(1); });
 }
