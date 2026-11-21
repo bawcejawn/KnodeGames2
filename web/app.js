@@ -1511,7 +1511,7 @@
       cards.replaceChildren(...list);
     }
     $("#lb-note").textContent = practice
-      ? "Test week: practice standings. Points count as usual, but there are no rewards or prizes this week; they roll into Week 1's pool (Week 1 starts Monday 16 November)."
+      ? "Test week: practice standings. Points count as usual, but there are no rewards or prizes this week; they roll into Week 4's pool (Week 4 starts Monday 16 November)."
       : kind === "free"
       ? `Free play: wallets with no stake. 1st and 2nd at the end of the week collect the free-play prize. Only the top ${FREE_SHOW} are shown; everyone else stays private.`
       : week === S.week

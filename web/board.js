@@ -30,7 +30,7 @@
   const WL = (w) => {
     if (root.KWeeks) return root.KWeeks.label(w);
     const n = Math.trunc(Number(w));
-    return n >= 4 ? `Week ${n - 3}` : n === 3 ? "Test week" : `Week of ${new Date(1792368000000 + n * 604800000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`;
+    return n >= 4 ? `Week ${n}` : n === 3 ? "Test week" : `Week of ${new Date(1792368000000 + n * 604800000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`;
   };
   const MEDAL = ["🥇", "🥈", "🥉"], ORD = ["1st", "2nd", "3rd"];
   const LABELS = Object.freeze({ staked: "Staked", free: "Free play" });   // the same in every game

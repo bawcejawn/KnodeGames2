@@ -91,5 +91,5 @@ test("the Race page keeps a short Ruler line and one results table; its Rules ta
   assert.ok((h.match(/id="ruler-box"[\s\S]*?<\/section>/)[0].length) < 700, "a short box");
   assert.match(js, /hist\.hidden = cur\.mode === "on" && body\.length > 0/, "the older Results table is hidden once the Ruler scores the race");
   assert.match(js, /class: "rl"/);
-  assert.match(idx, /Scored by the VHP Ruler<\/b> from Week 1/);
+  assert.match(idx, /Scored by the VHP Ruler<\/b> from Week 4/);
 });
