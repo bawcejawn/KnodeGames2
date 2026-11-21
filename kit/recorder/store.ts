@@ -4,11 +4,13 @@
 // can't be read stops the run; it's never treated as "nothing yet".
 import fs from "node:fs";
 import path from "node:path";
-import { canon, pad3, weekShape, readWeekFolder, weekToParts, useKitParts } from "../publish/check.inline.mjs";
+import { canon, pad3, weekShape, readWeekFolder, weekToParts, useKitParts, MAX_PARTS_WEEK_BYTES } from "../publish/check.inline.mjs";
 import * as KP from "../parts/parts.inline.mjs";
 useKitParts(KP);
 
 export const MAX_WRITE_BYTES = 1_900_000;   // under the publish job's 2 MB cap
+/** B2 (1): a parts game's whole week (written as parts, each under kit/parts' cap), 95% of the publish check's limit. */
+export const MAX_PARTS_WEEK_WRITE_BYTES = Math.floor(0.95 * MAX_PARTS_WEEK_BYTES);
 export const FETCHED_MARK = ".fetched";
 
 export type GameCfg = { game: number; genesis: number; weekMs?: number; sundayFunRound: boolean; maxRoundPoints?: number; inputsFile?: boolean; slug?: string; parts?: "d" | "r" };

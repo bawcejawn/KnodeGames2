@@ -2273,6 +2273,9 @@ jobs:
           export const HOUR = 3600000;
           export const WEEK = 7 * DAY;
           export const MAX_FILE_BYTES = 2 * 1024 * 1024;      // the publish job's cap (RECORDER §6.3)
+          // B2 (1): a parts game's week is never one published file (each part keeps kit/parts' 2 MB cap), so its rebuilt week
+          // file may be bigger. This bounds the rebuilt week this job holds in memory; every real file still keeps MAX_FILE_BYTES.
+          export const MAX_PARTS_WEEK_BYTES = 16 * 1024 * 1024;
           export const RESULTS_DAYS = 3;                      // the vault takes a week's results file for 3 days (VAULT §6)
           export const STABLE_MS = HOUR;                      // final once two runs at least an hour apart read the same (D-135)
           export const MAX_PER_PLACE = 10;                    // the vault takes at most 10 wallets per free place
@@ -2935,9 +2938,9 @@ jobs:
           }
           const readRaw = (dir, rel) => { const p = path.join(dir, rel); return fs.existsSync(p) && fs.lstatSync(p).isFile() ? fs.readFileSync(p) : null; };
           /** Parsed JSON, only when the bytes are exactly the recorders' own form. */
-          function parseCanon(raw) {
+          function parseCanon(raw, max = MAX_FILE_BYTES) {
             if (raw === null) return { ok: false, why: "missing" };
-            if (raw.length > MAX_FILE_BYTES) return { ok: false, why: "over 2 MB" };
+            if (raw.length > max) return { ok: false, why: max === MAX_FILE_BYTES ? "over 2 MB" : `over ${max / 1048576} MB` };
             let v;
             try { v = JSON.parse(raw.toString("utf8")); } catch { return { ok: false, why: "not JSON" }; }
             if (Buffer.compare(Buffer.from(canon(v), "utf8"), raw) !== 0) return { ok: false, why: "not in the recorders' own JSON form" };
@@ -2986,7 +2989,9 @@ jobs:
             for (const b of bad) hold(b, "not a plain file in an allowed folder");
             const okWeeks = new Map();     // week -> the week file that will be published after this job (incoming or published)
             const heldWeeks = new Set();
-            const pubWeek = (w) => { const r = parseCanon(readRaw(pubDir, weekName(w))); return r.ok && !weekShape(r.v, weekName(w), cfg) ? r.v : null; };
+            // B2 (1): a parts game's week files here are rebuilt from W<NNN>/ folders (partsViews), so they get the parts cap.
+            const weekMax = cfg.parts ? MAX_PARTS_WEEK_BYTES : MAX_FILE_BYTES;
+            const pubWeek = (w) => { const r = parseCanon(readRaw(pubDir, weekName(w)), weekMax); return r.ok && !weekShape(r.v, weekName(w), cfg) ? r.v : null; };
             const tallyOf = (j) => tally(j, cfg);
 
             // Inputs files first (FC-9): write-once, only before their week opens (by this job's clock), at most a week ahead.
@@ -3038,7 +3043,7 @@ jobs:
               if (!NAMES.test(f)) { hold(f, "a name the game may not publish"); continue; }
               if (!WEEK_FILE.test(f)) continue;
               const raw = readRaw(inDir, f), old = readRaw(pubDir, f);
-              const p = parseCanon(raw);
+              const p = parseCanon(raw, weekMax);
               if (!p.ok) { hold(f, p.why); continue; }
               const j = p.v, why = weekShape(j, f, cfg);
               if (why) { hold(f, why); continue; }
@@ -3047,7 +3052,7 @@ jobs:
               if (cfg.rolling) { const rw = rollingWeekWhy(j, cfg, schedOk); if (rw) { hold(f, rw); continue; } }
               if (cfg.inputsFile && (inputsOk.get(w) ?? pubInputs(w)) !== j.inputs) { hold(f, "its inputs hash isn't the published inputs file's (FC-9)"); continue; }
               { const cw2 = cardsWhy(raw, old, j); if (cw2) { hold(f, cw2); continue; } }
-              const pv = old ? parseCanon(old) : null;
+              const pv = old ? parseCanon(old, weekMax) : null;
               const prev = pv?.ok && !weekShape(pv.v, f, cfg) ? pv.v : null;
               if (old && !prev) { hold(f, "the published copy can't be read: nothing replaces it"); continue; }
               if (prev?.state === "final") {
@@ -3219,7 +3224,8 @@ jobs:
                     } else fs.writeFileSync(path.join(dst, rel), canon(readWeekFolder(from, g).week));
                   } catch (err) { if (incoming) held.push({ name: e.name + "/", why: String(err?.message ?? err).slice(0, 200) }); else throw err; }
                 } else if (e.isDirectory() && !e.isSymbolicLink()) fs.cpSync(from, to, { recursive: true, verbatimSymlinks: true });
-                else if (e.isFile()) fs.copyFileSync(from, to);
+                // B2 (1): only rebuilt weeks get the parts cap; a real incoming file over 2 MB is held here (it could not be published).
+                else if (e.isFile()) { if (incoming && fs.statSync(from).size > MAX_FILE_BYTES) held.push({ name: e.name, why: "over 2 MB" }); else fs.copyFileSync(from, to); }
                 else if (incoming) held.push({ name: e.name, why: "not a plain file" });
               }
             };

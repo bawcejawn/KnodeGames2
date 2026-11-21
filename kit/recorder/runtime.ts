@@ -15,10 +15,10 @@
 // The module never sees the clock, files or the network except through what this passes it.
 import fs from "node:fs";
 import path from "node:path";
-import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_STATE_BYTES, MAX_EXTRAS_BYTES, rollingClock, rollingId, rollingNo, scheduleName, startDay, rollingProblem, MAX_SCHEDULE_BYTES, rollingCancelled, inScheduleWindow } from "../publish/check.inline.mjs";
+import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_PARTS_WEEK_BYTES, MAX_STATE_BYTES, MAX_EXTRAS_BYTES, rollingClock, rollingId, rollingNo, scheduleName, startDay, rollingProblem, MAX_SCHEDULE_BYTES, rollingCancelled, inScheduleWindow } from "../publish/check.inline.mjs";
 import { clockFromState, rollingRounds, type VaultClock } from "./clock.ts";
 import { agree, budgeted, Budget, DEFAULT_BUDGETS, Disagree, OutOfBudget, ReadFailed, sameJson, toJson, type Budgets, type KitNode } from "./nodes.ts";
-import { Prev, Out, MAX_WRITE_BYTES } from "./store.ts";
+import { Prev, Out, MAX_WRITE_BYTES, MAX_PARTS_WEEK_WRITE_BYTES } from "./store.ts";
 import { decide, holdWeeks, releaseCode, releaseMatches } from "./lifecycle.ts";
 import { boardFor } from "./boards.ts";
 import { vaultFileFor } from "./vaultfile.ts";
@@ -720,6 +720,13 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     if (n > ALERT_BYTES) alerts.errors.push(`${what} is ${Math.round(n / 1024)} KB, over 85% of the 2 MB cap: it stops at 1.9 MB, so the game needs its files split soon (NK-3, NK-4)`);
     else if (n > WARN_BYTES) alerts.warnings.push(`${what} is ${Math.round(n / 1024)} KB, over 60% of the 2 MB cap (KC-9, NK-3)`);
   };
+  // B2 (1): a parts game's whole week is never one file (each part is warned on by kit/parts), so it is measured against
+  // the parts-week limit instead: a warning from 60%, an owner alert from 85%, a stop at 95%.
+  const partsWeekAlert = (n: number) => {
+    const mb = (x: number) => (x / 1048576).toFixed(1);
+    if (n > Math.floor(0.85 * MAX_PARTS_WEEK_BYTES)) alerts.errors.push(`week ${w}'s whole week is ${mb(n)} MB, over 85% of the ${mb(MAX_PARTS_WEEK_BYTES)} MB parts-week limit: it stops at ${mb(MAX_PARTS_WEEK_WRITE_BYTES)} MB (B2)`);
+    else if (n > Math.floor(0.6 * MAX_PARTS_WEEK_BYTES)) alerts.warnings.push(`week ${w}'s whole week is ${mb(n)} MB, over 60% of the parts-week limit (B2)`);
+  };
   // board.json is trimmed to its byte budget (boardOf); if its kept rows alone are still too big, the week's other files
   // are written anyway and the board waits, with an owner alert (NK-4: the cap never leaves a week with no files).
   const writeBoard = (b: any) => {
@@ -775,8 +782,14 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   const d = decide({ now, end: span.end, due, complete: t.complete, hash, prev: pw ? { state: pw.state, seen: pw.seen } : null, rereadOk, held: held ?? inputsHeld ?? (t.vaultError ? `no vault file: ${t.vaultError}` : null) });
   body.state = d.state; body.seen = d.seen;
   const size = Buffer.byteLength(JSON.stringify(body));
-  if (size > MAX_WRITE_BYTES) throw new Error(`week ${w}'s file would be ${Math.round(size / 1024)} KB, over the ${Math.round(MAX_WRITE_BYTES / 1024)} KB the kit writes: this game has outgrown one week file (GAME_KIT.md §6: split it before this happens)`);
-  sizeAlert(`week ${w}'s file`, size);
+  if (cfg.parts) {
+    // B2 (1): a parts week is written as parts (each capped by kit/parts), so the one-file limit doesn't apply to it.
+    if (size > MAX_PARTS_WEEK_WRITE_BYTES) throw new Error(`week ${w} would be ${Math.round(size / 1024)} KB in all, over the ${Math.round(MAX_PARTS_WEEK_WRITE_BYTES / 1024)} KB a parts week may hold (B2): stopping`);
+    partsWeekAlert(size);
+  } else {
+    if (size > MAX_WRITE_BYTES) throw new Error(`week ${w}'s file would be ${Math.round(size / 1024)} KB, over the ${Math.round(MAX_WRITE_BYTES / 1024)} KB the kit writes: this game has outgrown one week file (GAME_KIT.md §6: split it before this happens)`);
+    sizeAlert(`week ${w}'s file`, size);
+  }
   // KG parts v1: a parts game writes the week as its folder W<NNN>/ (display columns from partCols ride along).
   const writeWeek = (j: any) => {
     if (!cfg.parts) { out.write(`W${pad3(w)}.json`, j); return; }
