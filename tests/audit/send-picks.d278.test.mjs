@@ -179,7 +179,7 @@ test("D-284: a packed pick (Picks kind 3, one number 0 to 2^64-1) plans, shows t
 test("D-294: one copy of selfPayMin: the wallet reads the sponsor's (game-data/deployment.json), the card and page keep none", () => {
   assert.match(fnSrc("hasOwnMana"), /const v = sp && sp\.selfPayMin;/);
   assert.match(fnSrc("sendKondor"), /if \(sp && await hasOwnMana\(sp\)\) \{ sp = null;/, "25+ Mana of its own: the wallet pays");
-  for (const f of ["web/js/lib/send-picks.js", "web/fantasy.js"]) {
+  for (const f of ["web/js/lib/send-picks.js", "web/fantasy.js", "web/survivor.js", "web/survivor.html"]) {
     const src = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
     assert.doesNotMatch(src, /selfPayMin|\b25\s*Mana|2500000000\b/, `${f} keeps no copy of the self-pay line`);
   }
@@ -234,19 +234,14 @@ test("D-256 game:check: Fantasy passes, and a copy that sends a pick itself fail
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-test("D-256 allowance: only web/survivor.js, shown as a note (not a failure), and only that file", () => {
-  assert.deepEqual(Object.keys(SEND_PICKS_ALLOW), ["web/survivor.js"]);
+test("D-256 allowance: none left (Survivor's follow-up PR moved web/survivor.js onto the card)", () => {
+  assert.deepEqual(Object.keys(SEND_PICKS_ALLOW), []);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sendpicks-"));
   fs.mkdirSync(path.join(tmp, "web"));
   const page = "picksContract.functions.pick({});\nawait W.send(label, [operation]);\n";
   fs.writeFileSync(path.join(tmp, "web", "survivor.js"), page);
-  fs.writeFileSync(path.join(tmp, "web", "other.js"), page);
   const s = checkSendPicks({ page: "survivor.html" }, tmp);
-  assert.equal(s.length, 1);
-  assert.equal(s[0].required, false, "Survivor: a note until its follow-up PR");
-  assert.match(s[0].msg, /allowed for now/);
-  const o = checkSendPicks({ page: "other.html" }, tmp);
-  assert.ok(o.every((r) => !r.pass && r.required), "any other page still fails");
+  assert.ok(s.length && s.every((r) => !r.pass && r.required), "a Survivor page that sends itself fails for real now");
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 

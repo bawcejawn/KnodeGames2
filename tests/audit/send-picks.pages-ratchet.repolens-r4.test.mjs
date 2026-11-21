@@ -19,7 +19,6 @@ export const PENDING = [
   // ·
   "race.js",
   // ·
-  "survivor.js",
   // ·
   "overunder.js",
 ];
