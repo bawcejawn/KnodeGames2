@@ -195,7 +195,40 @@
           "seal": "b69ed0a878069169d35d919d5c2ceb02b9e21cf88377650bd3901c06b0b67e40"
         }
       ],
-      "vhpSeal": "8883435b9272e1d7538bcaff6484df035cc108308a9f6a4e143c28fe039c6766"
+      "vhpSeal": "8883435b9272e1d7538bcaff6484df035cc108308a9f6a4e143c28fe039c6766",
+      "result": {
+        "void": false,
+        "option": 3,
+        "value": "1,725",
+        "dataHash": "54618dd54fc615138b9069f4fce4098ae5444cd283822237019c378666725a3b",
+        "resolvedAt": "2026-11-21T09:52:17.190Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41236107,
+          "decidedHeight": 41261511,
+          "readings": [
+            41252515,
+            41253720,
+            41254879,
+            41255072,
+            41256634,
+            41256838,
+            41257832,
+            41258171,
+            41259527,
+            41260701
+          ],
+          "readingsInWindow": 10,
+          "values": {
+            "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": {
+              "release": "213001169458215",
+              "end": "219303852834863",
+              "change": "+2.96%",
+              "height": 41258171
+            }
+          }
+        }
+      }
     },
     {
       "id": "W004-D5-2",
@@ -544,7 +577,40 @@
           "seal": "7d77f5a93a2ce33551ae8135e79768837c52bd3bcef955b167242bc8a723ed6b"
         }
       ],
-      "vhpSeal": "7f4268fe07bd0b33d36fba5121f049d0fac355a8e26ed3ac94a5a00d5f67559a"
+      "vhpSeal": "7f4268fe07bd0b33d36fba5121f049d0fac355a8e26ed3ac94a5a00d5f67559a",
+      "result": {
+        "void": false,
+        "option": 2,
+        "value": "913",
+        "dataHash": "54618dd54fc615138b9069f4fce4098ae5444cd283822237019c378666725a3b",
+        "resolvedAt": "2026-11-21T09:52:17.190Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41236107,
+          "decidedHeight": 41261518,
+          "readings": [
+            41252515,
+            41253720,
+            41254879,
+            41255072,
+            41256634,
+            41256838,
+            41257832,
+            41258171,
+            41259527,
+            41260701
+          ],
+          "readingsInWindow": 10,
+          "values": {
+            "1GGxRhLN7Ek54xycG5XaZBE4bCgwV2xtvk": {
+              "release": "117389626811587",
+              "end": "116447873899824",
+              "change": "−0.80%",
+              "height": 41260701
+            }
+          }
+        }
+      }
     },
     {
       "id": "W004-D5-4",
