@@ -25,7 +25,7 @@ A new game every 30 minutes. Each game is one block producer and a line, in half
 On form: 97% or more. A little behind: 90% to 96.9%. Behind: 80% to 89.9%. Unreliable: below 80%.
 
 ## Rewards
-- **Free play:** 2 VHP first, 1 VHP second, when prizes are on.
+- **Free play:** free to play; no free prizes for now (D-576: held off by Vault's prize switch, not closed for good). Staking opens only from week 6, once the vault has added the game.
 - **Staked:** D-152, from the staked board when staking is on.
 
 ## Dependencies

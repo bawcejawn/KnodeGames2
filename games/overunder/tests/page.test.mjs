@@ -38,7 +38,7 @@ test("no HTML strings: the page is built with textContent and elements", () => {
 
 test("the owner's wording: Over Under (no slash), form (not rate), the open and lock times, no banned words", () => {
   const all = text(html) + " " + words(code);
-  for (const s of ["Picks open 2 hours before the start", "never more than 4", "No changes", "half block", "skipped", "2 VHP for first and 1 VHP for second", "every 30 minutes", "Unreliable"]) assert.ok(all.includes(s), s);
+  for (const s of ["Picks open 2 hours before the start", "never more than 4", "No changes", "half block", "skipped", "pays no VHP prize for now", "every 30 minutes", "Unreliable"]) assert.ok(all.includes(s), s);
   assert.doesNotMatch(all, /Over\/Under/);
   assert.doesNotMatch(all, /\b(bet|bets|betting|earn|earns|returns|odds|guaranteed|beta)\b/i);
   assert.doesNotMatch(text(html), /\brate\b/i);

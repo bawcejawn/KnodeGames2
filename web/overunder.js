@@ -181,7 +181,7 @@ function start() {
       label: "Over Under leaderboard", hide: ["today"], columns: [{ key: "pts", label: "Points", d: 0 }],
       summary: (r) => `${r.pts} pts`, scored: (r) => r.pts > 0, name: nameOf,
       unranked: "The Staked board is for wallets with at least 1 VHP staked in Over Under that week.",
-      free: { show: 6, prize: "Free play prizes: 2 VHP for first, 1 VHP for second." },
+      free: { show: 6, prize: "The Free play board pays no VHP prize for now." },
     });
     lb.set(boardData()); lb.setMe(me() || "");
   }
