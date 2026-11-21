@@ -22,14 +22,14 @@ function run(page, iso) {
 }
 const fx = (page, iso) => run(page, iso).filter(([c]) => c.includes("fx-test-week"));
 
-test("Fantasy test week banner: Home, All games and Fantasy only, from Mon 16 Nov 00:00 UTC to Mon 23 Nov 00:00 UTC", () => {
-  for (const p of ["index.html", "games.html", "fantasy.html"]) {
+test("Fantasy test week banner: All games and Fantasy only (Home has none, owner 20 Nov), from Mon 16 Nov 00:00 UTC to Mon 23 Nov 00:00 UTC", () => {
+  for (const p of ["games.html", "fantasy.html"]) {
     assert.equal(fx(p, "2026-11-15T23:59:59Z").length, 0, `${p}: not before week 4`);
     assert.equal(fx(p, "2026-11-16T00:00:00Z").length, 1, `${p}: on at the start of week 4 (Sun 15 Nov 7 PM ET)`);
     assert.equal(fx(p, "2026-11-22T23:59:59Z").length, 1, `${p}: still on at the end of week 4`);
     assert.equal(fx(p, "2026-11-30T00:00:00Z").length, 0, `${p}: off after week 5 (Sun 29 Nov 7 PM ET, D-238)`);
   }
-  for (const p of ["race.html", "blockx.html", "stake.html", "golf.html"]) assert.equal(fx(p, "2026-11-18T12:00:00Z").length, 0, `${p}: never`);
+  for (const p of ["index.html", "race.html", "blockx.html", "stake.html", "golf.html"]) assert.equal(fx(p, "2026-11-18T12:00:00Z").length, 0, `${p}: never`);
 });
 
 test("Fantasy test week banner: the words follow the site's rules and the owner's dates", () => {
@@ -50,7 +50,8 @@ test("Fantasy page note and the games list say week 4 is a free test and every w
   assert.match(fs.readFileSync(`${APP}/web/fantasy.js`, "utf8"), /TEST_WEEK_ENDS = Date\.UTC\(2026, 10, 30\);   \/\/ weeks 4 and 5 are free play \(D-238\)\n  if \(Date\.now\(\) >= TEST_WEEK_ENDS && \$\("fx-testweeks"\)\) \$\("fx-testweeks"\)\.hidden = true;/);
 });
 
-test("only the Fantasy banner is left: nothing shows in the old test week (its banner is gone), Fantasy's shows from Mon 16 Nov", () => {
-  assert.equal(run("index.html", "2026-11-12T12:00:00Z").length, 0);
-  assert.deepEqual(run("index.html", "2026-11-16T00:00:00Z").map(([c]) => c), ["test-week fx-test-week"]);
+test("only the Fantasy banner is left: nothing shows in the old test week, none on Home, Fantasy's shows from Mon 16 Nov on All games and Fantasy", () => {
+  assert.equal(run("games.html", "2026-11-12T12:00:00Z").length, 0);
+  assert.equal(run("index.html", "2026-11-16T00:00:00Z").length, 0);
+  assert.deepEqual(run("games.html", "2026-11-16T00:00:00Z").map(([c]) => c), ["test-week fx-test-week"]);
 });

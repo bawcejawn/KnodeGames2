@@ -94,8 +94,10 @@ Commit that file in a PR to `main`. From then on, owner commands need `OWNER_WIF
 with their own 48-hour wait: a Picks propose on Mon 9 can be accepted from Wed 11 (until 7 days after that). Nothing may be
 announced on Picks in between (Combo's game 8 and the Picks v2 upgrade wait until after the accept).
 
-**The planned new owner is pinned** (Repo Lens #D-12 F-1): `"nextOwner"` in `picks-data/deployment.json` (today
-`1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd`, the cold wallet in `KEYS_AND_ROLES.md`), set by a reviewed pull request.
+**The planned new owner is pinned** (Repo Lens #D-12 F-1): `"nextOwner"` in `picks-data/deployment.json`, set by a
+reviewed pull request. **Not set now** (owner D-268, D-417: the handover comes last, after the Picks v2 upload and every
+apply); it is pinned again to `1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd` (the cold wallet in `KEYS_AND_ROLES.md`) by its own
+PR just before the propose.
 `owner-propose` refuses any other address, and prints the address in groups of 4 to check against the cold wallet's
 screen. After the accept the pin is removed, so the next handover needs a new reviewed pin.
 

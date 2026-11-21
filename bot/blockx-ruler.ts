@@ -135,19 +135,31 @@ export function emptyDay(week: number, day: number, from: number | null): RulerD
 /** How long the recorder waits for the ruler's data to score a target before it counts no pick on it (3 days, the
  *  recorder's own look-back: vhp-data is normally an hour or two behind). */
 export const RULER_WAIT_MS = 3 * 86400000;
+/** The 48-hour old-points fallback (owner, 18 Nov 2026): in an ON week, a target the ruler still can't score 48 hours after
+ *  its block is scored the OLD way instead of being voided at 3 days: a right pick keeps the points the recorder already
+ *  wrote for it in the week file (the pre-ruler rule, W file). Shadow weeks never use it (nothing counts in them). Once
+ *  made, a fallback entry is final, like a card or a void: it is never made again, even if the ruler's data arrives. */
+export const RULER_FALLBACK_MS = 2 * 86400000;
+/** How a fallback entry is marked, with no new key (the publish job's day-file keys stay as they are): no card, not
+ *  void, no ruler points, and exactly this `why`. The publish job (games.yml) carries the same text; a test keeps them equal. */
+export const FALLBACK_WHY = "old points: the ruler couldn't score this target within 48 hours, so a right pick keeps its old-rule points";
+export const isFallback = (e: { card?: unknown; void?: unknown; why?: unknown } | null | undefined): boolean =>
+  !!e && e.card === null && e.void === false && e.why === FALLBACK_WHY;
 
 /** A final, recorded target's ruler entry. L: the ruler's ledger (null: unavailable this run). old: last run's entry
  *  (kept as published once it has a card). now: the run's head time (for the wait). A target the recorder voided is
  *  void here too (no points). */
-export function entryFor(L: any, t: { round: number; height: number; time: number; signer: string | null; void?: boolean }, lead: number, now: number, old?: RulerTarget | null): RulerTarget {
+export function entryFor(L: any, t: { round: number; height: number; time: number; signer: string | null; void?: boolean }, lead: number, now: number, old?: RulerTarget | null, fallback = false): RulerTarget {
   const lock = t.height - lead, cardRound = roundOf(t.time), window = windowOf(lock);
   // Repo Lens #G-35 G35-1: an entry that has a card, or is void, is final as published: never made again.
-  if (old && (old.card || old.void === true) && old.height === t.height && old.cardRound === cardRound && JSON.stringify(old.window) === JSON.stringify(window)) return old;
+  if (old && (old.card || old.void === true || isFallback(old)) && old.height === t.height && old.cardRound === cardRound && JSON.stringify(old.window) === JSON.stringify(window)) return old;
   const base: RulerTarget = { round: t.round, height: t.height, lock, cardRound, window, card: null, note: null, signer: t.signer, points: 0, void: false, why: null };
   if (t.void || !t.signer) return { ...base, void: true, why: "the target itself is void (no signer recorded)" };
   const late = now - t.time >= RULER_WAIT_MS;
+  // The 48-hour fallback (ON weeks only: the caller passes fallback = true): never reached by the 3-day void below.
+  const old48 = fallback && now - t.time >= RULER_FALLBACK_MS && !!old && !old.card && old.void !== true;   // Repo Lens #R3-1 R3-1.1: only a target an EARLIER run already saw waiting
   // Repo Lens #G-49 G49-1: the 3-day void's note doesn't start "not yet", so the recorder reports it (and alerts in an ON week).
-  const wait = (note: string) => (late ? { ...base, void: true, note: `the ruler couldn't score this target within 3 days (${note})`, why: "the ruler couldn't score this target within 3 days: no pick on it counts" } : { ...base, note });
+  const wait = (note: string) => (old48 ? { ...base, note: `the ruler couldn't score this target within 48 hours (${note}): scored the old way`.slice(0, 380), why: FALLBACK_WHY } : late ? { ...base, void: true, note: `the ruler couldn't score this target within 3 days (${note})`, why: "the ruler couldn't score this target within 3 days: no pick on it counts" } : { ...base, note });
   if (!L) return wait("not yet: the ruler's data isn't available this run");
   if (t.height + R.DELAY > L.to || lock + 20 > L.to) return wait(`not yet: the ruler's data reaches block ${L.to}, the target is block ${t.height}`);
   try {
@@ -158,8 +170,10 @@ export function entryFor(L: any, t: { round: number; height: number; time: numbe
     return wait(/not yet/.test(m) ? m : `the ruler couldn't make this card: ${m}`);
   }
 }
-/** A pick's points on the ruler: the entry's points if the pick named the signer, else 0. undefined: not scored yet. */
-export function ruledPoints(e: RulerTarget | null | undefined, producer: string): number | undefined {
+/** A pick's points on the ruler: the entry's points if the pick named the signer, else 0. undefined: not scored yet.
+ *  oldPts: the pick's own old-rule points (its week-file points); a fallback entry (isFallback) scores with them. */
+export function ruledPoints(e: RulerTarget | null | undefined, producer: string, oldPts?: number): number | undefined {
+  if (isFallback(e)) return typeof oldPts === "number" ? oldPts : undefined;
   if (!e || (!e.card && !e.void)) return undefined;
   return !e.void && producer === e.signer ? e.points : 0;
 }

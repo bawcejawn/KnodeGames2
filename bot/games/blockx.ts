@@ -158,23 +158,41 @@ async function readSigners(node: any, headId: string, from: number, to: number) 
   return { signers: [...signers], first, last, n };
 }
 const PICKS_ABI = () => JSON.parse(fs.readFileSync(new URL("../../contracts/picks/abi/picks.koilib.json", import.meta.url), "utf8"));
-async function readPicks(node: any, contract: string, game: number, round: number, tries = 6, beforeRead: () => void = () => {}): Promise<RawPick[]> {
-  const c = new Contract({ id: contract, abi: PICKS_ABI(), provider: node });
+/** Capacity (13 Nov): the most picks one target may hold. Past it the read stops LOUDLY (an error: the target is not
+ *  recorded this run, the run's alert fires, and it is tried again next run), never a quiet cut at the limit. */
+export const MAX_PICKS_PER_TARGET = 100000;
+export class TooManyPicks extends Error {}
+/** The paging loop of readPicks, on its own so it can be tested with a fake page reader. `page(after)` returns one
+ *  page of list_picks rows (an empty page ends the list). */
+export async function pagePicks(page: (after: string | undefined) => Promise<any[]>, round: number, beforeRead: () => void = () => {}, max = MAX_PICKS_PER_TARGET): Promise<RawPick[]> {
   const out: RawPick[] = [];
-  let after: string | undefined;
-  for (let page = 0; page < 1000; page++) {
+  let after: string | undefined, rowsSeen = 0;
+  for (;;) {
     beforeRead();   // Repo Lens B4-2: before every page, not only the first
-    const r: any = await withRetry(`picks for round ${round}`, () => (c.functions as any).list_picks({ game, round: String(round), ...(after ? { start_after: after } : {}), limit: 100 }), tries);
-    const rows = r?.result?.rows ?? [];
+    const rows = (await page(after)) ?? [];
+    // Audit BX-18: keep going until an empty page (not "a page shorter than 100", which assumes the contract's page size).
+    if (!rows.length) break;
+    rowsSeen += rows.length;
+    // Rows are counted as read (valid or not), so the loop always ends, even on a node that never sends an empty page.
+    if (rowsSeen > max) throw new TooManyPicks(`round ${round} has more than ${max.toLocaleString("en-US")} picks: stopped reading it (nothing recorded for this target; tell the Block X chat)`);
     for (const x of rows) {
       const ps = x.pick?.producers;
       if (isAddr(x.player) && Array.isArray(ps) && ps.length === 1 && isAddr(ps[0])) out.push({ player: x.player, producer: ps[0], time: Number(x.pick.time || 0) });
     }
-    // Audit BX-18: keep going until an empty page (not "a page shorter than 100", which assumes the contract's page size).
-    if (!rows.length) break;
-    after = rows[rows.length - 1].player;
+    const next = rows[rows.length - 1]?.player;
+    // A page that doesn't move forward would loop for ever: stop loudly instead (only "the same key again" is checked:
+    // the contract orders by the address's bytes, which need not match string order; the row cap above ends the rest).
+    if (typeof next !== "string" || next === after) throw new Error(`round ${round}: the picks list didn't move forward after ${after ?? "the start"}; stopped reading it`);
+    after = next;
   }
   return out;
+}
+async function readPicks(node: any, contract: string, game: number, round: number, tries = 6, beforeRead: () => void = () => {}): Promise<RawPick[]> {
+  const c = new Contract({ id: contract, abi: PICKS_ABI(), provider: node });
+  return pagePicks(async (after) => {
+    const r: any = await withRetry(`picks for round ${round}`, () => (c.functions as any).list_picks({ game, round: String(round), ...(after ? { start_after: after } : {}), limit: 100 }), tries);
+    return r?.result?.rows ?? [];
+  }, round, beforeRead);
 }
 const MAINNET_KNODE_GAME = (() => { try { return JSON.parse(fs.readFileSync(new URL("../../game-data/deployment.json", import.meta.url), "utf8")).contract as string; } catch { return ""; } })();
 const GAME_ABI = () => JSON.parse(fs.readFileSync(new URL("../../contracts/vault/abi/kpred.koilib.json", import.meta.url), "utf8"));
@@ -947,13 +965,16 @@ export async function run(o: Opts) {
         if (RR.dayOf(t.time, ws) !== d) continue;
         const prevE = olds.get(t.height) || null;
         const needs = !(prevE && (prevE.card || prevE.void));
-        const e = o.rulerEntryOf ? o.rulerEntryOf(t, lead, head.time, prevE) : RR.entryFor(needs && !t.void ? ledger() : null, t, lead, head.time, prevE);
+        const e = o.rulerEntryOf ? o.rulerEntryOf(t, lead, head.time, prevE) : RR.entryFor(needs && !t.void ? ledger() : null, t, lead, head.time, prevE, mode === "on");
         if (e !== prevE) {   // (a published entry is reported once, when it is made)
           if (!e.card && e.note && !/^not yet/.test(e.note)) problems.push(`block ${t.height}: ${e.note}`);
+          // The 48-hour old-points fallback (owner, 18 Nov): in an ON week a target the ruler couldn't score in 48 hours is scored
+          // the old way (its week-file points). It counts, so it is not a void; the owner is alerted once (held), as for a void.
+          if (mode === "on" && RR.isFallback(e) && !RR.isFallback(prevE)) holds.push(`block ${t.height}: the VHP ruler couldn't score this ON-week target within 48 hours (its data was missing or behind), so it was scored the old way, with the points in its week file. Check the VHP ruler workflow (vhp-data)`);
           // Repo Lens #G-49 G49-1: in an ON week a 3-day void costs right picks their points for good: alert (held).
           if (mode === "on" && e.void && !e.card && !t.void && !(prevE && prevE.void)) holds.push(`block ${t.height}: the VHP ruler couldn't score this ON-week target within 3 days (its data was missing or behind), so no pick on it counts. Check the VHP ruler workflow (vhp-data)`);
         }
-        if (mode === "on" && !e.card && !e.void && head.time - t.time > RULER_LATE_MS) rulerLate++;
+        if (mode === "on" && !e.card && !e.void && !RR.isFallback(e) && head.time - t.time > RULER_LATE_MS) rulerLate++;
         fresh.targets.push(e); rulerAt.set(`${wf.week}:${t.height}`, e);
       }
       rulerDays.set(RR.xName(wf.week, d), fresh);
@@ -974,7 +995,7 @@ export async function run(o: Opts) {
   if (rulerLate) holds.push(`the VHP ruler's data is missing or behind: ${rulerLate} ON-week target(s) have waited more than ${RULER_LATE_MS / 3600000} hours for their card; after 3 days a target counts no pick. Check the VHP ruler workflow (vhp-data)`);
   for (const h of holds) if (!problems.includes(h)) problems.push(h);
   /** In an ON week, a pick's points are the ruler's (undefined: the target isn't scored by the ruler yet). */
-  const ruled = (w: number, t: any, producer: string, pts: number): number | undefined => (rulerMode(w) === "on" ? RR.ruledPoints(rulerAt.get(`${w}:${t.height}`), producer) : pts);
+  const ruled = (w: number, t: any, producer: string, pts: number): number | undefined => (rulerMode(w) === "on" ? RR.ruledPoints(rulerAt.get(`${w}:${t.height}`), producer, pts) : pts);
   const rulerScored = (w: number, from: number, to: number) => rulerMode(w) !== "on" || (all.get(w)?.targets || []).every((t: any) => t.time < from || t.time >= to || t.void || ruled(w, t, "", 0) !== undefined);
   const rowsOf = (from: number, to: number) => {
     const rows: any[] = [];

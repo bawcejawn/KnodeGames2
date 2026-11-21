@@ -6,9 +6,9 @@
   the damaged block stores (desk node 2026-10-23, game node 2026-10-27). A Docker volume lives on Linux's own disk
   inside WSL2: faster, and a proper filesystem for the databases.
 
-  Run in PowerShell from C:\kprediction, one node at a time (desk first: it produces the fewest blocks):
-      powershell -ExecutionPolicy Bypass -File node\move-node-to-volume.ps1 -Node desk -WhatIf   (shows the plan only)
-      powershell -ExecutionPolicy Bypass -File node\move-node-to-volume.ps1 -Node desk
+  Run in PowerShell from your KnodeGames2 folder (e.g. C:\knodegames2), one node at a time (desk first: it produces the fewest blocks):
+      powershell -ExecutionPolicy Bypass -File ops\node\move-node-to-volume.ps1 -Node desk -WhatIf   (shows the plan only)
+      powershell -ExecutionPolicy Bypass -File ops\node\move-node-to-volume.ps1 -Node desk
   -Node: desk (C:\kpred-desk-node), game (C:\kpred-node) or personal (C:\koinos-personal).
 
   What it does (nothing is ever deleted):
@@ -159,7 +159,7 @@ try {
   # ---------- 6. override ----------
   $services = @("chain", "mempool", "block_store", "p2p", "block_producer", "jsonrpc", "grpc", "transaction_store", "contract_meta_store", "account_history")
   $lines = @($Marker,
-    "# Written by node\move-node-to-volume.ps1 on $stamp. Docker Compose reads this file automatically: every Koinos",
+    "# Written by ops\node\move-node-to-volume.ps1 on $stamp. Docker Compose reads this file automatically: every Koinos",
     "# service gets the Docker volume above at /koinos instead of the BASEDIR folder (Compose merges volumes by their",
     "# path in the container). To go back to the folder: docker compose down, rename this file, docker compose up -d.",
     "services:")

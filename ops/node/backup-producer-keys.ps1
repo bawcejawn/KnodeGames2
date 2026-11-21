@@ -1,16 +1,16 @@
 <#
   Knode - back up each node's block-producer key (R-VAULT-10, owner OK 4 Nov).
 
-  With a backup, a replacement PC can produce at once with the same key (node\setup-node.ps1 -RestoreKey): the Desk
+  With a backup, a replacement PC can produce at once with the same key (ops\node\setup-node.ps1 -RestoreKey): the Desk
   then avoids its 48-hour key wait, and the pool needs no re-registering.
 
-  Run in PowerShell from C:\kprediction, with the USB stick plugged in (E: here; use its letter):
-      powershell -ExecutionPolicy Bypass -File node\backup-producer-keys.ps1 -To E:\
+  Run in PowerShell from your KnodeGames2 folder (e.g. C:\knodegames2), with the USB stick plugged in (E: here; use its letter):
+      powershell -ExecutionPolicy Bypass -File ops\node\backup-producer-keys.ps1 -To E:\
   It writes E:\knode-producer-keys-<date>\game\private.key, ...\desk\private.key and ...\personal\private.key (from
-  the node's folder, or from its Docker volume after node\move-node-to-volume.ps1), checks each copy is identical to
+  the node's folder, or from its Docker volume after ops\node\move-node-to-volume.ps1), checks each copy is identical to
   the original, then prints ONLY each node's PUBLIC key and checks it against the key registered on chain.
 
-  It never prints, uploads or sends a private key. It refuses to write into C:\kprediction (the repository), into a
+  It never prints, uploads or sends a private key. It refuses to write into the repository folder, into a
   node's own folder, through a link or junction, or into a cloud-synced folder (OneDrive); a drive that isn't removable
   needs a typed YES. No image code ever runs with the key mounted, and the helper container has no network.
 
@@ -33,7 +33,7 @@ function Warn($m) { Write-Host "!!  $m" -ForegroundColor Yellow }
 function Full($p) { return [IO.Path]::GetFullPath($p).TrimEnd('\', '/') }
 function Inside($p, $root) { $a = (Full $p) + [IO.Path]::DirectorySeparatorChar; $b = (Full $root) + [IO.Path]::DirectorySeparatorChar; return $a.StartsWith($b, [StringComparison]::OrdinalIgnoreCase) }
 function DockerExit([string[]]$a) { $ErrorActionPreference = "Continue"; $null = & docker @a 2>&1; return $LASTEXITCODE }
-# The node's Docker volume (written by node\move-node-to-volume.ps1 into docker-compose.override.yml), or $null.
+# The node's Docker volume (written by ops\node\move-node-to-volume.ps1 into docker-compose.override.yml), or $null.
 function VolumeOf($dir) {
   $o = Join-Path (Join-Path $dir "koinos") "docker-compose.override.yml"
   if (-not (Test-Path $o)) { return $null }
