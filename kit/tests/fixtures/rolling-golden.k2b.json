@@ -1,0 +1,14 @@
+{
+  "fantasy-shape (sundayFunRound true, liveWeek false)": {
+    "W004.json": "5d0c0fdfc3c20fea7c31084201ca6142b0d9ddd2c1287230f4d5186b91ee0685",
+    "alltime.json": "4f0e075e55cf64e12f13049c88b340ebabbfdf374d1d78aa27e174135631d748",
+    "board.json": "b8ae86c5fd69e02ef69ac8566b555224666b9951ad948cb4eb938a1b4da68cf9",
+    "vault/W4.json": "0de6832d18b2629914f51954c25864762a0d4d3f7282735fd8e611f713773e63"
+  },
+  "survivor-shape (liveWeek true, seasonWeeks 2)": {
+    "W004.json": "88c9291334a199f52539d53f3e71854f5f48ad12563e6f96c6e90709ac627bff",
+    "alltime.json": "4f0e075e55cf64e12f13049c88b340ebabbfdf374d1d78aa27e174135631d748",
+    "board.json": "2e291dd303d591a32fc8bd09b0a47235ba8cdd3ed0b8b882d6eb3ed914c4fd38",
+    "vault/W4.json": "281482bd73dd52c9483d1be7501e436a9c276cc15f819aafcb2168927dbd24e8"
+  }
+}

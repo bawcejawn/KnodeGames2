@@ -174,9 +174,27 @@ try {
       stateFor.set(r.id, st);
     }
   }
+  // Rolling rounds (#38): each round's schedule body from the game's own scheduleFor, made in round order as the
+  // recorder makes them (at its window's start, seeing the earlier ones), deterministic and the same on both nodes;
+  // resultOf then gets it as ctx.schedule. A round whose scheduleFor says NotYet has no schedule (cancelled, void).
+  const sched = new Map<string, any>();
+  if (cfg.rolling) {
+    const { rollingClock, rollingNo } = await import("../publish/check.inline.mjs");
+    const c = rollingClock(cfg);
+    ok(typeof mod.scheduleFor === "function", "a rolling game has scheduleFor");
+    for (const r of rounds.slice().sort((x: any, y: any) => (x.id < y.id ? -1 : 1))) {
+      const n = rollingNo(r.id), start = c.start(n), at = c.scheduleFrom(n);
+      const mk = async (node: any, cx: any) => { try { return JSON.parse(JSON.stringify(await mod.scheduleFor(n, start, { now: at, read: node.vault, schedules: new Map(sched), ...cx }))); } catch (e) { if (e instanceof NotYet) return null; throw e; } };
+      const x = await mk(na, ctxA), x2 = await mk(na, ctxA), y = await mk(nb, ctxB);
+      if (canon(x) !== canon(x2) || canon(x) !== canon(y)) ok(false, `scheduleFor(${r.id}) gives the same answer twice and on both nodes`);
+      if (x !== null) sched.set(r.id, x);
+    }
+  }
+  const ctxOf = (cx: any, r: any) => (cfg.rolling ? { ...cx, schedule: sched.get(r.id) } : cx);
   let decided = 0;
   for (const r of rounds) {
-    const a = await result(r, na, ctxA), a2 = await result(r, na, ctxA), b = await result(r, nb, ctxB);
+    if (cfg.rolling && !sched.has(r.id)) continue;     // cancelled: never decided (D-344)
+    const a = await result(r, na, ctxOf(ctxA, r)), a2 = await result(r, na, ctxOf(ctxA, r)), b = await result(r, nb, ctxOf(ctxB, r));
     if (canon(a) !== canon(a2) || canon(a) !== canon(b)) ok(false, `resultOf(${r.id}) gives the same answer twice and on both nodes`);
     if (sample.undecided.includes(r.id)) ok(a === PENDING, `resultOf(${r.id}) is PENDING while undecided (never a guess)`);
     if (typeof a !== "symbol" && read) {
