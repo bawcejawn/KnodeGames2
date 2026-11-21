@@ -1,181 +1,156 @@
-// Over/Under on the kit: the GameModule against a fake ruler (cards built from given rows) and a fake block clock.
-// The end-to-end week (real ruler chain, two nodes, the real publish check) is the conformance sample (`npm run game:check`).
-import test from "node:test";
+// Over Under recorder (games/overunder/recorder.ts): the schedule file (who plays, the line), the queue it carries, and the
+// line re-check on the scored card. A fake ruler and a fake chain (one block every 3 s), so each test runs in milliseconds.
+import { test } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import { game, CARD, type Inputs } from "../recorder.ts";
-import { PENDING, NotYet } from "../../../kit/recorder/types.ts";
-import * as F from "../math.js";
+import { createRequire } from "node:module";
+import { game, markOf } from "../recorder.ts";
+import { VOID, NotYet } from "../../../kit/recorder/types.ts";
+import * as R from "../math.js";
 
-const DAY = 86400000, MON = Date.UTC(2026, 10, 16);
-const WEEK = { week: 4, start: MON, end: MON + 7 * DAY };
-const A = "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", B = "1BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", C = "1CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
-const D = "1DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD", E = "1EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE";
-const S = "1SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS", T = "1TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT", U = "1UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU";
-const CH = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-const BLOCK0 = 1000000, T0 = Date.UTC(2026, 9, 1);
-const clock = (upTo = Infinity) => async (ms: number) => { if (ms > upTo) throw new NotYet("not yet: not irreversible"); return BLOCK0 + Math.ceil((ms - T0) / 3000); };
-type Row = { credited: number; expected: number; void?: boolean; entry?: boolean; quality?: "ok" | "flagged" };
-function fakeVhp(rowsFor: (round: string) => Record<string, Row> | null) {
+const require = createRequire(import.meta.url);
+require("../../../ruler/vhp-ruler.js");
+const KR = (globalThis as any).KRuler;
+
+const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
+const A = (i: number) => "1" + "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"[i].repeat(33);
+const T0 = R.WEEK0 + 6 * R.WEEK_MS + 2 * 86400000;                // Wed 2 Dec 2026 00:00 UTC
+const H0 = 1_000_000, blockAt = async (t: number) => H0 + Math.floor((t - R.WEEK0) / 3000);
+
+/** A fake ruler: every card lists `rows` (k, form in millionths; entry true unless said); it records the settings asked for. */
+function fakeCtx(rows: Record<string, { k: number; form: number; entry?: boolean; credited?: number | null }>, schedules = new Map<string, any>(), now = 0) {
   const asked: any[] = [];
-  return {
-    asked, ruleVersion: 4, to: 0,
+  const vhp = {
     card(s: any) {
       asked.push(s);
-      const rows = rowsFor(s.round);
-      if (!rows) throw new NotYet(`not yet: ${s.round}`);
-      return { ruleVersion: 4, game: s.game, round: s.round, producers: Object.entries(rows).map(([a, r]) => ({ a, credited: String(r.credited * 1e6), expected: String(r.expected * 1e6), void: !!r.void, entry: r.entry ?? true, quality: r.quality ?? "ok" })) };
+      return { producers: Object.entries(rows).map(([a, r]) => ({ a, k: String(r.k), form: String(r.form), entry: r.entry !== false, credited: r.credited === undefined ? null : r.credited === null ? null : String(r.credited), void: false })) };
     },
   };
+  return { ctx: { now, read: {}, vhp, blockAt, schedules } as any, asked };
 }
-const base = (): Record<string, Row> => ({ [A]: { credited: 20, expected: 20.4 }, [B]: { credited: 30, expected: 30.4 }, [C]: { credited: 40, expected: 40.4 }, [D]: { credited: 50, expected: 50.4, entry: false }, [E]: { credited: 60, expected: 60.4, void: true } });
-const ctxOf = (vhp: unknown, blockAt: unknown = clock(), extra: object = {}) => ({ now: MON, vhp, blockAt, ...extra } as any);
-const roster = async (): Promise<Inputs> => (await game.inputsFor!(WEEK, ctxOf(fakeVhp(base)))) as Inputs;
+const roundId = (start: number) => "r" + String(Math.round((start - R.WEEK0) / R.SLOT)).padStart(5, "0");
+const nOf = (start: number) => Math.round((start - R.WEEK0) / R.SLOT);
 
-test("rounds: Monday to Sunday, two a UTC day (A rows 0-31, B rows 32-63), 12-hour Picks rounds, day = dayOf(locksAt)", () => {
-  const rs = game.roundsFor(WEEK, { now: MON });
-  assert.equal(rs.length, 14);
-  assert.deepEqual(rs.map((x) => x.id), ["d20261116", "d20261116b", "d20261117", "d20261117b", "d20261118", "d20261118b", "d20261119", "d20261119b", "d20261120", "d20261120b", "d20261121", "d20261121b", "d20261122", "d20261122b"]);
-  for (const x of rs) { assert.equal(x.locksAt, x.day + 1); assert.equal(x.resolvesAt, x.day + DAY); assert.equal(x.pickRound, F.pickRoundOf(x.day, F.halfOfId(x.id))); }
-  assert.equal(new Set(rs.map((x) => x.pickRound)).size, 14, "every round its own Picks round");
-  assert.equal(rs[0].pickRound, MON / DAY * 2);
-  assert.equal(rs[1].pickRound, MON / DAY * 2 - 1);
+/** Runs scheduleFor for `count` starts in a row (each sees the files before it), skipping the starts in `cancel`. */
+async function chain(rows: any, count: number, cancel = new Set<number>()) {
+  const sched = new Map<string, any>(), who: (string | null)[] = [];
+  for (let i = 0; i < count; i++) {
+    const start = T0 + i * R.SLOT;
+    if (cancel.has(i)) { who.push(null); continue; }
+    try {
+      const { ctx } = fakeCtx(rows, new Map(sched), start - R.SCHEDULE_FROM_MIN * R.MIN);
+      const body = JSON.parse(JSON.stringify(await game.scheduleFor!(nOf(start), start, ctx)));
+      sched.set(roundId(start), body); who.push(body.entry.producer);
+    } catch (e) { if (e instanceof NotYet) { who.push(null); continue; } throw e; }
+  }
+  return { sched, who };
+}
+const rowsOf = (n: number, k = 900_000_000, form = 990_000) => Object.fromEntries(Array.from({ length: n }, (_, i) => [A(i), { k, form }]));
+
+test("the schedule card sits wholly in the past when the file is made (the ruler can make it), on a 6-hour mark", async () => {
+  const start = T0 + 13 * R.SLOT, { ctx, asked } = fakeCtx(rowsOf(3));
+  await game.scheduleFor!(nOf(start), start, ctx);
+  const w = asked[0].window, opensAt = await blockAt(start - R.SCHEDULE_FROM_MIN * R.MIN);
+  assert.ok(w.S1 + KR.DELAY <= opensAt - 500, "scored range ends well before the window opens");
+  assert.equal(w.S1 - w.S0 + 1, R.GAME_BLOCKS, "same size as a game, so k is a game's k");
+  assert.ok(w.W0 <= w.W1 && w.W1 === w.L && w.L === w.S0 - 1 && w.W1 - w.W0 + 1 === 7200);
+  assert.equal(markOf(start) % (6 * 3600000), 0);
+  assert.equal(asked[0].round, markOf(start) / (6 * 3600000));
+  // every start with the same mark asks for the very same card
+  const other = start + R.SLOT, b = fakeCtx(rowsOf(3));
+  if (markOf(other) === markOf(start)) { await game.scheduleFor!(nOf(other), other, b.ctx); assert.deepEqual(b.asked[0], asked[0]); }
 });
 
-test("manifest: Picks game 16 and vault game 16, kind of inputs, and the roster is made at least a day before the first picks open", () => {
-  const m = JSON.parse(fs.readFileSync(new URL("../game.json", import.meta.url), "utf8"));
-  assert.equal(m.vaultGameId, 16);
-  assert.deepEqual(m.picks, { contract: "picks", gameId: 16 });
-  assert.equal(game.slug, m.slug);
-  assert.equal(m.inputsFile, true);
-  assert.equal(m.freePrizeDefault, "on", "D-290");
-  assert.equal(m.maxRoundPoints, F.HALF);
-  // D-284: the roster is published BEFORE picks open. Monday's picks open F.AHEAD (2 days) before the week; the roster
-  // is made inputsLeadHours before it. The roster must exist, with a margin of at least a day, before that moment.
-  assert.ok(m.inputsLeadHours * 3600000 >= F.AHEAD + DAY, `inputsLeadHours ${m.inputsLeadHours} h is not at least ${(F.AHEAD + DAY) / 3600000} h`);
+test("the card settings are the Ruler's for game 16 (with the Vault pooled)", async () => {
+  const { ctx, asked } = fakeCtx(rowsOf(3));
+  await game.scheduleFor!(nOf(T0), T0, ctx);
+  const s = asked[0];
+  assert.deepEqual(Object.keys(s), ["game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"]);
+  assert.deepEqual({ ...s, round: 0, window: 0 }, { game: 16, round: 0, window: 0, c: "500000", minK: 10, poolRule: "min", ownRule: "spot", paying: true, pooled: [POOL] });
 });
 
-test("inputsFor: the newest ruler card (Thursday), Over/Under's own settings, roster = entry and not void, lines from expected; the recount is byte-equal", async () => {
-  const vhp = fakeVhp(base);
-  const inp = (await game.inputsFor!(WEEK, ctxOf(vhp))) as Inputs;
-  assert.deepEqual(vhp.asked.map((s) => s.round), ["20261112"], "one card, the newest");
-  assert.ok(vhp.asked.every((s) => s.game === 16 && s.minK === CARD.minK && s.ownRule === "spot" && s.poolRule === "min"));
-  assert.equal(inp.start, MON);
-  assert.equal(inp.roster.cardRound, "20261112");
-  assert.deepEqual(inp.roster.rows, [{ a: A, line: 41 }, { a: B, line: 61 }, { a: C, line: 81 }], "D has no entry, E is void; 20.4 → 20.5, 30.4 → 30.5, 40.4 → 40.5");
-  F.checkRoster(inp.roster, MON);
-  const again = (await game.inputsFor!(WEEK, ctxOf(fakeVhp(base)))) as Inputs;
-  assert.equal(JSON.stringify(again), JSON.stringify(inp));
+test("KR-1: a missing schedule file (a cancelled start) leaves the queue exactly as if that start never happened", async () => {
+  const rows = rowsOf(6);
+  const full = await chain(rows, 12);
+  const cut = await chain(rows, 12, new Set([4]));
+  // the start after the cancelled one takes the producer the cancelled start would have had
+  assert.equal(cut.who[5], full.who[4]);
+  // and re-running a later start with an earlier file deleted from the map gives the same answer as the cancelled chain
+  const m = new Map(full.sched); for (const id of [...m.keys()]) if (id >= roundId(T0 + 4 * R.SLOT)) m.delete(id);
+  const start = T0 + 4 * R.SLOT + R.SLOT, { ctx } = fakeCtx(rows, m, start - R.SCHEDULE_FROM_MIN * R.MIN);
+  const body = await game.scheduleFor!(nOf(start), start, ctx);
+  assert.equal((body as any).entry.producer, cut.who[5]);
 });
 
-test("inputsFor: a flagged newest card is passed over for the next one; every card flagged or no data waits (NotYet), never a guess", async () => {
-  const flaggedRows = (): Record<string, Row> => Object.fromEntries(Object.entries(base()).map(([a, r]) => [a, { ...r, quality: "flagged" as const }]));
-  const vhp = fakeVhp((round) => (round === "20261112" ? flaggedRows() : base()));
-  const inp = (await game.inputsFor!(WEEK, ctxOf(vhp))) as Inputs;
-  assert.deepEqual(vhp.asked.map((s) => s.round), ["20261112", "20261111"]);
-  assert.equal(inp.roster.cardRound, "20261111");
-  await assert.rejects(() => game.inputsFor!(WEEK, ctxOf(fakeVhp(flaggedRows))), NotYet);
-  await assert.rejects(() => game.inputsFor!(WEEK, ctxOf(undefined)), NotYet);
-  await assert.rejects(() => game.inputsFor!(WEEK, ctxOf(fakeVhp(base), null)), NotYet, "before the kit's block clock");
-  await assert.rejects(() => game.inputsFor!(WEEK, ctxOf(fakeVhp(() => null))), NotYet, "no card yet");
+test("every file carries the queue; a bad queue in a file stops the run loudly", async () => {
+  const { sched } = await chain(rowsOf(4), 3);
+  for (const b of sched.values()) assert.deepEqual(Object.keys(b), ["entry", "state"]);
+  const m = new Map(sched); const last = [...m.keys()].pop()!;
+  m.set(last, { ...m.get(last), state: { launched: true, initial: [], last: { x: 1 } } });
+  const start = T0 + 3 * R.SLOT, { ctx } = fakeCtx(rowsOf(4), m);
+  await assert.rejects(game.scheduleFor!(nOf(start), start, ctx), /queue state is not valid/);
 });
 
-test("resultOf: each roster producer's [credited, expected, void] from the day's card; asked with the roster as `include`", async () => {
-  const inp = await roster(), [mon] = game.roundsFor(WEEK, { now: MON });
-  const vhp = fakeVhp(() => ({ ...base(), [A]: { credited: 21, expected: 20.4 } }));
-  const r: any = await game.resultOf(mon, {} as any, inp, ctxOf(vhp));
-  assert.equal(r.round, "20261116");
-  assert.deepEqual(Object.keys(r.rows).sort(), [A, B, C]);
-  assert.deepEqual(r.rows[A], [String(21e6), String(20.4e6), false]);
-  assert.deepEqual(vhp.asked[0].include, [A, B, C]);
-  assert.equal(vhp.asked[0].game, 16);
+test("a new entrant is not left at the bottom for ever: it plays once everyone ahead of it has had a turn", async () => {
+  const rows: any = rowsOf(14);
+  const first = await chain(rows, 4);
+  const newbie = A(20);
+  rows[newbie] = { k: 900_000_000, form: 990_000 };
+  const sched = new Map(first.sched), who: string[] = [];
+  for (let i = 4; i < 4 + 30; i++) {
+    const start = T0 + i * R.SLOT, { ctx } = fakeCtx(rows, new Map(sched));
+    const body = JSON.parse(JSON.stringify(await game.scheduleFor!(nOf(start), start, ctx)));
+    sched.set(roundId(start), body); who.push(body.entry.producer);
+  }
+  const at = who.indexOf(newbie);
+  assert.ok(at >= 0 && at <= 16, `the new entrant played at start ${at}`);
 });
 
-test("resultOf: waits (PENDING / NotYet) while there is no roster, no data, the day isn't irreversible, or a roster producer has no row", async () => {
-  const inp = await roster(), [mon] = game.roundsFor(WEEK, { now: MON });
-  assert.equal(await game.resultOf(mon, {} as any, undefined, ctxOf(fakeVhp(base))), PENDING);
-  await assert.rejects(() => game.resultOf(mon, {} as any, inp, ctxOf(fakeVhp(() => null))), NotYet);
-  await assert.rejects(() => game.resultOf(mon, {} as any, inp, ctxOf(fakeVhp(base), clock(MON))), NotYet, "the day's last block isn't irreversible");
-  const missing = fakeVhp(() => { const b = base(); delete b[B]; return b; });
-  assert.equal(await game.resultOf(mon, {} as any, inp, ctxOf(missing)), PENDING, "B has no row: wait, never a silent skip");
+test("Unreliable producers (form below 80%) and the pool node never play; nobody left = no game (NotYet, the kit cancels)", async () => {
+  const rows = { [A(0)]: { k: 900_000_000, form: 799_999 }, [POOL]: { k: 900_000_000, form: 990_000 }, [A(1)]: { k: 900_000_000, form: 990_000, entry: false } };
+  const { ctx } = fakeCtx(rows);
+  await assert.rejects(game.scheduleFor!(nOf(T0), T0, ctx), (e: any) => e instanceof NotYet);
+  const ok = { ...rows, [A(2)]: { k: 900_000_000, form: 800_000 } };
+  const b = fakeCtx(ok);
+  assert.equal(((await game.scheduleFor!(nOf(T0), T0, b.ctx)) as any).entry.producer, A(2));
 });
 
-test("resultOf: a flagged day waits until Tuesday 00:00 UTC after the week, then every row is skipped; a day with no card at all skips every row after 48 h, alerted", async () => {
-  const inp = await roster(), [mon] = game.roundsFor(WEEK, { now: MON });
-  const flaggedVhp = fakeVhp(() => Object.fromEntries(Object.entries(base()).map(([a, r]) => [a, { ...r, quality: "flagged" as const }])));
-  await assert.rejects(() => game.resultOf(mon, {} as any, inp, ctxOf(flaggedVhp, clock(F.flaggedCutoff(MON) - DAY))), NotYet);
-  const f: any = await game.resultOf(mon, {} as any, inp, ctxOf(flaggedVhp, clock()));
-  assert.equal(f.flagged, true);
-  assert.ok(Object.values(f.rows).every((r: any) => r[2] === true));
-  const out = F.dayOutcomes(inp.roster, f.rows);
-  assert.ok(Object.values(out).every((o) => o === "skip"));
-  const said: string[] = [];
-  const none = fakeVhp(() => null);
-  await assert.rejects(() => game.resultOf(mon, {} as any, inp, ctxOf(none, clock(mon.day + DAY + F.NO_CARD_GRACE - 1), { fallback: async (w: string) => { said.push(w); } })), NotYet, "inside the 48 hours");
-  const g: any = await game.resultOf(mon, {} as any, inp, ctxOf(none, clock(), { fallback: async (w: string) => { said.push(w); } }));
-  assert.equal(g.fallback, true);
-  assert.equal(said.length, 1);
-  assert.match(said[0], /Over\/Under 20261116/);
-  await assert.rejects(() => game.resultOf(mon, {} as any, inp, ctxOf(none, clock())), NotYet, "no fallback available: waits");
+test("the line is the Ruler's helpers on the schedule card's row", async () => {
+  const { ctx } = fakeCtx({ [A(0)]: { k: 1_234_567_890, form: 950_000 } });
+  const e = ((await game.scheduleFor!(nOf(T0), T0, ctx)) as any).entry;
+  assert.equal(e.line, Number(KR.medianLineHalves(KR.forecastExpected({ k: 1_234_567_890n, form: 950_000n }))));
 });
 
-test("scoreRound: 1 point a right row for every wallet that picked, 0 included; the score time is the pick's, kept inside the week", async () => {
-  const inp = await roster(), [mon] = game.roundsFor(WEEK, { now: MON });
-  const result = { round: "20261116", rows: { [A]: [String(21e6), "0", false], [B]: [String(29e6), "0", false], [C]: [String(40.5e6), "0", false] } } as any;
-  // lines: A 20.5 (21 → over), B 30.5 (29 → under), C 40.5 (40.5 → tie: skipped)
-  const pick = (wallet: string, choices: Record<string, "over" | "under">, at: number) => ({ wallet, round: "d", pick: { number: F.encodePick(inp.roster, choices) }, at });
-  const picks = [
-    pick(S, { [A]: "over", [B]: "under", [C]: "over" }, MON - 600000),
-    pick(T, { [A]: "under", [B]: "over" }, MON - 500000),
-    { wallet: U, round: "d", pick: { number: "garbage" }, at: MON - 100 },
-  ] as any;
-  const s = game.scoreRound(mon, picks, result, inp);
-  assert.deepEqual([...s.entries()], [[S, { points: 2, at: MON }], [T, { points: 0, at: 0 }], [U, { points: 0, at: 0 }]]);
-  // a Tuesday-round pick from Sunday: still inside the week, never before its start
-  const tue = game.roundsFor(WEEK, { now: MON })[2];
-  const s2 = game.scoreRound(tue, [pick(S, { [A]: "over" }, MON - 2 * DAY)] as any, result, inp);
-  assert.equal(s2.get(S)!.at, MON);
-  const s3 = game.scoreRound(tue, [pick(S, { [A]: "over" }, tue.day + 5000)] as any, result, inp);
-  assert.equal(s3.get(S)!.at, tue.day, "never later than the round's own day start");
+test("resultOf: the scored card uses the schedule card's round and size window; a line that doesn't match it cancels the game", async () => {
+  const sc = fakeCtx({ [A(0)]: { k: 900_000_000, form: 990_000 } });
+  const body = JSON.parse(JSON.stringify(await game.scheduleFor!(nOf(T0), T0, sc.ctx)));
+  const round: any = { id: roundId(T0), day: 0, locksAt: T0 - R.LEAD, resolvesAt: T0 + R.GAME_MS, pickRound: nOf(T0) };
+  const line = body.entry.line;                                    // half blocks: Over iff credited x 2 > line
+  const over = fakeCtx({ [A(0)]: { k: 900_000_000, form: 990_000, credited: (line + 1) * 500_000 } });
+  const r = await game.resultOf(round, {} as any, undefined, { ...over.ctx, schedule: body } as any);
+  assert.deepEqual(r, { outcome: "over", producer: A(0), line });
+  const w = over.asked[0];
+  assert.equal(w.round, sc.asked[0].round);
+  assert.deepEqual([w.window.W0, w.window.W1, w.window.L], [sc.asked[0].window.W0, sc.asked[0].window.W1, sc.asked[0].window.L]);
+  assert.equal(w.window.S0, await blockAt(T0));
+  assert.equal(w.window.S1 - w.window.S0 + 1, R.GAME_BLOCKS);
+  const changed = fakeCtx({ [A(0)]: { k: 990_000_000, form: 990_000, credited: 0 } });
+  assert.equal(await game.resultOf(round, {} as any, undefined, { ...changed.ctx, schedule: body } as any), VOID);
+  assert.equal(await game.resultOf(round, {} as any, undefined, { ...over.ctx } as any), VOID, "no schedule file: cancelled");
 });
 
-test("scoreRound refuses any roster that is not exactly the published one, and any day outside its week (D-284)", async () => {
-  const inp = await roster(), [mon] = game.roundsFor(WEEK, { now: MON });
-  const result = { round: "20261116", rows: { [A]: ["1", "0", false], [B]: ["1", "0", false], [C]: ["1", "0", false] } } as any;
-  const p = [{ wallet: S, round: "d", pick: { number: "5" }, at: MON }] as any;
-  assert.doesNotThrow(() => game.scoreRound(mon, p, result, inp));
-  const changed = JSON.parse(JSON.stringify(inp)) as Inputs; changed.roster.rows[0].line += 2;
-  assert.throws(() => game.scoreRound(mon, p, result, changed), /id does not match/, "a changed line");
-  const swapped = JSON.parse(JSON.stringify(inp)) as Inputs; swapped.roster.rows.reverse();
-  assert.throws(() => game.scoreRound(mon, p, result, swapped), /sorted/, "a reordered roster");
-  const other = (await game.inputsFor!({ ...WEEK, start: MON + 7 * DAY, end: MON + 14 * DAY }, ctxOf(fakeVhp(base)))) as Inputs;
-  assert.throws(() => game.scoreRound(mon, p, result, other), /not in the roster's week/, "next week's roster for this week's day");
-  assert.throws(() => game.scoreRound(mon, p, result, undefined), /no roster/);
-  const wrong = { ...inp, start: MON + DAY } as Inputs;
-  assert.throws(() => game.scoreRound(mon, p, result, wrong), /roster: for the week starting|id does not match/);
+test("stand-ins equal the Ruler's helpers (forecastExpected, medianLineHalves, isUnreliable)", () => {
+  const ks = [0n, 1n, 149_999n, 150_000n, 1_150_000n, 7_654_321n, 999_999_999n, 1_000_000_000n, 3_000_000_000n];
+  const fs = [0n, 1n, 799_999n, 800_000n, 970_000n, 1_000_000n, 1_200_000n];
+  for (const k of ks) for (const form of fs) {
+    assert.equal(R.forecastExpected({ k, form }), KR.forecastExpected({ k, form }));
+    assert.equal(R.medianLineHalves(R.forecastExpected({ k, form })), KR.medianLineHalves(KR.forecastExpected({ k, form })));
+    assert.equal(R.isUnreliable({ form }), KR.isUnreliable({ form }));
+  }
+  assert.equal(BigInt(R.FORM_GATE), BigInt(KR.FORM_GATE));
 });
 
-test("round B scores rows 32 to 63 from its own number; round A ignores them; a wallet that only picked A has no entry in B", () => {
-  const adr = (i: number) => "1" + CH[i % CH.length].repeat(33 - Math.floor(i / CH.length)) + "Z".repeat(Math.floor(i / CH.length));
-  const roster = F.makeRoster(MON, "20261112", Array.from({ length: 40 }, (_, i) => ({ a: adr(i), expected: "20400000", entry: true, void: false })));
-  const inp = { start: MON, roster } as any;
-  const rows = Object.fromEntries(roster.rows.map((x: any) => [x.a, ["25000000", "0", false]])) as any;   // every row: over (line 20.5)
-  const [a, b] = game.roundsFor(WEEK, { now: MON });
-  assert.equal(b.id, "d20261116b");
-  const all = Object.fromEntries(roster.rows.map((x: any) => [x.a, "over"])) as Record<string, "over">;
-  const [na, nb] = F.encodePicks(roster, all);
-  const mkPick = (wallet: string, number: string) => ({ wallet, round: "x", pick: { number }, at: MON - 1000 });
-  const sa = game.scoreRound(a, [mkPick(S, na)] as any, { round: "20261116", rows } as any, inp);
-  const sb = game.scoreRound(b, [mkPick(S, nb)] as any, { round: "20261116", rows } as any, inp);
-  assert.equal(sa.get(S)!.points, 32);
-  assert.equal(sb.get(S)!.points, 8, "rows 32 to 39");
-  // B's number read as A (or the reverse) can't give the other half's points
-  assert.equal(game.scoreRound(a, [mkPick(S, nb)] as any, { round: "20261116", rows } as any, inp).get(S)!.points, 8, "the same bits mean rows 0 to 7 in A: that is what the round says");
-  assert.equal(game.scoreRound(b, [mkPick(S, "0")] as any, { round: "20261116", rows } as any, inp).get(S)!.points, 0);
-});
-
-test("inputsFor: more than 64 qualifying producers stops the roster loudly (D-296): not NotYet, nothing cut", async () => {
-  const adr = (i: number) => "1" + CH[i % CH.length].repeat(33 - Math.floor(i / CH.length)) + "Z".repeat(Math.floor(i / CH.length));
-  const many = (): Record<string, Row> => Object.fromEntries(Array.from({ length: 65 }, (_, i) => [adr(i), { credited: 20, expected: 20.4 }]));
-  await assert.rejects(() => game.inputsFor!(WEEK, ctxOf(fakeVhp(many))), (e: any) => !(e instanceof NotYet) && /65 producers qualify, the limit is 64/.test(e.message));
+test("each round's Picks round is the contract's (round_size 30 min, offset 0): start / 30 min", () => {
+  const rs = (game.roundsFor as any)({ start: T0, end: T0 + 3 * R.SLOT });
+  assert.equal(rs.length, 3);
+  for (const r of rs) assert.equal(r.pickRound, (r.locksAt + R.LEAD) / R.SLOT);
 });

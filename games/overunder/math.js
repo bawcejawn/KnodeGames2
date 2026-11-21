@@ -1,197 +1,170 @@
-// Over/Under (game 16): every rule, as pure functions. The recorder (recorder.ts, on the Shared Game Kit) and the page use
-// this one file, so a score shown in the browser and a score recorded always agree. No network, no clock, no randomness,
-// no files. Whole numbers only (BigInt where numbers are large), so JavaScript and Python-side checks give the same bytes.
+// Over Under, rolling (game 16): every rule of the queue, the schedule files and the score, as pure functions.
+// No network, no clock, no randomness, no files; whole numbers only. The recorder and the page use this one file.
 //
-// RULES (owner decisions D-266, D-267, D-277, D-284 to D-290; design note claude/newgames/DESIGN-OVERUNDER-VS-2026-11-19.md)
-// - Each UTC day, every producer on the week's roster has a row with a LINE set at half a block. A player picks OVER or
-//   UNDER on any rows; a blank row is no pick. A row is right if the producer's credited blocks that day are above the
-//   line (Over) or below it (Under). 1 point per right row (D-277). Weekly board and prizes (D-272).
-// - The line comes from the VHP Ruler (the expected blocks on the roster's card, rounded to the nearest half block), never
-//   from a number an operator types. Credited blocks are the ruler's, not raw blocks.
-// - A producer that is void that day is SKIPPED: no win, no loss (D-287). A credited count exactly on the line (possible
-//   only when the ruler's credit is a whole half block) is skipped too: a tie is never a win or a loss.
-// - The roster (up to 64 producers, sorted by address) and the lines are published once, write-once, before picks open
-//   (D-284). A day's picks are TWO numbers (Picks kind 3, D-296): number A holds rows 0 to 31, number B rows 32 to 63;
-//   2 bits a row, in roster order, the first row of each number in the lowest bits: 00 blank, 01 over, 10 under,
-//   11 invalid (read as blank). Over 64 producers is a loud error that stops the roster: never a silent cut (D-296).
-//   The two numbers are two Picks rounds (round size 12 hours): A is the round that ends at the day's start, B the one
-//   12 hours before it, so B closes 12 hours earlier than A. Both close before the day starts.
+// RULES (owner decisions D-325 to D-357, D-370, D-383, D-392 to D-398; design note claude/newgames/REPLY-NEWGAMES-M73-2026-11-19.md)
+// - A new game starts every 30 minutes (on :00 and :30 UTC). One game = one producer = one Picks round (round r starts at
+//   r x 1,800,000 ms). A game is exactly 14,400 blocks (about 12 hours). Up to 24 run at once; 3 or 4 are open for picks.
+// - Picks (kind 3): 1 = Over, 2 = Under. Open 2 hours before the start, lock 5 minutes before. No changes (max_changes 0).
+// - The queue: the producer whose last start is longest ago plays next. A producer goes to the bottom at the START of its
+//   game (D-342). A producer off the list at its turn is skipped and keeps its place (D-343). A producer with 2 games
+//   already running is skipped the same way. A new entrant goes to the bottom. A cancelled start leaves the queue unchanged.
+// - Each start gets ONE write-once schedule file, written 3 h 3 min to 3 h 33 min before the start (D-370, line timing A).
+//   A file made later than 2 h 15 min before the start is invalid: that game is cancelled for everyone (D-344).
+// - 1 point per right pick (D-275). A count exactly on the line, and a void game, are skipped (D-287).
+// - A game belongs to the week it STARTS in (week changes Sun 7 PM ET = Mon 00:00 UTC).
+/** FNV-1a (64 bit) of a string, as 16 hex digits: a checksum that a schedule file is the one that was published (not a secret). */
+export function fnv64(s) {
+  let h = 0xcbf29ce484222325n;
+  for (const b of new TextEncoder().encode(s)) { h ^= BigInt(b); h = (h * 0x100000001b3n) & 0xffffffffffffffffn; }
+  return h.toString(16).padStart(16, "0");
+}
 
 export const GAME = 16;
-export const DAY = 86400000;
-export const LEAD = 300000;                   // Picks game 16 locks each number 5 minutes before its round's target (D-285)
-export const AHEAD = 2 * DAY;                 // and opens 2 days before it (D-285)
-export const MAX_CHANGES = 2;                 // a pick, then up to 2 changes (D-286)
-export const HALF = 32;                       // rows in one number: 2 bits a row in a 64-bit number
-export const MAX_ROWS = 64;                   // two numbers a day (D-296)
-export const PICK_ROUND = DAY / 2;            // Picks game 16's round size: 12 hours
-export const MAX_NUMBER = 18446744073709551615n;
-export const ROSTER_VERSION = 1;
-export const PLAY_DAYS = 7;                   // Monday to Sunday; Sunday is the fun round (counts on Today and All time only)
+export const SLOT = 1800000;                       // Picks round_size: 30 minutes
+export const GAME_MS = 12 * 3600000;               // a game runs about 12 hours
+export const GAME_BLOCKS = 14400;                  // exactly this many blocks, from blockAt(start)
+export const AHEAD = 7200000;                      // picks open 2 hours before the start
+export const LEAD = 300000;                        // and lock 5 minutes before it
+export const MAX_CHANGES = 0;
+export const MAX_RUNNING_PER_PRODUCER = 2;
+export const MIN = 60000;
+// The kit's manifest settings (Architecture's rolling-rounds draft); the recorder passes the manifest's numbers in.
+export const SCHEDULE_FROM_MIN = 213;              // 3 h 33 min before the start
+export const SCHEDULE_TO_MIN = 183;                // 3 h 3 min before the start
+export const CANCEL_AFTER_MIN = 135;               // later than 2 h 15 min before the start = cancelled
+export const SCHEDULE_VERSION = 1;
+export const WEEK_MS = 604800000;
+export const WEEK0 = 1792368000000;                // Mon 19 Oct 2026 00:00 UTC = week 0 (the Ruler's weekOfStart)
 export const MILLION = 1000000n;
 export const OVER = 1, UNDER = 2;
 
 export const isAddr = (a) => typeof a === "string" && /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(a);
-const big = (x) => { if (typeof x === "bigint" && x >= 0n) return x; if (typeof x === "number" && Number.isSafeInteger(x) && x >= 0) return BigInt(x); if (typeof x === "string" && /^[0-9]+$/.test(x)) return BigInt(x); throw new Error(`not a whole number ≥ 0: ${x}`); };
-const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
-// ── days ──
-/** yyyymmdd of a UTC day (ms at 00:00), with no Date: days since 1970-01-01 → civil date (H. Hinnant's algorithm). */
-export function ymd(dayMs) {
-  if (!Number.isSafeInteger(dayMs) || dayMs % DAY !== 0) throw new Error("ymd: not the start of a UTC day");
-  const z = dayMs / DAY + 719468, era = Math.floor(z / 146097), doe = z - era * 146097;
-  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
-  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)), mp = Math.floor((5 * doy + 2) / 153);
-  const d = doy - Math.floor((153 * mp + 2) / 5) + 1, m = mp < 10 ? mp + 3 : mp - 9, y = yoe + era * 400 + (m <= 2 ? 1 : 0);
-  return String(y * 10000 + m * 100 + d);
+// ── rounds and times ──
+export function roundOfStart(startMs) {
+  if (!Number.isSafeInteger(startMs) || startMs < 0 || startMs % SLOT !== 0) throw new Error(`a start must be a whole 30-minute slot (:00 or :30 UTC): ${startMs}`);
+  return startMs / SLOT;
 }
-/** The week's 7 rounds, Monday to Sunday. */
-export const weekDays = (start) => Array.from({ length: PLAY_DAYS }, (_, i) => start + i * DAY);
-/** The days whose ruler cards the roster may come from, newest first: Thursday back to Friday before the week (all at
- *  least 3 days old when the roster is made, Friday 00:00 UTC). The newest card that isn't flagged is used. */
-export const rosterDays = (start) => Array.from({ length: 7 }, (_, i) => start - (4 + i) * DAY);
-/** When a still-flagged day of the week starting at `start` is decided anyway (every row skipped): Tuesday 00:00 UTC
- *  after the week (the same rule as Fantasy: owner, 12 Nov). */
-export const flaggedCutoff = (start) => start + 8 * DAY;
-/** A day with no ruler card at all waits 48 hours after the day ends, then counts as skipped for every row (owner, 13 Nov). */
-export const NO_CARD_GRACE = 2 * DAY;
-
-/** The Picks rounds (12 hours each) of a day's two numbers: A (rows 0 to 31) is the round whose target is the day's start,
- *  B (rows 32 to 63) the round 12 hours before. Both lock 5 minutes before their target, so before the day starts. */
-export const pickRoundOf = (dayMs, half) => dayMs / PICK_ROUND - (half === 1 ? 1 : 0);
-/** When a number stops taking picks (chain ms): its round's target minus the lead. */
-export const lockOf = (dayMs, half) => pickRoundOf(dayMs, half) * PICK_ROUND - LEAD;
-/** Which number a kit round holds: the round id of half B ends in "b" (d20261123b), half A is plain (d20261123). */
-export const halfOfId = (id) => (/^d[0-9]{8}b$/.test(id) ? 1 : /^d[0-9]{8}$/.test(id) ? 0 : (() => { throw new Error(`not an Over/Under round id: ${id}`); })());
-export const roundIdOf = (dayMs, half) => `d${ymd(dayMs)}${half === 1 ? "b" : ""}`;
-
-// ── lines ──
-/** The line, in HALF blocks (an odd whole number: 57 means 28.5 blocks), from a producer's expected blocks (millionths
- *  of a block). The half block nearest to the expected count: floor(expected) + 0.5. An odd number can never equal a
- *  whole count, so a whole-block result is never a tie. */
-export function lineOf(expectedMillionths) {
-  return Number((2n * (big(expectedMillionths) / MILLION)) + 1n);
-}
-
-// ── the roster ──
-/** FNV-1a (64 bit) of a string, as 16 hex digits. A checksum that the roster is the one that was published (not a
- *  secret): the page and the recorder both recompute it. */
-export function fnv64(s) {
-  let h = 0xcbf29ce484222325n;
-  const bytes = new TextEncoder().encode(s);
-  for (const b of bytes) { h ^= BigInt(b); h = (h * 0x100000001b3n) & 0xffffffffffffffffn; }
-  return h.toString(16).padStart(16, "0");
-}
-const canon = (r) => `${r.v}|${r.start}|${r.cardRound}|${r.rows.map((x) => `${x.a}:${x.line}`).join(",")}`;
-/** The roster id: a checksum over the version, week, card day and rows (address:line). */
-export const rosterId = (r) => fnv64(canon(r));
-
-/** Make the week's roster from the ruler card the lines come from. `cardRows`: the card's rows
- *  [{ a, expected, entry, void, quality }] (expected in millionths, decimal strings). A producer is listed when it has the
- *  ruler's `entry` (the 80% form gate: not in ramp-up) and is not void on that card (its VHP is inside the ruler's band).
- *  More than MAX_ROWS (64) qualifying producers is an error that stops the roster (D-296): nothing is cut silently.
- *  Rows are sorted by address; each has its line in half blocks. */
-export function makeRoster(start, cardRound, cardRows) {
-  if (!Number.isSafeInteger(start) || start % DAY !== 0) throw new Error("roster: the week must start at 00:00 UTC");
-  if (!/^[0-9]{8}$/.test(String(cardRound))) throw new Error("roster: cardRound must be yyyymmdd");
-  const seen = new Set(), ok = [];
-  for (const r of cardRows) {
-    if (!isAddr(r.a)) throw new Error(`roster: not an address: ${r.a}`);
-    if (seen.has(r.a)) throw new Error(`roster: ${r.a} twice on the card`);
-    seen.add(r.a);
-    if (r.entry !== true || r.void === true) continue;
-    const e = big(r.expected);
-    if (lineOf(e) < 1) continue;
-    ok.push({ a: r.a, e });
-  }
-  if (ok.length > MAX_ROWS) throw new Error(`roster: ${ok.length} producers qualify, the limit is ${MAX_ROWS}: stopping, nothing is cut (D-296)`);
-  ok.sort((x, y) => cmp(x.a, y.a));
-  const roster = { v: ROSTER_VERSION, start, cardRound: String(cardRound), rows: ok.map((x) => ({ a: x.a, line: lineOf(x.e) })), id: "" };
-  roster.id = rosterId(roster);
-  return roster;
-}
-
-/** The roster, checked: shape, sorted distinct addresses, at most MAX_ROWS, odd lines, and the checksum. Returns the
- *  roster; throws a plain reason otherwise. The recorder and the page both call it before they decode any pick, so no
- *  other roster can give a pick its meaning (D-284). */
-export function checkRoster(r, expectStart) {
-  if (!r || typeof r !== "object") throw new Error("roster: missing");
-  if (r.v !== ROSTER_VERSION) throw new Error(`roster: version ${r.v}, not ${ROSTER_VERSION}`);
-  if (!Number.isSafeInteger(r.start) || r.start % DAY !== 0) throw new Error("roster: bad week start");
-  if (expectStart !== undefined && r.start !== expectStart) throw new Error(`roster: for the week starting ${r.start}, not ${expectStart}`);
-  if (!Array.isArray(r.rows) || r.rows.length > MAX_ROWS) throw new Error(`roster: 0 to ${MAX_ROWS} rows`);
-  let prev = "";
-  for (const x of r.rows) {
-    if (!x || !isAddr(x.a)) throw new Error("roster: a row without an address");
-    if (!(x.a > prev)) throw new Error("roster: rows must be sorted by address, no repeats");
-    prev = x.a;
-    if (!Number.isSafeInteger(x.line) || x.line < 1 || x.line % 2 !== 1) throw new Error(`roster: ${x.a}: the line must be an odd number of half blocks`);
-  }
-  if (r.id !== rosterId(r)) throw new Error("roster: its id does not match its rows (not the roster that was published)");
-  return r;
-}
-
-// ── picks ──
-/** One of a day's two pick numbers (a decimal string): `choices` maps a producer address on the roster to "over" or
- *  "under"; only the rows of `half` (0: rows 0 to 31, 1: rows 32 to 63) are written, the other rows are left to the
- *  other number. Rows not in `choices` stay blank. Anything not on the roster is refused. */
-export function encodePick(roster, choices, half = 0) {
-  if (half !== 0 && half !== 1) throw new Error("encodePick: half must be 0 or 1");
-  const idx = new Map(roster.rows.map((x, i) => [x.a, i]));
-  let n = 0n;
-  for (const [a, c] of Object.entries(choices)) {
-    if (!idx.has(a)) throw new Error(`encodePick: ${a} is not on the roster`);
-    const bits = c === "over" ? BigInt(OVER) : c === "under" ? BigInt(UNDER) : null;
-    if (bits === null) throw new Error(`encodePick: "${c}" is not over or under`);
-    const i = idx.get(a);
-    if (Math.floor(i / HALF) !== half) continue;
-    n |= bits << BigInt(2 * (i - half * HALF));
-  }
-  return n.toString();
-}
-/** Both of a day's numbers: [A, B]. */
-export const encodePicks = (roster, choices) => [encodePick(roster, choices, 0), encodePick(roster, choices, 1)];
-/** One pick number back into choices { address: "over" | "under" } for its half of the roster. A number that is not a
- *  plain decimal, or is above 2^64 − 1, is no pick at all. A row's invalid bits (11) and bits beyond the half's rows
- *  are read as blank. */
-export function decodePick(roster, number, half = 0) {
-  const out = {};
-  if (half !== 0 && half !== 1) throw new Error("decodePick: half must be 0 or 1");
-  if (typeof number === "number") { if (!Number.isSafeInteger(number)) return out; number = String(number); }
-  if (typeof number === "bigint") number = number.toString();
-  if (typeof number !== "string" || !/^[0-9]{1,20}$/.test(number)) return out;
-  const n = BigInt(number);
-  if (n > MAX_NUMBER) return out;
-  roster.rows.slice(half * HALF, half * HALF + HALF).forEach((x, i) => {
-    const bits = Number((n >> BigInt(2 * i)) & 3n);
-    if (bits === OVER) out[x.a] = "over"; else if (bits === UNDER) out[x.a] = "under";
-  });
+export const startOfRound = (r) => { if (!Number.isSafeInteger(r) || r < 0) throw new Error(`bad round ${r}`); return r * SLOT; };
+export const opensAt = (start) => start - AHEAD;
+export const locksAt = (start) => start - LEAD;
+export const endsAt = (start) => start + GAME_MS;
+/** The window in which a start's schedule file must be written (first run inside it writes it). */
+export const writeWindow = (start, fromMin = SCHEDULE_FROM_MIN, toMin = SCHEDULE_TO_MIN) => [start - fromMin * MIN, start - toMin * MIN];
+export const weekOfStart = (startMs) => Math.floor((startMs - WEEK0) / WEEK_MS);
+/** Starts whose picks are open at time t: 3 or 4, never more than 4 (the page says "3 or 4 open"). */
+export function openStarts(t) {
+  const first = Math.floor((t + LEAD) / SLOT) * SLOT + (((t + LEAD) % SLOT) === 0 ? 0 : SLOT);
+  const out = [];
+  for (let s = first; s - AHEAD <= t; s += SLOT) if (t >= opensAt(s) && t < locksAt(s)) out.push(s);
   return out;
 }
 
-// ── scoring ──
-/** One row's outcome from the credited blocks (millionths) and the line (half blocks): "over", "under", or "skip"
- *  (void that day, or exactly on the line). credited × 2 against line × 1,000,000, so no decimals anywhere. */
+// ── the queue ──
+// state = { launched: bool, initial: [addr], last: { addr: startMs } }  (rebuilt from the valid schedule files, in start order)
+export const emptyState = () => ({ launched: false, initial: [], last: {} });
+
+/** Who plays the start at T. games = every earlier valid game {producer, start}. Returns { producer|null, state }. The input state is not changed. */
+export function step(state, listed, T, games = []) {
+  const addrs = [...new Set(listed)].filter(isAddr).sort();
+  const st = { launched: state.launched, initial: state.initial.slice(), last: { ...state.last } };
+  if (!st.launched) st.initial = addrs.slice();
+  for (const a of addrs) {
+    if (st.last[a] === undefined && st.launched && !st.initial.includes(a)) st.last[a] = T;   // a new entrant goes to the bottom
+  }
+  const running = (a) => games.filter((g) => g.producer === a && g.start < T && T < endsAt(g.start)).length;
+  const order = addrs.slice().sort((x, y) => {
+    const lx = st.last[x], ly = st.last[y];
+    if (lx === undefined && ly === undefined) return x < y ? -1 : x > y ? 1 : 0;   // never played: by address
+    if (lx === undefined) return -1;
+    if (ly === undefined) return 1;
+    return lx - ly || (x < y ? -1 : x > y ? 1 : 0);
+  });
+  const who = order.find((a) => running(a) < MAX_RUNNING_PER_PRODUCER) ?? null;
+  if (who === null) return { producer: null, state: st };   // no game at this start
+  st.launched = true;
+  st.last[who] = T;                                          // to the bottom at the START of its game
+  return { producer: who, state: st };
+}
+
+/** The queue state read back from a schedule file: refused loudly unless it is exactly the shape step() returns. */
+export function checkState(st) {
+  const bad = (why) => { throw new Error(`Over Under: a schedule file's queue state is not valid (${why})`); };
+  if (st === null || typeof st !== "object" || Array.isArray(st)) bad("not an object");
+  if (Object.keys(st).sort().join() !== "initial,last,launched") bad("keys");
+  if (typeof st.launched !== "boolean") bad("launched");
+  if (!Array.isArray(st.initial) || !st.initial.every(isAddr)) bad("initial");
+  if (st.last === null || typeof st.last !== "object" || Array.isArray(st.last)) bad("last");
+  for (const [a, t] of Object.entries(st.last)) if (!isAddr(a) || !Number.isSafeInteger(t) || t < 0) bad("last " + a);
+  return { launched: st.launched, initial: st.initial.slice(), last: { ...st.last } };
+}
+
+// ── schedule files ──
+export const cardKey = (round, w0, w1, l) => `${GAME}|${round}|${w0}|${w1}|${l}`;
+const canonEntry = (e) => [e.v, e.game, e.round, e.start, e.producer, e.w0, e.w1, e.l, e.cardKey, e.line, e.form, e.madeAt].join(",");
+export function makeEntry({ start, producer, w0, w1, l, line, form, madeAt }) {
+  if (!isAddr(producer)) throw new Error("schedule: bad producer address");
+  for (const [k, x] of Object.entries({ w0, w1, l, line, form, madeAt })) if (!Number.isSafeInteger(x) || x < 0) throw new Error(`schedule: ${k} must be a whole number >= 0`);
+  if (line % 2 !== 1) throw new Error("schedule: a line is an odd number of half blocks");
+  const round = roundOfStart(start);
+  const e = { v: SCHEDULE_VERSION, game: GAME, round, start, producer, w0, w1, l, cardKey: cardKey(round, w0, w1, l), line, form, madeAt };
+  return { ...e, sum: fnv64(canonEntry(e)) };
+}
+/** Is a schedule file valid? Returns { ok, why }. Late = made after start - cancelAfterMin: that game is cancelled for everyone. */
+export function checkEntry(e, cancelAfterMin = CANCEL_AFTER_MIN) {
+  const no = (why) => ({ ok: false, why });
+  if (e === null || typeof e !== "object") return no("not an object");
+  if (e.v !== SCHEDULE_VERSION || e.game !== GAME) return no("wrong version or game");
+  if (!isAddr(e.producer)) return no("bad producer");
+  let round; try { round = roundOfStart(e.start); } catch { return no("start is not a 30-minute slot"); }
+  if (e.round !== round) return no("round does not match the start");
+  if (e.cardKey !== cardKey(round, e.w0, e.w1, e.l)) return no("card key does not match");
+  if (e.sum !== fnv64(canonEntry(e))) return no("checksum");
+  if (!Number.isSafeInteger(e.madeAt)) return no("no made time");
+  if (e.madeAt > e.start - cancelAfterMin * MIN) return no("late: made after 2 h 15 min before the start, the game is cancelled");
+  return { ok: true, why: "" };
+}
+/** The recorded line must equal the Ruler's helper value computed from the SCORED card's row: any difference cancels the game. */
+export const lineMatches = (entry, helperLine) => entry.line === helperLine;
+/** The line is public before picks open: made at least `marginMin` before the open (line timing A leaves about an hour). */
+export const publicBeforeOpen = (e, marginMin = 0) => e.madeAt + marginMin * MIN <= opensAt(e.start);
+
+// ── score ──
+/** over / under / skip. credited and the line: credited is the Ruler's, in millionths of a block; the line is in half blocks. */
 export function outcomeOf(creditedMillionths, line, isVoid) {
   if (isVoid === true) return "skip";
-  const c2 = 2n * big(creditedMillionths), l = BigInt(line) * MILLION;
+  const c2 = 2n * BigInt(creditedMillionths), l = BigInt(line) * MILLION;
   return c2 > l ? "over" : c2 < l ? "under" : "skip";
 }
-/** The day's outcomes by producer, from the roster and the day's result rows { address: [credited, expected, void] }.
- *  A producer on the roster with no row is an error: the recorder keeps the day pending instead (never a guess). */
-export function dayOutcomes(roster, rows) {
-  const out = {};
-  for (const x of roster.rows) {
-    const r = rows[x.a];
-    if (!r) throw new Error(`no result row for ${x.a}`);
-    out[x.a] = outcomeOf(r[0], x.line, r[2] === true);
-  }
-  return out;
+/** 1 point for a right pick (1 = Over, 2 = Under); 0 for a wrong pick, no pick, a skipped game or a cancelled game. */
+export function pointOf(pick, outcome) {
+  if (outcome !== "over" && outcome !== "under") return 0;
+  return (pick === OVER && outcome === "over") || (pick === UNDER && outcome === "under") ? 1 : 0;
 }
-/** Points for one wallet's pick number (its `half`) that day: 1 for each row where its choice equals the day's outcome. */
-export function scorePick(roster, number, outcomes, half = 0) {
-  const ch = decodePick(roster, number, half);
-  let p = 0;
-  for (const [a, c] of Object.entries(ch)) if (outcomes[a] === c) p++;
-  return p;
+
+// ── the form label on the page (the Ruler's labels) ──
+export function formLabel(formMillionths) {
+  if (!Number.isSafeInteger(formMillionths) || formMillionths < 0) throw new Error("form must be a whole number >= 0 (millionths; 1,000,000 = 100%)");
+  return formMillionths >= 970000 ? "On form" : formMillionths >= 900000 ? "A little behind" : formMillionths >= 800000 ? "Behind" : "Unreliable";
+}
+
+// ── the line: STAND-INS for the Ruler's helpers (#33: forecastExpected, medianLineHalves). A test pins them equal to the Ruler's. ──
+export const LUCK_CAP = 1000n * MILLION;          // never above 1,000 blocks (D-383)
+/** Blocks forecast in a game, millionths: the card's k (VHP share) scaled down by its form (never up), capped. Numbers or BigInts only. */
+export function forecastExpected(row) {
+  for (const x of [row.k, row.form]) if (typeof x !== "bigint" && !Number.isSafeInteger(x)) throw new Error("k and form must be whole numbers or BigInts, never text");
+  const k = BigInt(row.k), form = BigInt(row.form);
+  if (k < 0n || form < 0n) throw new Error("k and form can't be negative");
+  const e = (k * (form < MILLION ? form : MILLION)) / MILLION;
+  return e < LUCK_CAP ? e : LUCK_CAP;
+}
+/** The line in half-blocks: the Poisson median half-line for `expected` (millionths). */
+/** The Ruler's 'Unreliable' label: form below the 80% gate (millionths). */
+export const FORM_GATE = 800000;
+export const isUnreliable = (row) => BigInt(row.form) < BigInt(FORM_GATE);
+/** Unreliable producers are left out of the queue (owner, M-120: on by default). */
+export const EXCLUDE_UNRELIABLE = true;
+export function medianLineHalves(expected) {
+  const e = BigInt(expected);
+  return e < 150000n ? 1n : 2n * ((e - 150000n) / MILLION) + 1n;
 }

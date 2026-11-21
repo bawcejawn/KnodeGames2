@@ -236,11 +236,11 @@ const read = (f) => {
 };
 test("every page that loads names.js may read names-data, and loads it before its own page script", () => {
   const users = pages.filter((p) => /<script src="names\.js"><\/script>/.test(read(p)));
-  assert.deepEqual(users.sort(), ["blockx.html", "bracket.html", "fantasy.html", "games.html", "golf.html", "index.html", "lastnode.html", "names.html", "node.html", "pulse.html", "race.html"]);
+  assert.deepEqual(users.sort(), ["blockx.html", "bracket.html", "fantasy.html", "games.html", "golf.html", "index.html", "lastnode.html", "names.html", "node.html", "overunder.html", "pulse.html", "race.html"]);
   for (const p of users) {
     const h = read(p);
     assert.match(h.match(/connect-src ([^;"]*)/)[1], /https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/names-data\//, p);
-    const own = { "blockx.html": "blockx.js", "bracket.html": "bracket.js", "fantasy.html": "fantasy.js", "games.html": "games.js", "golf.html": "golf.js", "index.html": "app.js", "lastnode.html": "lastnode.js", "pulse.html": "pulse.js", "node.html": "node-page.js", "names.html": "names-page.js", "race.html": "race.js" }[p];
+    const own = { "blockx.html": "blockx.js", "bracket.html": "bracket.js", "fantasy.html": "fantasy.js", "games.html": "games.js", "golf.html": "golf.js", "index.html": "app.js", "lastnode.html": "lastnode.js", "pulse.html": "pulse.js", "node.html": "node-page.js", "overunder.html": "overunder.js", "names.html": "names-page.js", "race.html": "race.js" }[p];
     assert.ok(h.indexOf('src="names.js"') < h.indexOf(`src="${own}"`), `${p}: names.js before ${own}`);
   }
   assert.match(read("web/index.html"), /src="names\.js"[\s\S]*src="results\.js"/, "results.js (on index.html) can use it too");

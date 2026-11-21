@@ -1,266 +1,173 @@
-/* Over/Under: the game page (Koinos MAINNET, Picks game 16), on the Shared Game Kit's files.
+/* Over Under: the game page (Koinos MAINNET, Picks game 16), a rolling game on the Shared Game Kit.
+ *
+ * A new game starts every 30 minutes (:00 and :30 UTC). Each game is one producer and its line, in half blocks. Picks open
+ * 2 hours before the start and lock 5 minutes before it, so 3 or 4 games are open at any time, never more than 4. A pick
+ * is one number per game: 1 = Over, 2 = Under. No changes.
  *
  * Reads (games-data branch, overunder/ folder, written by the kit's recorder and checked by its publish job):
- *   inputs/W<w>.json   the week's write-once roster with each producer's line (published Friday 00:00 UTC before the week;
- *                      FC-9, D-284: before any pick for the week can open)
- *   board.json         the Staked / Free play board of the latest week
- *   alltime.json       every final week, added up
- * and your picks from the Picks contract. It sends up to two numbers a day (Picks game 16, 12-hour rounds, D-296): number A
- * holds rows 0 to 31, number B rows 32 to 63; two bits a row in roster order, 01 Over, 10 Under, 00 blank. Both go in one
- * approval (a batch). Number B closes 12 hours before number A. The rules and the number's layout are games/overunder/math.js, the same
- * file the recorder uses. Picks go out only through the shared "Send my picks" card (js/lib/send-picks.js, D-255/D-278). Everything on screen is built with textContent: no HTML strings. */
+ *   schedule/r#####.json   each game's write-once schedule file: who plays and the line (made 3 h 33 min to 3 h 3 min
+ *                          before the start, so it is public before picks open). A game with no file is cancelled.
+ *   board.json, alltime.json   the boards.
+ * and your picks from the Picks contract. The rules are games/overunder/math.js, the same file the recorder uses. Picks go
+ * out only through the shared "Send my picks" card (js/lib/send-picks.js). Everything on screen is built with textContent. */
 import * as F from "./games/overunder/math.js";
 import * as SP from "./js/lib/send-picks.js";
 
 const $ = (id) => document.getElementById(id);
-if (typeof document !== "undefined" && $("ou-rows")) start();
+if (typeof document !== "undefined" && $("ou-games")) start();
 
 function start() {
   "use strict";
   const lib = window.koilib || window.koinos || window;
   const ROOT = new URL("./", location.href);
   const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/overunder/";
-  const RPC = ["https://koinos.armana.io", "https://api.koinosblocks.com"];
-  const DAY = F.DAY, LEAD = F.LEAD, AHEAD = F.AHEAD, GAME = F.GAME;
-  let GENESIS = window.KWeeks ? window.KWeeks.GENESIS_MS : 1792368000000, WEEK = 7 * DAY;
+  const RPC = ["https://api.koinos.io", "https://api.koinosblocks.com"];
+  const GAME = F.GAME, BATCH = 10, READ_FAILED = "couldn't check your current pick";
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Swap" };
 
   // ── small helpers ──
   const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; if (k === "text") e.textContent = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? "" : v); } for (const c of kids) if (c != null) e.append(c); return e; };
-  const isAddr = F.isAddr;
-  const nameOf = (a) => (!isAddr(a) ? "–" : window.KNames && typeof window.KNames.of === "function" ? window.KNames.of(a) : NAMES[a] || a.slice(0, 5) + "…" + a.slice(-4));
-  const WL = (w) => (window.KWeeks ? window.KWeeks.label(w) : `Week ${w - 3}`);
+  const nameOf = (a) => (!F.isAddr(a) ? "–" : window.KNames && typeof window.KNames.of === "function" ? window.KNames.of(a) : NAMES[a] || a.slice(0, 5) + "…" + a.slice(-4));
   const dur = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min` : `${m} min`; };
   const hm = (t) => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  const when = (t) => new Date(t).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
-  const dayLabel = (d) => new Date(d * DAY).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
   const lineText = (line) => `${Math.floor(line / 2)}.5`;
   const say = (t) => { $("status").textContent = t; $("status").hidden = !t; };
+  const idOf = (start) => "r" + String(Math.round((start - F.WEEK0) / F.SLOT)).padStart(5, "0");
   async function fetchJson(url) { const r = await fetch(url, { cache: "no-cache" }); if (!r.ok) throw new Error(String(r.status)); return r.json(); }
 
-  // ── the clock ──
-  const weekStart = (w) => GENESIS + w * WEEK;
-  const weekOf = (t) => Math.floor((t - GENESIS) / WEEK);
-  const dayNo = (t) => Math.floor(t / DAY);
-  const lockOfHalf = (d, h) => F.lockOf(d * DAY, h);                    // when number A (h 0) or B (h 1) of day d stops taking picks
-  const halvesOf = (r) => (r.rows.length > F.HALF ? [0, 1] : [0]);       // a roster of 32 rows or fewer needs only number A
-  const lockOf = (d, r) => lockOfHalf(d, halvesOf(r).length - 1);        // the day's earliest lock: B when there are rows 32 to 63
-  const opensOf = (d) => d * DAY - AHEAD;
-
   // ── network and wallet ──
-  let provider = null, W = null, picks = null, PICKS = null;
+  let provider = null, W = null, picks = null;
   const me = () => (W && W.address) || null;
-  async function setupNet() {
+  async function boot() {
     let dep = null, gd = null;
     try { dep = await fetchJson(new URL("picks-data/deployment.json", ROOT)); } catch { /* not live yet */ }
     try { gd = await fetchJson(new URL("game-data/deployment.json", ROOT)); } catch { /* defaults */ }
-    if (gd && Number(gd.genesisTime) > 0) GENESIS = Number(gd.genesisTime);
-    if (gd && Number(gd.weekLength) > 0) WEEK = Number(gd.weekLength);
-    PICKS = dep && isAddr(dep.contract) ? dep.contract : null;
+    const PICKS = dep && F.isAddr(dep.contract) ? dep.contract : null;
     provider = new lib.Provider(RPC);
     W = window.KWallet || null;
     if (window.KStake && typeof window.KStake.mount === "function" && $("ou-stake")) window.KStake.mount($("ou-stake"), { game: GAME });
     if (window.KStake && typeof window.KStake.badge === "function" && $("stake-badge")) window.KStake.badge($("stake-badge"), { game: GAME });
-    if (W && W.init && PICKS) W.init({ provider, chainId: gd && gd.chainId, payer: gd && gd.payer, sponsor: gd && gd.sponsor, onChange: () => refresh() });
-    if (PICKS) {
-      const abi = await fetchJson(new URL("contracts/picks/abi/picks.koilib.json", ROOT));
-      picks = new lib.Contract({ id: PICKS, abi, provider });
-    }
+    if (W && W.init && PICKS) W.init({ provider, chainId: gd && gd.chainId, payer: gd && gd.payer, sponsor: gd && gd.sponsor, onChange: () => refreshMine() });
+    if (PICKS) picks = new lib.Contract({ id: PICKS, abi: await fetchJson(new URL("contracts/picks/abi/picks.koilib.json", ROOT)), provider });
   }
 
-  // ── the kit's files ──
-  const files = { board: null, alltime: null, rosters: new Map() };
-  async function loadFiles() {
-    const wNow = weekOf(Date.now());
-    const get = async (name) => { try { return await fetchJson(DATA + name); } catch { return null; } };
-    const [board, alltime] = await Promise.all([get("board.json"), get("alltime.json")]);
-    files.board = board && board.v === 1 ? board : null;
-    files.alltime = alltime && alltime.v === 1 ? alltime : null;
-    await Promise.all([wNow, wNow + 1].map(async (w) => {
-      const inp = await get(`inputs/W${w}.json`);
-      let roster = null;
-      // The roster is used only if it is exactly the published one: checkRoster refuses anything else (D-284).
-      try { if (inp && inp.week === w && inp.data && inp.data.start === weekStart(w)) roster = F.checkRoster(inp.data.roster, weekStart(w)); } catch (e) { say(`The roster for ${WL(w)} did not pass its check (${String((e && e.message) || e).slice(0, 100)}). Picks for that week are switched off on this page.`); }
-      if (roster) files.rosters.set(w, roster); else files.rosters.delete(w);
+  // ── the schedule files ──
+  /** start → the checked schedule entry (who plays, the line), or null: no file yet, or one that fails its check (never shown). */
+  const games = new Map();
+  /** The game's schedule file, only if it is exactly what the kit publishes for that start and its entry passes math.js's check. */
+  function checked(j, start) {
+    if (!j || j.v !== 1 || j.game !== GAME || j.round !== idOf(start) || j.start !== start || !j.body) return null;
+    const e = j.body.entry;
+    return e && F.checkEntry(e).ok && e.start === start ? e : null;
+  }
+  async function loadGames(now = Date.now()) {
+    const want = F.openStarts(now);
+    for (const s of [...games.keys()]) if (!want.includes(s)) games.delete(s);
+    await Promise.all(want.filter((s) => !games.get(s)).map(async (s) => {
+      let j = null; try { j = await fetchJson(DATA + `schedule/${idOf(s)}.json`); } catch { /* not out (yet) */ }
+      games.set(s, checked(j, s));
     }));
   }
-  const rosterOf = (d) => files.rosters.get(weekOf(d * DAY)) || null;
 
   // ── your picks (Picks contract) ──
-  /** { number, changes } of your saved pick for one of a day's two numbers, or null when there is none. A failed read
-   *  THROWS: it is never read as "no pick" (RL-5 R5-3), so a player who has a pick is never offered the first-pick path. */
-  async function getPick(d, h = 0) {
+  /** Your saved pick for the game at `start` ("1" Over, "2" Under), or null. A failed read THROWS: never "no pick". */
+  async function readPick(start) {
     const who = me();
     if (!who || !picks) return null;
-    const x = await picks.functions.get_pick({ game: GAME, round: String(F.pickRoundOf(d * DAY, h)), player: who });
+    const x = await picks.functions.get_pick({ game: GAME, round: String(F.roundOfStart(start)), player: who });
     const p = x && x.result && x.result.pick;
     if (!p) return null;
-    const number = p.number == null ? "0" : String(p.number), changes = Number(p.changes || 0);
-    return Number(p.time || 0) > 0 || number !== "0" || changes > 0 ? { number, changes } : null;
+    const n = p.number == null ? "0" : String(p.number);
+    return Number(p.time || 0) > 0 || n !== "0" ? n : null;
   }
-  /** The days you can pick for now: opened (2 days ahead), not locked (a minute to spare), in a week whose roster is out. */
-  function openDays(now = Date.now()) {
-    const out = [];
-    for (let d = dayNo(now); d <= dayNo(now) + 3; d++) { const r = rosterOf(d); if (r && now >= opensOf(d) && lockOfHalf(d, 0) - now >= 60000) out.push(d); }
-    return out;
-  }
-  const nextDay = (now = Date.now()) => { let d = dayNo(now); while (lockOfHalf(d, 0) - now < 60000) d++; return d; };
-
-  let st = { open: [], sel: null, saved: new Map(), unread: new Set(), now: 0 };           // saved: day → [number A's { number, changes } or null, number B's or null]
-  let draft = new Map();                                                  // day → { address: "over" | "under" }
+  const saved = new Map(), unread = new Set();      // start → "1" | "2"; starts whose pick couldn't be read
+  const draft = new Map();                          // start → 1 | 2 (not sent yet)
   let sending = false;
-  const draftOf = (d) => draft.get(d) || {};
-  const batchOk = () => !!(W && typeof W.batchReady === "function" && W.batchReady());     // two new numbers go in one approval only when the sponsor's batch numbers are out
-  const savedChoices = (d) => { const s = st.saved.get(d), r = rosterOf(d); return s && r ? { ...(s[0] ? F.decodePick(r, s[0].number, 0) : {}), ...(s[1] ? F.decodePick(r, s[1].number, 1) : {}) } : {}; };
-  const halfOf = (r, ch, h) => Object.fromEntries(r.rows.slice(h * F.HALF, h * F.HALF + F.HALF).filter((x) => ch[x.a]).map((x) => [x.a, ch[x.a]]));
-  const sameChoices = (a, b) => { const ka = Object.keys(a), kb = Object.keys(b); return ka.length === kb.length && ka.every((k) => a[k] === b[k]); };
-  const halfDirty = (d, h) => { const r = rosterOf(d); return !!r && draft.has(d) && !sameChoices(halfOf(r, draftOf(d), h), halfOf(r, savedChoices(d), h)); };
-  const dirty = (d) => { const r = rosterOf(d); return !!r && halvesOf(r).some((h) => halfDirty(d, h)); };
-  const isLocked = (d, h, now = Date.now()) => lockOfHalf(d, h) - now < 60000;
-  const changesUsed = (d) => { const s = st.saved.get(d) || []; return Math.max(0, ...s.map((x) => (x ? x.changes : 0))); };
-
-  async function refresh() {
-    const now = Date.now(), open = openDays(now);
-    st = { open, sel: open.includes(st.sel) ? st.sel : open[0] ?? null, saved: new Map(), unread: new Set(), now };
-    if (me() && picks) await Promise.all(open.map(async (d) => {
-      try { const r = rosterOf(d), s = await Promise.all(halvesOf(r).map((h) => getPick(d, h))); if (s.some(Boolean)) st.saved.set(d, [s[0] || null, s[1] || null]); }
-      catch { st.unread.add(d); }                                          // couldn't read: nothing is sent for that day (R5-3)
+  async function refreshMine() {
+    saved.clear(); unread.clear();
+    if (me() && picks) await Promise.all([...games.keys()].map(async (s) => {
+      try { const n = await readPick(s); if (n) saved.set(s, n); } catch { unread.add(s); }
     }));
-    for (const d of open) if (!draft.has(d)) draft.set(d, { ...savedChoices(d) });
+    for (const s of saved.keys()) draft.delete(s);
     render();
   }
 
-  // ── the sheet ──
-  function setRow(a, c) {
-    const d = st.sel, r = rosterOf(d);
-    if (!r || isLocked(d, Math.floor(r.rows.findIndex((x) => x.a === a) / F.HALF))) return;       // a locked number can't be changed
-    const cur = { ...draftOf(d) };
-    if (cur[a] === c) delete cur[a]; else cur[a] = c;
-    draft.set(d, cur); render();
+  // ── the games ──
+  const open = (s, now = Date.now()) => now >= F.opensAt(s) && F.locksAt(s) - now >= 60000;
+  function choose(s, c) {
+    if (!open(s) || saved.has(s)) return;
+    if (draft.get(s) === c) draft.delete(s); else draft.set(s, c);
+    render();
   }
-  function render() { renderPlan(); renderSheet(); renderLeague(); }
-  function renderPlan() {
-    const box = $("ou-plan");
-    box.hidden = st.open.length < 2;
-    box.replaceChildren(el("span", { class: "lbl", text: "Day:" }), ...st.open.map((d) => el("button", { type: "button", "aria-pressed": String(d === st.sel),
-      onclick: () => { st.sel = d; render(); } }, el("span", { class: "d", text: dayLabel(d) }), el("span", { class: "s", text: st.saved.has(d) ? "picks sent" : dirty(d) ? "not sent" : "no picks" }))));
-  }
-  function waitText() {
-    const w = weekOf(nextDay() * DAY), t = weekStart(w) - 3 * DAY;
-    return Date.now() < t ? `The roster and lines for ${WL(w)} come out ${when(t)}. Picks open 2 days before each day.` : "Waiting for the recorder to publish the roster and lines (it checks every hour).";
-  }
-  function renderSheet() {
-    const d = st.sel, r = d == null ? null : rosterOf(d), tbody = $("ou-rows");
-    $("ou-send").hidden = !r;
-    if (!r) {
-      $("ou-for").textContent = "Over/Under";
-      $("ou-lock").replaceChildren();
-      tbody.replaceChildren(el("tr", {}, el("td", { colspan: "3", class: "ou-none", text: waitText() })));
-      $("ou-check").textContent = ""; $("ou-saved").textContent = "";
-      return;
-    }
-    const hs = halvesOf(r), cur = draftOf(d), saved = st.saved.get(d), changesLeft = F.MAX_CHANGES - changesUsed(d);
-    $("ou-for").textContent = `Picks for ${dayLabel(d)} (UTC day)`;
-    $("ou-lock").replaceChildren(...hs.flatMap((h) => { const lk = lockOfHalf(d, h); return [el("span", { text: hs.length > 1 ? (h ? "Rows 33 to 64 lock in " : "Rows 1 to 32 lock in ") : "Locks in " }), el("b", { text: lk - Date.now() < 0 ? "now (locked)" : dur(lk - Date.now()) }), el("span", { text: ` at ${hm(lk)}. ` })]; }).concat([el("span", { text: `The day runs ${hm(d * DAY)} to ${hm(d * DAY + DAY)}.` })]));
-    const lockedRow = (x) => isLocked(d, Math.floor(r.rows.indexOf(x) / F.HALF));
-    tbody.replaceChildren(...r.rows.map((x) => el("tr", { class: cur[x.a] ? "on" : null },
-      el("td", {}, el("span", { class: "ou-name", text: nameOf(x.a) })),
-      el("td", { class: "num", text: lineText(x.line) }),
-      el("td", { class: "ou-btns" },
-        el("button", { type: "button", class: "ou-o", "aria-pressed": String(cur[x.a] === "over"), "aria-label": `Over ${lineText(x.line)} for ${nameOf(x.a)}`, disabled: lockedRow(x) ? "" : null, onclick: () => setRow(x.a, "over") }, "Over"),
-        el("button", { type: "button", class: "ou-u", "aria-pressed": String(cur[x.a] === "under"), "aria-label": `Under ${lineText(x.line)} for ${nameOf(x.a)}`, disabled: lockedRow(x) ? "" : null, onclick: () => setRow(x.a, "under") }, "Under")))));
-    const n = Object.keys(cur).length, isChange = hs.some((h) => halfDirty(d, h) && !!(saved && saved[h]));
-    let msg = "", ok = false;
-    if (!me()) msg = "Connect a wallet to send picks.";
-    else if (st.unread.has(d)) msg = "Couldn't read your pick for this day. Try again in a moment. Nothing is sent until it reads.";
-    else if (!dirty(d)) msg = saved ? "These are your saved picks." : "Tap Over or Under on any rows. A row you leave blank is no pick.";
-    else if (hs.some((h) => halfDirty(d, h) && isLocked(d, h))) msg = "Some rows you changed have locked (rows 33 to 64 lock 12 hours before the others). Reset to go back to your saved picks.";
-    else if (isChange && changesLeft <= 0) msg = "You have used both changes for this day. Your saved picks stand.";
-    else if (n === 0 && !saved) msg = "Choose at least one row.";
-    else {
-      ok = true;
-      const rows = `${n} row${n === 1 ? "" : "s"}`, fresh = hs.filter((h) => halfDirty(d, h) && !(saved && saved[h])).length, chg = hs.filter((h) => halfDirty(d, h) && !!(saved && saved[h])).length;
-      const approvals = (fresh > 1 ? (batchOk() ? 1 : fresh) : fresh) + chg;
-      msg = (chg ? `This is a change (${changesUsed(d) + 1} of ${F.MAX_CHANGES} for this day): it is paid with your own Mana, not free, and goes out on its own. ` : "A first pick is free: the Knode Mana sponsor pays. ")
-        + `${rows}. ` + (approvals > 1 ? `Your wallet will ask you to approve ${approvals} times${fresh > 1 && !batchOk() ? " (it can't batch the two numbers right now)" : ""}.` : "Your wallet will ask you to approve once.");
-    }
-    $("ou-check").textContent = msg; $("ou-check").className = "ou-check" + (ok ? " ok" : "");
-    $("ou-send").disabled = sending || !picks || !ok;
-    $("ou-send").textContent = !me() ? "Connect to send" : isChange ? "Change my picks" : "Send my picks";
-    $("ou-reset").hidden = !dirty(d);
-    $("ou-saved").textContent = saved ? `Saved on chain for this day: ${Object.keys(savedChoices(d)).length} rows, ${changesLeft} change${changesLeft === 1 ? "" : "s"} left.` : "";
-    $("ou-roster").textContent = `Roster id ${r.id}, from the ruler card of ${r.cardRound}. Published once for ${WL(weekOf(d * DAY))}; it never changes.`;
-  }
-  const why = (e) => {
-    const m = String((e && e.message) || e);
-    return /locked/i.test(m) ? "That day has locked: picks close 5 minutes before it starts."
-      : /not open yet/i.test(m) ? "That day isn't open yet."
-      : /used up/i.test(m) ? "Today's picks are used up. More after 00:00 UTC."
-      : /already your pick/i.test(m) ? "That is already your pick."
-      : /closed|switched off/i.test(m) ? "This game is switched off right now."
-      : /reject|denied|cancel/i.test(m) ? "Cancelled in your wallet. Nothing was sent."
-      : `Not sent: ${m.slice(0, 200)}`;
-  };
-  async function confirmPick(d, sent) {
-    for (let t = 0; t < 10; t++) {
-      try {
-        const got = await Promise.all(sent.map((x) => getPick(d, x.h)));
-        if (sent.every((x, i) => got[i] && got[i].number === x.number)) return true;
-      } catch { /* try again */ }
-      await new Promise((r) => setTimeout(r, 3000));
-    }
-    return false;
-  }
-  /** "Your pick this round is X. Change it to Y?" (the shared card's question, D-255): resolves true for Change. */
-  function ask(lines) {
-    return new Promise((done) => {
-      const box = $("ou-ask"), yes = $("ou-ask-yes"), no = $("ou-ask-no");
-      $("ou-ask-text").replaceChildren(...lines.map((l) => el("span", { class: "ou-ask-l", text: l })));
-      const finish = (v) => () => { box.hidden = true; yes.onclick = no.onclick = null; done(v); };
-      yes.onclick = finish(true); no.onclick = finish(false);
-      box.hidden = false; no.focus();
-    });
-  }
-  const sumOf = (n) => { const o = [...Object.values(F.decodePick({ rows: Array.from({ length: F.HALF }, (_, i) => ({ a: String(i) })) }, n, 0))]; return `${o.filter((x) => x === "over").length} Over, ${o.filter((x) => x === "under").length} Under`; };
-  async function send() {
-    if (!me()) { if (W && W.connect) W.connect(); else say("Connect a wallet first."); return; }
-    const d = st.sel, r = rosterOf(d);
-    if (d == null || !r || sending || !picks || !dirty(d)) return;
-    const hs = halvesOf(r).filter((h) => halfDirty(d, h));
-    if (!hs.length) return;
-    sending = true; render();
-    try {
-      // 1. Read your pick for each number NOW, strictly: a failed read sends nothing (R5-3), never "no pick".
-      let now;
-      try { now = await Promise.all(hs.map((h) => getPick(d, h))); }
-      catch { say("Couldn't read your pick, try again."); return; }
-      // 2. The shared card plans it: new picks (sponsored, batched when possible), changes (own Mana, alone), refusals.
-      const items = [], sent = [];
-      for (let i = 0; i < hs.length; i++) {
-        const h = hs[i], number = F.encodePick(r, draftOf(d), h), key = `${GAME}:${F.pickRoundOf(d * DAY, h)}`;
-        const { operation } = await picks.functions.pick({ player: me(), game: GAME, round: String(F.pickRoundOf(d * DAY, h)), producers: [], number }, { onlyOperation: true });
-        items.push({ key, label: `Over/Under ${h ? "rows 33 to 64" : "rows 1 to 32"} for ${dayLabel(d)}`, op: operation, existing: now[i] ? now[i].number : null, wanted: number, open: !isLocked(d, h), h });
-        sent.push({ h, number });
-      }
-      const p = SP.plan(items, { maxChanges: F.MAX_CHANGES, changesUsed: Object.fromEntries(items.map((it, i) => [it.key, now[i] ? now[i].changes : 0])) });
-      if (p.refused.length) { say(p.refused.map((x) => `${x.label}: not sent (${x.why === "locked" ? "that number has locked" : x.why}).`).join(" ")); await refresh(); return; }
-      if (p.same.length && !p.fresh.length && !p.changes.length) { say("That is already your pick."); return; }
-      const cannot = (lines) => { say(lines.join(" ")); return Promise.resolve(); };
-      if (!(await SP.confirm(p, ask, sumOf, { guest: W.kind === "guest", cannot }))) { if (p.changes.length && W.kind !== "guest") say("Kept your pick. Nothing was sent."); return; }
-      if (p.fresh.length > 1 && !batchOk()) say("Your wallet will ask you to approve each number separately (it can't batch them right now).");
-      else say(W.kind === "guest" ? "Saving your picks…" : `Confirm in ${W.label ? W.label() : "your wallet"}: ${dayLabel(d)}`);
-      const res = await SP.send(W, p, { label: `Over/Under picks for ${dayLabel(d)}`, stillOpen: (it) => !isLocked(d, it.h) });
-      if (!res.sent && !res.changed) throw new Error("locked");
-      say("Sent. Checking the chain…");
-      const ok = await confirmPick(d, sent.filter((x) => p.fresh.concat(p.changes).some((it) => it.h === x.h)));
-      const id = res.ids[res.ids.length - 1];
-      say(ok ? `Saved. You can change it until ${when(lockOf(d, r))} (${F.MAX_CHANGES} changes).` : `Sent${id ? ` (${String(id).slice(0, 12)}…)` : ""}, not seen yet. It usually shows within a minute.`);
-    } catch (e) { say(why(e)); }
-    finally { sending = false; await refresh(); }
+  function render() {
+    const now = Date.now(), starts = [...games.keys()].sort((a, b) => a - b), box = $("ou-games");
+    if (!starts.length) { box.replaceChildren(el("p", { class: "ou-none", text: "No game is open right now. A new game starts every 30 minutes; picks open 2 hours before the start." })); }
+    else box.replaceChildren(...starts.map((s) => {
+      const e = games.get(s), mine = saved.get(s), want = draft.get(s), lk = F.locksAt(s) - now;
+      const head = el("div", { class: "ou-g-head" },
+        el("span", { class: "ou-g-when", text: `Starts ${hm(s)}` }),
+        el("span", { class: "ou-g-lock", text: lk < 60000 ? "Locked" : `Locks in ${dur(lk)}` }));
+      if (!e) return el("article", { class: "ou-g" }, head, el("p", { class: "ou-none", text: "No game at this start: it was cancelled for everyone (no schedule file)." }));
+      const label = F.formLabel(e.form);
+      const btn = (c, txt, cls) => el("button", { type: "button", class: cls, "aria-pressed": String((mine ? Number(mine) : want) === c),
+        "aria-label": `${txt} ${lineText(e.line)} for ${nameOf(e.producer)}`, disabled: !open(s, now) || !!mine ? "" : null, onclick: () => choose(s, c) }, txt);
+      return el("article", { class: "ou-g" + (want ? " on" : "") }, head,
+        el("p", { class: "ou-g-who" }, el("b", { text: nameOf(e.producer) }), el("span", { class: "ou-form", text: ` · ${label}` })),
+        el("p", { class: "ou-g-line" }, el("span", { text: "Line: " }), el("b", { text: `${lineText(e.line)} blocks` }), el("span", { text: " in its next 14,400 blocks" })),
+        el("div", { class: "ou-btns" }, btn(F.OVER, "Over", "ou-o"), btn(F.UNDER, "Under", "ou-u")),
+        el("p", { class: "ou-small", text: mine ? `Your pick: ${mine === "1" ? "Over" : "Under"}. No changes.` : unread.has(s) ? "Couldn't read your pick for this game. Nothing is sent for it until it reads." : "" }));
+    }));
+    const n = [...draft.keys()].filter((s) => open(s, now) && games.get(s) && !unread.has(s)).length;
+    $("ou-send").disabled = sending || !picks || n === 0;
+    $("ou-send").textContent = !me() ? "Connect to send" : n > 1 ? `Send my ${n} picks` : "Send my pick";
+    $("ou-check").textContent = !me() ? "Connect a wallet to send picks." : n ? "A first pick is free: Knode's Mana sponsor pays. Picks can't be changed once sent." : "Tap Over or Under on any open game.";
+    renderLeague();
   }
 
-  // ── the league (board.js, D-081) ──
+  function pop(title, lines = []) {
+    const box = $("ou-pop");
+    box.replaceChildren(el("h3", { text: title }), ...lines.map((l) => el("p", { text: l })), el("button", { type: "button", class: "btn", onclick: () => { box.hidden = true; } }, "OK"));
+    box.hidden = false;
+  }
+  async function send() {
+    if (!me()) { if (W && W.connect) W.connect(); else say("Connect a wallet first."); return; }
+    if (sending || !draft.size || !picks) return;
+    sending = true; render();
+    try {
+      const items = [];
+      for (const [s, c] of draft) {
+        if (!open(s) || !games.get(s) || unread.has(s)) continue;
+        const number = String(c), round = String(F.roundOfStart(s));
+        let existing = null; try { existing = await readPick(s); } catch { throw new Error(READ_FAILED); }
+        const { operation } = await picks.functions.pick({ player: me(), game: GAME, round, producers: [], number }, { onlyOperation: true });
+        items.push({ key: `${GAME}:${s}`, label: `Over Under, game at ${hm(s)}`, op: operation, existing, wanted: number, open: open(s) });
+      }
+      const p = SP.plan(items, { maxChanges: F.MAX_CHANGES });
+      if (!p.fresh.length) { pop("Nothing to send", p.same.length ? ["Those picks are already on chain."] : ["Those games have locked, or already have a pick (no changes in this game)."]); return; }
+      const batch = p.fresh.slice(0, BATCH);
+      say(W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}.`);
+      await SP.send(W, { ...p, changes: [], fresh: batch }, { label: "Over Under picks", stillOpen: (it) => open(Number(String(it.key).split(":")[1])) });
+      for (const it of batch) draft.delete(Number(String(it.key).split(":")[1]));
+      say("");
+      pop("Picks sent", ["Your picks are in. No changes in this game."]);
+    } catch (e) {
+      const m = String((e && e.message) || e);
+      say("");
+      pop("Not sent", [/reject|denied|cancel/i.test(m) ? "Cancelled in your wallet. Nothing was sent."
+        : m === READ_FAILED ? "Couldn't check your current pick, so nothing was sent. Try again in a moment."
+        : /locked/i.test(m) ? "That game has locked: picks close 5 minutes before it starts."
+        : `Not sent: ${m.slice(0, 200)}`]);
+    } finally { sending = false; await refreshMine(); }
+  }
+
+  // ── the league (board.js) ──
+  const files = { board: null, alltime: null };
   let lb = null;
+  async function loadBoards() {
+    const get = async (name) => { try { return await fetchJson(DATA + name); } catch { return null; } };
+    const [b, a] = await Promise.all([get("board.json"), get("alltime.json")]);
+    files.board = b && b.v === 1 ? b : null; files.alltime = a && a.v === 1 ? a : null;
+  }
   function boardData() {
     const b = files.board && files.board.lastWeek, at = files.alltime;
     const row = (x) => ({ a: x.a, pts: x.pts, boardPlace: x.place, ranked: x.board === "staked", earns: 0 });
@@ -270,24 +177,22 @@ function start() {
   }
   function renderLeague() {
     if (!window.KBoard || !$("ou-board")) return;
-    if (!lb) {
-      lb = window.KBoard.create($("ou-board"), {
-        label: "Over/Under leaderboard", hide: ["today"],
-        columns: [{ key: "pts", label: "Points", d: 0 }],
-        summary: (r) => `${r.pts} pts`, scored: (r) => r.pts > 0, name: nameOf,
-        unranked: "The Staked board is for wallets with at least 1 VHP staked in Over/Under that week.",
-        free: { show: 6, prize: "Free play prizes: 2 VHP for first, 1 VHP for second." },
-      });
-    }
+    if (!lb) lb = window.KBoard.create($("ou-board"), {
+      label: "Over Under leaderboard", hide: ["today"], columns: [{ key: "pts", label: "Points", d: 0 }],
+      summary: (r) => `${r.pts} pts`, scored: (r) => r.pts > 0, name: nameOf,
+      unranked: "The Staked board is for wallets with at least 1 VHP staked in Over Under that week.",
+      free: { show: 6, prize: "Free play prizes: 2 VHP for first, 1 VHP for second." },
+    });
     lb.set(boardData()); lb.setMe(me() || "");
   }
 
   // ── start ──
   $("ou-send").addEventListener("click", send);
-  $("ou-reset").addEventListener("click", () => { const d = st.sel; draft.set(d, { ...savedChoices(d) }); render(); });
   (async () => {
-    try { await setupNet(); await loadFiles(); await refresh(); say(picks ? "" : "Over/Under isn't live yet: its Picks game hasn't been added. You can read the rules below."); }
-    catch (e) { say(`Couldn't load: ${String((e && e.message) || e).slice(0, 120)}`); }
-    setInterval(() => { if (!sending) render(); }, 30000);
+    try { await boot(); await Promise.all([loadGames(), loadBoards()]); say(picks ? "" : "Over Under isn't live yet: its Picks game hasn't been added. You can read the rules below."); }
+    catch (e) { say("Couldn't load the game files. Try again in a moment."); }
+    await refreshMine();
+    // every minute: the clock moves (locks, new games); a new game's file is fetched when it opens
+    setInterval(async () => { if (sending) return; const before = [...games.keys()].join(); await loadGames(); if ([...games.keys()].join() !== before) await refreshMine(); else render(); }, 60000);
   })();
 }

@@ -1,6 +1,6 @@
-# Over/Under (game 16)
+# Over Under (game 16)
 
-Every day each block producer on the week's roster has a line at half a block, set by the VHP Ruler. Players pick Over or Under on any rows (a blank row is no pick); a day's picks are two 64-bit numbers on the Picks contract (2 bits a row in roster order; rows 1 to 32 and rows 33 to 64, two 12-hour Picks rounds, up to 64 producers). A row is right if the producer's credited blocks are above (Over) or below (Under) the line: 1 point a row; void or exactly-on-the-line rows are skipped. Weekly board and prizes. The scoring is `math.js`, used by both the page and the recorder.
+A rolling game on the Shared Game Kit: a new game every 30 minutes, one producer and a line in half blocks (from the VHP Ruler). Players pick Over (1) or Under (2) on the Picks contract, one number per game, no changes. 1 point a game called right; void and cancelled games are skipped. Weekly board and prizes. The rules are `math.js`, used by both the page and the recorder; `recorder.ts` is the kit's part (schedule files, results, scores).
 
 - **Rules (the one home):** `docs/games/OverUnder.md`
 - **Settings:** `game.json` (checked by `npm run game:check -- overunder`)

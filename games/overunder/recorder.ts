@@ -1,101 +1,114 @@
-// Over/Under (game 16) on the Shared Game Kit. The kit does the reading, stakes, clock, files, pending → final, holds,
-// boards, all-time, the vault file and alerts; this module supplies the week's rounds, the write-once roster with each
-// producer's line (made 72 hours before the week from the VHP Ruler's cards), each day's result from the ruler, and the
-// scoring. Every rule is in math.js; how a UTC day becomes a ruler card is in ruler-view.ts.
+// Over Under (game 16, TEST): the game's own part of the recorder, a rolling GameModule on the Shared Game Kit (#38).
+// A new game starts every 30 minutes (:00 and :30 UTC): one producer, 14,400 blocks from blockAt(start), one Picks round.
+// Picks 1 = Over, 2 = Under; no changes. The kit makes each round's write-once schedule file (3 h 3 min to 3 h 33 min before
+// the start) from scheduleFor: who plays (the queue, math.js step; the queue travels in every file) and the line
+// (form-based, D-383). A round with no file by 2 h 15 min before its start is cancelled for everyone by the kit (D-344).
+// Every rule is in math.js.
 //
-// Rounds: Monday to Saturday play days, then Sunday's fun round (Today and All time only), two kit rounds a day (A: rows
-// 0 to 31, B: rows 32 to 63). Picks game 16: kind 3 number, time lock, round size 12 hours, lead 5 min, ahead 2 days.
-// A day's picks are TWO numbers per wallet (D-296), decoded against the week's roster; there is no other way to read a
-// pick (D-284).
-// Nothing is ever guessed: while the ruler data or the block clock doesn't reach a day, the kit's NotYet keeps the round
-// PENDING (or the roster waiting); a flagged card, or a roster producer missing from a card, stays PENDING too.
-import { DAY } from "../../kit/recorder/clock.ts";
-import { PENDING, NotYet, type GameModule, type Round, type Score } from "../../kit/recorder/types.ts";
+// STAND-INS (marked; a test pins each equal to the Ruler's): a game module can't load the Ruler's helpers (the kit gives it
+// the ruler only as ctx.vhp.card), so: (1) the list = producers with the card's entry flag (minK 10), not the pool node;
+// the Ruler's listAt needs the kit to expose it; (2) Unreliable producers (form below 80%, the Ruler's isUnreliable) are
+// left out, always (math.js EXCLUDE_UNRELIABLE): a module can't read a GitHub variable, so the switch
+// OVERUNDER_EXCLUDE_UNRELIABLE needs kit support first; (3) forecastExpected and medianLineHalves in math.js are copies of
+// the Ruler's; (4) the card settings are the Ruler's for game 16 (c "500000", minK 10, poolRule "min", ownRule "spot",
+// paying true, pooled = the Vault), without noVoid (the kit's card settings don't allow it yet).
+import { PENDING, VOID, NotYet, type GameModule, type Round, type Score, type Pick } from "../../kit/recorder/types.ts";
 import type { RawPick } from "../../kit/recorder/sources/picks-contract.ts";
-import * as F from "./math.js";
-import { CARD, dayCard, flagged, rowsOf, sourcesOf } from "./ruler-view.ts";
+import { rollingRounds } from "../../kit/recorder/clock.ts";
+import * as R from "./math.js";
 
-export const VAULT_GAME = F.GAME;            // one constant: Picks game 16 and vault game 16 are the same id (D-266)
-export { CARD };
+const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
+const CARD_BLOCKS = 7200;                                       // the card's size window: the 6 hours before the lock
+const CARD = Object.freeze({ game: R.GAME, c: "500000", minK: 10, poolRule: "min", ownRule: "spot", paying: true, pooled: [POOL] });
+const ROLLING = { roundMin: 30, gameMin: 720, leadMin: 5, scheduleFromMin: R.SCHEDULE_FROM_MIN, scheduleToMin: R.SCHEDULE_TO_MIN, cancelAfterMin: R.CANCEL_AFTER_MIN };
+const SIX_H = 6 * 3_600_000;
+/** The kit's grid (kit/recorder/clock.ts rollingRounds): round n starts at genesis + n x 30 min, id r#####, counted for the
+ *  UTC day and the vault week of its START. Its Picks round is the contract's own: game 16 has round_size 30 min and
+ *  offset 0, so the round of a start is start / 30 min (math.js roundOfStart), not n. */
+export const gridRounds = (span: { start: number; end: number }): Round[] =>
+  rollingRounds(span, { genesis: R.WEEK0, rolling: ROLLING }, (_n, start) => R.roundOfStart(start));
 
-/** The week's write-once inputs (FC-9): the roster, with each producer's line, and where it came from. */
-export type Roster = { v: number; start: number; cardRound: string; rows: { a: string; line: number }[]; id: string };
-export type Inputs = { start: number; roster: Roster };
-/** A day's result: its ruler round and each roster producer's [credited, expected, void] (millionths of a block).
- *  `flagged` / `fallback`: no usable card; every row is skipped that day. */
-export type DayResult = { round: string; rows: Record<string, [string, string, boolean]>; flagged?: true; fallback?: true };
+export type OUResult = { outcome: "over" | "under" | "skip"; producer: string; line: number };
 
-export const game: GameModule<RawPick, DayResult, Inputs> = {
+/** One run's cards, by their settings (a card is a pure function of the run's ruler data and its settings, so making it
+ *  twice gives the same bytes): the same card asked for again in the same run is not made again. Keyed by the run's
+ *  ctx.vhp, so nothing is kept from one run to the next. */
+/** The 6-hour mark a start's schedule card ends at (see scheduleFor). */
+export const markOf = (start: number) => Math.floor((start - (R.SCHEDULE_FROM_MIN + 30) * R.MIN) / SIX_H) * SIX_H;
+const made = new WeakMap<object, Map<string, any>>();
+function cardAt(ctx: any, n: number, w0: number, w1: number, l: number, s0: number, s1: number) {
+  if (!ctx?.vhp) throw new NotYet("Over Under: no ruler data yet");
+  const settings = { game: CARD.game, round: n, window: { W0: w0, W1: w1, L: l, S0: s0, S1: s1 }, c: CARD.c, minK: CARD.minK,
+    poolRule: CARD.poolRule, ownRule: CARD.ownRule, paying: CARD.paying, pooled: [...CARD.pooled] };
+  let run = made.get(ctx.vhp);
+  if (!run) { run = new Map(); made.set(ctx.vhp, run); }
+  const key = JSON.stringify(settings);
+  if (!run.has(key)) run.set(key, ctx.vhp.card(settings));      // a NotYet or a read failure is never kept
+  return run.get(key);
+}
+const asBig = (x: unknown) => BigInt(x as any);
+
+export const game: GameModule<RawPick, OUResult, unknown> = {
   slug: "overunder",
-  picks: { source: "picks-contract", gameId: VAULT_GAME },
+  picks: { source: "picks-contract", gameId: R.GAME },
 
-  roundsFor(week): Round[] {
-    // Two kit rounds a day (D-296): A holds the pick number for rows 0 to 31, B the number for rows 32 to 63, each its own
-    // 12-hour Picks round (math.js pickRoundOf). locksAt = 1 ms into the day (the kit's dayOf rule; see Fantasy KC-30);
-    // both numbers lock in the Picks contract before the day starts.
-    return F.weekDays(week.start).flatMap((day) => [0, 1].map((half) => ({ id: F.roundIdOf(day, half), day, locksAt: day + 1, resolvesAt: day + DAY, pickRound: F.pickRoundOf(day, half) })));
+  roundsFor(week) { return gridRounds(week); },
+
+  async scheduleFor(n, start, ctx) {
+    if (typeof ctx.blockAt !== "function") throw new NotYet("Over Under: no block heights yet");
+    // Everything is read at fixed times, never "the latest". The ruler only makes a card once its whole scored range is
+    // in the data, so the card this file is made from sits in the past. Its scored range is the 14,400 blocks that end at
+    // the last 6-hour mark (00, 06, 12, 18 UTC) at least 4 h 3 min before the start (30 minutes before the window opens);
+    // its size window is the 7,200 blocks before that. Every start with the same mark uses the same card (one card per
+    // 6 hours, card round = the mark's number). Its k and form make the line; the game is scored later on a card with
+    // the same size window and the game's own 14,400 blocks (resultOf), which gives the same k and form, so the line in
+    // the file can be re-checked from the scored card.
+    const mark = markOf(start);
+    const s1 = (await ctx.blockAt(mark)) - 1;
+    const s0 = s1 - R.GAME_BLOCKS + 1, l = s0 - 1, w1 = l, w0 = l - CARD_BLOCKS + 1;
+    const card = cardAt(ctx, mark / SIX_H, w0, w1, l, s0, s1);
+    const listed: string[] = (card.producers as any[]).filter((p) => p.entry && p.a !== POOL && !(R.EXCLUDE_UNRELIABLE && R.isUnreliable(p))).map((p) => p.a);
+    // The queue (Repo Lens 5 KR-1): every schedule file carries the queue as it stood after its own game. This start
+    // continues from the LATEST earlier file that exists, so a missing file (a cancelled start, D-344) changes nothing:
+    // the queue is exactly as if that start never happened. Running games come from every earlier file.
+    const bodies = [...(ctx.schedules ?? new Map()).values()]
+      .filter((b: any) => b && b.entry && R.checkEntry(b.entry).ok && b.entry.start < start)
+      .sort((a: any, b: any) => a.entry.start - b.entry.start);
+    const games = bodies.map((b: any) => ({ producer: b.entry.producer, start: b.entry.start }));
+    const prev: any = bodies.length ? bodies[bodies.length - 1] : null;
+    const state = prev ? R.checkState(prev.state) : R.emptyState();
+    const r = R.step(state, listed, start, games);
+    if (r.producer === null) throw new NotYet("Over Under: nobody can play this start");
+    const row = (card.producers as any[]).find((p) => p.a === r.producer);
+    if (!row) throw new Error(`Over Under: ${r.producer} is not in the card`);
+    const form = asBig(row.form);
+    const line = Number(R.medianLineHalves(R.forecastExpected({ k: asBig(row.k), form })));
+    const entry = R.makeEntry({ start, producer: r.producer, w0, w1, l, line, form: Number(form), madeAt: ctx.now });
+    return { entry, state: r.state };
   },
 
-  /** The write-once roster (FC-9), made 72 hours before the week (Friday 00:00 UTC), so it is published a day before
-   *  the first picks open (Saturday 00:00 UTC, Picks `ahead` = 2 days): a pick can never come before the roster that
-   *  gives it meaning (D-284). The lines come from the newest ruler day card that isn't flagged, Thursday back to
-   *  Friday before the week. A card that isn't ready throws the kit's NotYet (the roster waits and the next run tries
-   *  again). The kit re-makes it at the week's end: the same cards must give the same bytes, else the week is held. */
-  async inputsFor(week, ctx) {
-    const src = sourcesOf(ctx);
-    for (const day of F.rosterDays(week.start)) {
-      const c = await dayCard(day, src);
-      if (flagged(c)) continue;
-      const roster = F.makeRoster(week.start, c.round, c.producers.map((p) => ({ a: p.a, expected: p.expected, entry: p.entry, void: p.void })));
-      return { start: week.start, roster };
-    }
-    throw new NotYet(`not yet: roster for week ${week.week}: all ${F.rosterDays(week.start).length} candidate ruler cards are flagged`);
+  async resultOf(round, _read, _inputs, ctx): Promise<OUResult | typeof PENDING | typeof VOID> {
+    const e = (ctx as any)?.schedule?.entry;
+    if (!e || !R.checkEntry(e).ok) return VOID;                                   // no valid schedule file: cancelled
+    if (!ctx?.vhp || typeof ctx.blockAt !== "function") return PENDING;
+    const s0 = await ctx.blockAt(e.start);
+    // The same card round as the schedule card (the ruler draws the card's moment from the round), so the same size
+    // window gives the same moment, k and form, over the game's own blocks.
+    const card = cardAt(ctx, markOf(e.start) / SIX_H, e.w0, e.w1, e.l, s0, s0 + R.GAME_BLOCKS - 1);
+    const row = (card.producers as any[]).find((p) => p.a === e.producer);
+    if (!row) return VOID;
+    // The line in the file must be the helper's value from this SCORED card's row; otherwise the game is cancelled.
+    const helper = Number(R.medianLineHalves(R.forecastExpected({ k: asBig(row.k), form: asBig(row.form) })));
+    if (!R.lineMatches(e, helper)) return VOID;
+    if (row.credited === null || row.credited === undefined) return PENDING;
+    return { outcome: R.outcomeOf(asBig(row.credited), e.line, row.void === true), producer: e.producer, line: e.line } as OUResult;
   },
 
-  /** A day's result from its ruler card, for the roster's producers only. PENDING while a roster producer has no row
-   *  (the ruler's `include` gives every listed producer one; until then such a day waits, never a silent skip). A
-   *  FLAGGED card waits until Tuesday 00:00 UTC after the week; if it is still flagged then, every row is skipped. */
-  async resultOf(round, _read, inputs, ctx) {
-    if (!inputs) return PENDING;
-    const roster = F.checkRoster(inputs.roster, inputs.start);
-    const src = sourcesOf(ctx), pool = roster.rows.map((r) => r.a);
-    const zeros = () => Object.fromEntries(pool.map((a) => [a, ["0", "0", true] as [string, string, boolean]]));
-    let c;
-    try { c = await dayCard(round.day, src, CARD, pool); }
-    catch (e) {
-      // No ruler card at all: after the 48-hour grace the day is skipped for every row, recorded and alerted by the kit
-      // (ctx.fallback). Within the grace, or while the kit has no fallback, or when this run has no ruler data, it waits.
-      if (!(e instanceof NotYet) || !src.fallback || !src.loaded) throw e;
-      await src.blockAt(round.day + DAY + F.NO_CARD_GRACE);
-      await src.fallback(`Over/Under ${F.ymd(round.day)}: no VHP Ruler card 48 hours after the day; every row is skipped`);
-      return { round: F.ymd(round.day), fallback: true, rows: zeros() };
-    }
-    if (flagged(c)) {
-      await src.blockAt(F.flaggedCutoff(inputs.start));
-      return { round: c.round, flagged: true, rows: zeros() };
-    }
-    const by = rowsOf(c), rows: DayResult["rows"] = {};
-    for (const a of pool) {
-      const r = by[a];
-      if (!r) return PENDING;
-      rows[a] = [String(r.credited), String(r.expected), r.void === true];
-    }
-    return { round: c.round, rows };
-  },
-
-  /** Points for every wallet that picked that day (0 included): 1 per row the wallet called right. The score time (the
-   *  D-152 tie-break) is the pick's time when it scored, else 0, kept inside the week (a pick made before the week
-   *  opens counts from its start: the kit's NK-19 window; the same rule as Fantasy). The roster is the week's write-once one and nothing
-   *  else: checkRoster refuses anything that is not exactly the published roster for this week. */
-  scoreRound(round, picks, result, inputs): Score {
-    if (!inputs) throw new Error("scoreRound: no roster (inputs)");
-    const roster = F.checkRoster(inputs.roster, inputs.start);
-    if (round.day < inputs.start || round.day >= inputs.start + F.PLAY_DAYS * DAY) throw new Error(`scoreRound: day ${F.ymd(round.day)} is not in the roster's week`);
-    const outcomes = F.dayOutcomes(roster, Object.fromEntries(Object.entries(result.rows)));
-    const half = F.halfOfId(round.id), out: Score = new Map();
+  scoreRound(round: Round, picks: Pick<RawPick>[], result): Score {
+    const out: Score = new Map();
     for (const p of picks) {
-      const points = F.scorePick(roster, (p.pick as RawPick)?.number as string | number | undefined, outcomes, half);
-      out.set(p.wallet, { points, at: points > 0 ? Math.min(round.day, Math.max(inputs.start, p.at)) : 0 });
+      const points = R.pointOf(Number((p.pick as any)?.number), result.outcome);
+      out.set(p.wallet, { points, at: points > 0 ? p.at : 0 });
     }
     return out;
   },
