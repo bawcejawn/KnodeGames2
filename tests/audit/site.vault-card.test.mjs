@@ -15,7 +15,7 @@ const read = (f) => {
   const nested = path.join(APP, "web", f);
   return fs.readFileSync(fs.existsSync(direct) ? direct : nested, "utf8");
 };
-const NOW = Date.UTC(2026, 10, 18, 12);   // Wed 18 Nov: Week 1
+const NOW = Date.UTC(2026, 10, 18, 12);   // Wed 18 Nov: Week 4
 const stats = (extra = {}) => ({ v: 1, updated: new Date(NOW - 20 * 60000).toISOString(), week: { start: Date.UTC(2026, 10, 16), end: Date.UTC(2026, 10, 23) },
   staked: { total: 1500, games: [{ id: 1, name: "Daily Questions", vhp: 900 }, { id: 7, name: "Producer Race", vhp: 500 }, { id: 2, name: "Who Signs Block X", vhp: 100 }] },
   blocks: { vault24h: 96 }, ...extra });
@@ -31,7 +31,7 @@ test("shows the pool's VHP, each game's share and the week's name", () => {
   const { ok, box, text } = page(stats());
   assert.equal(ok, true); assert.equal(box.hidden, false);
   assert.match(text, /The Knode pool/); assert.doesNotMatch(text, /vault/i, "it is called the pool"); assert.match(text, /1,500 VHP/); assert.match(text, /in the pool/);
-  assert.match(text, /Week 1/);
+  assert.match(text, /Week 4/);
   assert.match(text, /Daily Questions[\s\S]*60%/); assert.match(text, /Producer Race[\s\S]*33%/); assert.match(text, /Who Signs Block X[\s\S]*7%/);
   assert.match(text, /5 days|4d|5d/, "time left in the week");
   assert.match(text, /96[\s\S]*blocks made, last 24 h/);
