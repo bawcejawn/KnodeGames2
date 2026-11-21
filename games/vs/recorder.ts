@@ -19,7 +19,8 @@ import * as V from "./math.js";
 
 const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
 const DAY = V.DAY;
-const CARD_BLOCKS = 7200, DAY_BLOCKS = 28800;   // one block every 3 s: 28,800 blocks a day                                      // the card's size window: the 6 hours before the lock
+const CARD_BLOCKS = 7200;                                      // the card's size window: the 6 hours before the lock
+const DAY_BLOCKS = 28800;                                      // one block every 3 s: 28,800 blocks a day (VS-9)
 const CARD = Object.freeze({ game: V.GAME, c: "500000", minK: 10, poolRule: "min", ownRule: "spot", paying: true, pooled: [POOL] });
 
 export type DayResult = { round: string; node: string | null; rows: Record<string, string | null> };
