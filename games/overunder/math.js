@@ -149,14 +149,13 @@ export function formLabel(formMillionths) {
 }
 
 // ── the line: STAND-INS for the Ruler's helpers (#33: forecastExpected, medianLineHalves). A test pins them equal to the Ruler's. ──
-export const LUCK_CAP = 1000n * MILLION;          // never above 1,000 blocks (D-383)
-/** Blocks forecast in a game, millionths: the card's k (VHP share) scaled down by its form (never up), capped. Numbers or BigInts only. */
+export const FORM_CAP = 1040000n;                 // D-588 (version C): form counts up to 104%; no block cap (D-584)
+/** Blocks forecast in a game, millionths: the card's k (VHP share) scaled by its form, form counted up to 104%. Numbers or BigInts only. */
 export function forecastExpected(row) {
   for (const x of [row.k, row.form]) if (typeof x !== "bigint" && !Number.isSafeInteger(x)) throw new Error("k and form must be whole numbers or BigInts, never text");
   const k = BigInt(row.k), form = BigInt(row.form);
   if (k < 0n || form < 0n) throw new Error("k and form can't be negative");
-  const e = (k * (form < MILLION ? form : MILLION)) / MILLION;
-  return e < LUCK_CAP ? e : LUCK_CAP;
+  return (k * (form < FORM_CAP ? form : FORM_CAP)) / MILLION;
 }
 /** The line in half-blocks: the Poisson median half-line for `expected` (millionths). */
 /** The Ruler's 'Unreliable' label: form below the 80% gate (millionths). */

@@ -10,7 +10,7 @@ A new game every 30 minutes. Each game is one block producer and a line, in half
 - **Starts:** a game starts at every :00 and :30 UTC (the kit's rolling grid, round id `r#####`). It runs for the **14,400 blocks** from the block at its start (about 12 hours).
 - **Who plays:** the producer whose last game started longest ago plays next. A producer with 2 games running is passed over for that start. A new producer on the list goes to the bottom. **Unreliable** producers (form below 80%) and the pool node (the Vault) never play. If nobody can play, there is no game at that start.
 - **The list:** producers with the VHP Ruler's entry on the schedule card (stand-in for the Ruler's `listAt` until the kit exposes it), minus Unreliable ones.
-- **The line:** the producer's forecast blocks for the game: its card's k (its VHP share of a game's 14,400 blocks), scaled down by its form (never up), never above 1,000 blocks (`forecastExpected`), as the Poisson median half-line (`medianLineHalves`: 1 below 0.15 blocks, otherwise 2 × floor(e − 0.15) + 1 half blocks). Nobody types a line.
+- **The line:** the producer's forecast blocks for the game: its card's k (its VHP share of a game's 14,400 blocks), scaled by its form, with form counted up to 104% and no block cap (`forecastExpected`, D-584, D-588), as the Poisson median half-line (`medianLineHalves`: 1 below 0.15 blocks, otherwise 2 × floor(e − 0.15) + 1 half blocks). Nobody types a line.
 - **The schedule file:** the kit writes each game's write-once file `schedule/r#####.json` between 3 h 33 min and 3 h 3 min before the start, on both nodes (they must agree). It holds who plays, the line and the queue. **A game with no file by 2 h 15 min before its start is cancelled for everyone** (D-344); the queue is then exactly as if that start never happened.
 - **The schedule card:** the ruler can only make a card once its whole scored range is in the data, so the line comes from a card in the past: its scored range is the 14,400 blocks ending at the last 6-hour mark (00, 06, 12, 18 UTC) at least 4 h 3 min before the start, and its size window is the 7,200 blocks before that. All starts with the same mark use the same card.
 - **A pick:** one number per game on the Picks contract: **1 = Over, 2 = Under.** Picks open **2 hours** before the start and lock **5 minutes** before it, so 3 or 4 games are open at a time, never more than 4. **No changes.**
@@ -25,7 +25,7 @@ A new game every 30 minutes. Each game is one block producer and a line, in half
 On form: 97% or more. A little behind: 90% to 96.9%. Behind: 80% to 89.9%. Unreliable: below 80%.
 
 ## Rewards
-- **Free play:** free to play; no free prizes for now (D-576: held off by Vault's prize switch, not closed for good). Staking opens only from week 6, once the vault has added the game.
+- **Free play:** free to play; no free prizes for now (D-576: held off by Vault's prize switch, not closed for good). Staking comes later, once Over Under is proven (D-612).
 - **Staked:** D-152, from the staked board when staking is on.
 
 ## Dependencies

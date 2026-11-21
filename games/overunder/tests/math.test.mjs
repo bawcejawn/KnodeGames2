@@ -148,12 +148,13 @@ test("form labels: the Ruler's four labels at their edges", () => {
   assert.throws(() => R.formLabel(-1));
 });
 
-test("the line stand-ins: form scales k down, never up; capped; refuses text", () => {
+test("the line stand-ins: form scales k, counted up to 104%; no block cap (D-584, D-588); refuses text", () => {
   const f = (k, form) => R.forecastExpected({ k, form });
   assert.equal(f(4000000n, 1000000n), 4000000n);
   assert.equal(f(4000000n, 500000n), 2000000n);
-  assert.equal(f(4000000n, 1500000n), 4000000n);
-  assert.equal(f(5000n * 1000000n, 1000000n), 1000n * 1000000n);
+  assert.equal(f(4000000n, 1040000n), 4160000n);
+  assert.equal(f(4000000n, 1500000n), 4160000n);
+  assert.equal(f(5000n * 1000000n, 1000000n), 5000n * 1000000n);
   assert.throws(() => R.forecastExpected({ k: "4000000", form: 1000000 }));
   assert.equal(R.medianLineHalves(100000n), 1n);
   assert.equal(R.medianLineHalves(150000n), 1n);
