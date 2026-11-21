@@ -62,6 +62,8 @@
     // Wallet names (names.js, when the page loads it): "Name · 1Abc12…wxyz", else the short address.
     const named = (a) => (window.KNames ? window.KNames.of(a) : short(a));
     const id = "kb" + ++n, o = Object.assign({ columns: [], name: named, scored: () => true, summary: () => "", me: null, link: null, unranked: "", hide: [] }, opt || {});
+    // o.weekLabel(w) → the week's name on this board (Fantasy: the platform week, "Week 5"; owner, 21 Nov). Default: WL.
+    const weekName = typeof o.weekLabel === "function" ? o.weekLabel : WL;
     const hidden = new Set(Array.isArray(o.hide) ? o.hide.filter((m) => m !== "week") : []);   // "week" is always shown
     let data = null, mode = "week", who = "", kind = "main";
     // The two boards have the same names in every game (owner, 2026-10-28): KBoard.LABELS, never set per game.
@@ -101,7 +103,7 @@
       if (mode === "last" && btns[2].hidden) { mode = "week"; btns.forEach((x, i) => x.setAttribute("aria-pressed", String(MODES[i][0] === mode))); return render(); }
       if (F && kind === "free") return renderFree(part, rows, weekly);
       const ranked = rows.filter((r) => r && r.ranked);
-      sub.textContent = weekly && part && part.start ? `${WL(part.week)}, from ${day(part.start)} (UTC)` : mode === "today" && part && part.day ? `${part.day} (UTC)` : mode === "all" ? "Every week so far" : "";
+      sub.textContent = weekly && part && part.start ? `${weekName(part.week)}, from ${day(part.start)} (UTC)` : mode === "today" && part && part.day ? `${part.day} (UTC)` : mode === "all" ? "Every week so far" : "";
       // Audit BX-41: the row's own-board place (boardPlace, ties share it) when the game publishes one.
       const placeOf = (r, i) => (Number.isInteger(r.boardPlace) && r.boardPlace > 0 ? r.boardPlace : i + 1);
       // o.earned(row, weekly) → whether the row earns a reward: only those get a medal (places 1–3) and the highlight.
