@@ -718,9 +718,17 @@
             "1GJxaZw2BPU7NhB7fuVGKfQxaQ3tkhVKb8": "1011165393865"
           },
           "seal": "dfead00501fd16c0254f91e9ebde3734bac80b0c83bf3183644a411adb456d2d"
+        },
+        {
+          "height": 41253720,
+          "readAt": "2026-11-21T03:08:33.121Z",
+          "values": {
+            "1GJxaZw2BPU7NhB7fuVGKfQxaQ3tkhVKb8": "1011165393865"
+          },
+          "seal": "9de9f485a7abb9650559a9cca3efe8d68dd89c8a25a03afb4bbb872916cf322b"
         }
       ],
-      "vhpSeal": "8fe4d0606a15e0ab9893c4a7f880ee3ce753084c93e9105a597e3da5be6daaf1"
+      "vhpSeal": "73ad71d8fc4382eb9f351092fb43613d97d679376c50271b2d444d9ce1530cc8"
     }
   ],
   "daySeal": "d002725219383af30d5ef7e17e2f68bf3b18024cd27e7731ed9100496b19c009"
