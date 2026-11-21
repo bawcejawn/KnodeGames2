@@ -35,6 +35,7 @@ export type KitGameCfg = {
   sundayFunRound: boolean; payoutRule: "legacy-tied-whole" | "d152"; vaultValues: "dense255" | "points";
   entry: { minRounds: number; minPoints: number }; minPts: number; rowCap: number;
   liveWeek: boolean; roundsCorrectable: boolean; maxRoundPoints?: number; budgets?: Partial<Budgets>;
+  /** B2 (2): a staked weekly game's display-only live ranking, live.json (this week's rounds so far; never paid from). */ liveBoard?: boolean;
   /** K1: weeks in a season (scoreRound's seasonStaked). */ seasonWeeks?: number;
   /** The first week the game records (game.json firstWeek; Fantasy, 14 Nov). Weeks before it are never read, recorded or
    *  alerted on, and no inputs file is made for them. Unset: every week, as before. */
@@ -185,12 +186,14 @@ export async function runGame(m: GameModule<any, any, any>, cfg: KitGameCfg, o: 
   // K4 (Survivor): a liveWeek game also writes an open copy of the current week every run, with the rounds decided so
   // far, so players see each day's result the next morning. It has no vault file and adds nothing to the all-time
   // board; it never stops last week's run (a failure is a warning).
-  if (cfg.liveWeek) {
+  // B2 (2): a liveBoard game (no liveWeek) runs the same live pass, but it writes only live.json: this week's ranking
+  // so far, display only (no week file, no vault file, nothing in the all-time board).
+  if (cfg.liveWeek || cfg.liveBoard) {
     try {
       const lv = await runOnce(m, cfg, { ...o, live: true }, budget);
       r.written.push(...lv.written.filter((x) => !r.written.includes(x)));
       for (const k of ["errors", "warnings", "notes"] as const) for (const x of lv.alerts[k]) r.alerts[k].push(`live week ${lv.week ?? "?"}: ${x}`);
-    } catch (e) { r.alerts.warnings.push(`the current week's open copy couldn't be written this run (${(e as Error).message})`); }
+    } catch (e) { r.alerts.warnings.push(`the current week's ${cfg.liveWeek ? "open copy" : "live ranking (live.json)"} couldn't be written this run (${(e as Error).message})`); }
   }
   for (const rel of r.written) {
     let n = 0;
@@ -798,6 +801,17 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   };
   if (o.live) {
     if (d.state !== "open") throw new Error(`week ${w} isn't open by the chain's clock`);
+    if (!cfg.liveWeek) {
+      // B2 (2): liveBoard: the board's rows for this week so far, as live.json (the publish check keeps it display only).
+      const lb = boardFor(body, cfg, now);
+      const lj = { v: 1, updated: lb.updated, live: lb.lastWeek };
+      const n = Buffer.byteLength(JSON.stringify(lj));
+      if (n > MAX_WRITE_BYTES) throw new Error(`live.json would be ${Math.round(n / 1024)} KB: not written`);
+      sizeAlert("live.json", n);
+      out.write("live.json", lj);
+      log(`${cfg.slug} week ${w}: live ranking written (live.json); ${rounds.length} rounds.`);
+      return { week: w, state: d.state, alerts, written: out.written };
+    }
     writeWeek(body);
     log(`${cfg.slug} week ${w}: OPEN (live copy); ${rounds.length} rounds.`);
     return { week: w, state: d.state, alerts, written: out.written };

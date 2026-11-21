@@ -91,7 +91,7 @@ export class Out {
   readonly written: string[] = [];
   constructor(readonly dir: string) { fs.mkdirSync(path.join(dir, "vault"), { recursive: true }); }
   write(rel: string, v: unknown) {
-    if (!/^(board\.json|alltime\.json|W([0-9]{3}|[1-9][0-9]{3})\.json|vault\/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})\.json|inputs\/W(0|[1-9][0-9]{0,3})\.json|schedule\/r[0-9]{5}\.json)$/.test(rel)) throw new Error(`the kit never writes ${rel}`);
+    if (!/^(board\.json|live\.json|alltime\.json|W([0-9]{3}|[1-9][0-9]{3})\.json|vault\/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})\.json|inputs\/W(0|[1-9][0-9]{0,3})\.json|schedule\/r[0-9]{5}\.json)$/.test(rel)) throw new Error(`the kit never writes ${rel}`);
     if (rel.startsWith("inputs/")) fs.mkdirSync(path.join(this.dir, "inputs"), { recursive: true });
     if (rel.startsWith("schedule/")) fs.mkdirSync(path.join(this.dir, "schedule"), { recursive: true });
     const s = canon(v);

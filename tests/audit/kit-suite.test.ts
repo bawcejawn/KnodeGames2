@@ -41,6 +41,7 @@ import "../../kit/tests/rolling-golden.k2.test.ts";
 import "../../kit/tests/rolling-golden.k2b.test.ts";
 import "../../kit/tests/rpc-spare.test.ts";
 import "../../kit/tests/b2-parts-caps.test.ts";
+import "../../kit/tests/b2-live-board.test.ts";
 import "./kit-repolens-g41.test.ts";
 
 import test from "node:test";

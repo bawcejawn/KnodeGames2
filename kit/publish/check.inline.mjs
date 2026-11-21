@@ -677,7 +677,7 @@ export function readWeekFolder(dir, cfg) {
   return { manifest: m, week: partsToWeek(parts, cfg) };
 }
 
-const NAMES = new RegExp(`^(board\\.json|alltime\\.json|W([0-9]{3}|[1-9][0-9]{3})\\.json|vault/(HOLD-|RELEASE-)?W${VNUM}\\.json|inputs/W${VNUM}\\.json|schedule/r[0-9]{5}\\.json)$`);
+const NAMES = new RegExp(`^(board\\.json|live\\.json|alltime\\.json|W([0-9]{3}|[1-9][0-9]{3})\\.json|vault/(HOLD-|RELEASE-)?W${VNUM}\\.json|inputs/W${VNUM}\\.json|schedule/r[0-9]{5}\\.json)$`);
 const ISO = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/;
 const same = (a, b) => a !== null && b !== null && Buffer.compare(a, b) === 0;
 const isHold = (h, cfg, w) => !!h && typeof h === "object" && Object.keys(h).join() === "game,week,reason" && h.game === cfg.game && h.week === w && typeof h.reason === "string" && h.reason.length > 0 && h.reason.length <= 300;
@@ -875,6 +875,22 @@ export function checkGame(cfg, inDir, pubDir, now, release = "", cardsOk = null,
       else if (Date.parse(b.updated) > now + FUTURE_SLACK_MS) hold("board.json", "updated in the future by this job's clock");
       else publish.push("board.json");
     }
+  }
+
+  // B2 (2): live.json, a liveBoard game's display-only ranking of this week so far. Nothing is paid from it (the vault
+  // reads only vault/), so it is judged by its shape and clock: this week by this job's clock, the board's row shape, an
+  // open week, and not stamped in the future. It can't be recomputed here (the open week itself isn't published).
+  if (files.includes("live.json")) {
+    const p = parseCanon(readRaw(inDir, "live.json"));
+    const b = p.ok ? p.v : null, lw = b?.live;
+    const rowOk = (r) => r && typeof r === "object" && !Array.isArray(r) && isAddr(r.a);
+    if (!cfg.liveBoard) hold("live.json", "this game has no live ranking (liveBoard)");
+    else if (!p.ok) hold("live.json", p.why);
+    else if (!b || Object.keys(b).join() !== "v,updated,live" || b.v !== 1 || typeof b.updated !== "string" || !ISO.test(b.updated) || !lw || typeof lw !== "object" || Array.isArray(lw)) hold("live.json", "not the live ranking's shape");
+    else if (!nat(lw.week) || lw.week !== cw) hold("live.json", "not this week's live ranking, by this job's clock");
+    else if (lw.final !== false || lw.start !== k.start(cw) || !Array.isArray(lw.rows) || !lw.rows.every(rowOk)) hold("live.json", "not an open week's board rows");
+    else if (Date.parse(b.updated) > now + FUTURE_SLACK_MS) hold("live.json", "updated in the future by this job's clock");
+    else publish.push("live.json");
   }
 
   // Vault files: HOLD only added; RELEASE only the owner's (KC-3); W<n> only for a final week, inside the vault's window,
