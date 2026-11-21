@@ -23,3 +23,14 @@ test("no tool still points at an old top-level contract folder", () => {
     assert.doesNotMatch(src, /"(?:picks|desk|race|sponsor|game)\/build\//, `${file} names an old-layout build path`);
   }
 });
+
+// Repo Lens R1-3 J44-1/J44-2: the scan also covers the repo's own tools (tools/*.mjs) and the admin page's button texts,
+// where an old path (tools/combo-testnet.mjs, "sponsor/build/release") had been missed.
+test("tools/*.mjs and the admin button texts name no old top-level build folder", () => {
+  const files = [...fs.readdirSync("tools").filter((f) => f.endsWith(".mjs")).map((f) => `tools/${f}`), "ops/admin/actions.ts"];
+  assert.ok(files.includes("tools/combo-testnet.mjs"), "the Combo testnet tool is scanned");
+  for (const file of files) {
+    const src = fs.readFileSync(file, "utf8");
+    assert.doesNotMatch(src, /(?<![\w/])(?:picks|desk|race|sponsor|game)\/build\//, `${file} names an old-layout build path (use contracts/<name>/build/)`);
+  }
+});
