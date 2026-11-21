@@ -20,7 +20,7 @@ test("games.json: known kinds and statuses, plain text, live games link to this 
     assert.doesNotMatch(g.name + g.line, /[<>]/, `${g.id}: plain text`);
     if ((g.status === "live" || g.status === "preview") && g.href.includes(".html")) assert.ok(fs.existsSync(`${APP}/web/${g.href.split("#")[0]}`), `${g.id}: page exists`);
   }
-  assert.deepEqual(games.filter((g) => g.status === "live").map((g) => g.id).sort(), ["blockx", "bracket", "fantasy", "golf", "questions", "race"]);
+  assert.deepEqual(games.filter((g) => g.status === "live").map((g) => g.id).sort(), ["blockx", "bracket", "fantasy", "golf", "lastnode", "questions", "race"]);
 });
 
 test("games.js only reads and draws: no sending, no storage, no HTML from data; it checks games.json itself", () => {
@@ -37,7 +37,7 @@ test("games.html: no inline script or handler, pinned CDN scripts, and it reads 
   for (const m of h.matchAll(/<script src="https:[^"]+"([^>]*)>/g)) assert.match(m[1], /integrity="sha384-/);
   const csp = h.match(/Content-Security-Policy" content="([^"]+)"/)[1];
   // KnodeGames2: the game-data branch host comes first (web/data-source.js, docs/DATA.md).
-  assert.match(csp, /connect-src 'self' https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/ https:\/\/koinos\.armana\.io https:\/\/api\.koinos\.io https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/race-data\/ https:\/\/koinvault\.app https:\/\/us\.i\.posthog\.com https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/names-data\/ https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/stats-data\/ https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/prize-settings\/ https:\/\/data\.knodegames\.com\/ https:\/\/live\.knodegames\.com\/live\.json;/);
+  assert.match(csp, /connect-src 'self' https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/game-data\/ https:\/\/koinos\.armana\.io https:\/\/api\.koinos\.io https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/race-data\/ https:\/\/koinvault\.app https:\/\/us\.i\.posthog\.com https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/names-data\/ https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/stats-data\/ https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/prize-settings\/ https:\/\/data\.knodegames\.com\/ https:\/\/live\.knodegames\.com\/live\.json;/);
   assert.match(csp, /frame-src 'none'; object-src 'none'; base-uri 'self'/);
 });
 

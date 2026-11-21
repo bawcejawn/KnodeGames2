@@ -49,3 +49,20 @@ test("no ops\\ script takes the repository folder as only one level above ops\\<
   walk(path.join(ROOT, "ops"));
   assert.deepEqual(bad, []);
 });
+
+test("I-1: no ops\\ script tells you to run from the old folder C:\\kprediction or from node\\ (the old repository's layout)", () => {
+  const bad = [];
+  const walk = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith(".ps1")) {
+        const txt = fs.readFileSync(p, "utf8");
+        for (const [i, line] of txt.split("\n").entries())
+          if (/C:\\kprediction/i.test(line) || /-File node\\/.test(line)) bad.push(`${path.relative(ROOT, p)}:${i + 1}`);
+      }
+    }
+  };
+  walk(path.join(ROOT, "ops"));
+  assert.deepEqual(bad, []);
+});

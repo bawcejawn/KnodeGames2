@@ -216,7 +216,7 @@ test("names.yml publish: accepts names.json as bot/names.ts writes it, refuses a
 test("names.yml: hourly @name refresh only (R-HUB-5): no issues read or answered, publish pushes only names.json to names-data", () => {
   const code = wf.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");   // the workflow without its comments
   assert.doesNotMatch(code, /issues|labels=knode-name|reply:|ISSUES_FILE|claims:/, "the claim flow is gone");
-  assert.deepEqual([...wf.matchAll(/- cron: "([^"]+)"/g)].map((m) => m[1]), [], "no timer until the owner turns this workflow on");
+  assert.deepEqual([...wf.matchAll(/- cron: "([^"]+)"/g)].map((m) => m[1]), ["4 * * * *"]);
   assert.match(wf, /workflow_dispatch/);
   assert.deepEqual([...new Set([...wf.matchAll(/github\.event[a-z_.]*/g)].map((m) => m[0]))], [], "nothing is read from the event");
   assert.ok(!fs.existsSync(`${APP}/.github/ISSUE_TEMPLATE/producer-name.yml`), "the claim issue template is gone");
@@ -236,11 +236,11 @@ const read = (f) => {
 };
 test("every page that loads names.js may read names-data, and loads it before its own page script", () => {
   const users = pages.filter((p) => /<script src="names\.js"><\/script>/.test(read(p)));
-  assert.deepEqual(users.sort(), ["blockx.html", "bracket.html", "fantasy.html", "games.html", "golf.html", "index.html", "names.html", "node.html", "pulse.html", "race.html"]);
+  assert.deepEqual(users.sort(), ["blockx.html", "bracket.html", "fantasy.html", "games.html", "golf.html", "index.html", "lastnode.html", "names.html", "node.html", "pulse.html", "race.html"]);
   for (const p of users) {
     const h = read(p);
-    assert.match(h.match(/connect-src ([^;"]*)/)[1], /https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/names-data\//, p);
-    const own = { "blockx.html": "blockx.js", "bracket.html": "bracket.js", "fantasy.html": "fantasy.js", "games.html": "games.js", "golf.html": "golf.js", "index.html": "app.js", "pulse.html": "pulse.js", "node.html": "node-page.js", "names.html": "names-page.js", "race.html": "race.js" }[p];
+    assert.match(h.match(/connect-src ([^;"]*)/)[1], /https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/names-data\//, p);
+    const own = { "blockx.html": "blockx.js", "bracket.html": "bracket.js", "fantasy.html": "fantasy.js", "games.html": "games.js", "golf.html": "golf.js", "index.html": "app.js", "lastnode.html": "lastnode.js", "pulse.html": "pulse.js", "node.html": "node-page.js", "names.html": "names-page.js", "race.html": "race.js" }[p];
     assert.ok(h.indexOf('src="names.js"') < h.indexOf(`src="${own}"`), `${p}: names.js before ${own}`);
   }
   assert.match(read("web/index.html"), /src="names\.js"[\s\S]*src="results\.js"/, "results.js (on index.html) can use it too");

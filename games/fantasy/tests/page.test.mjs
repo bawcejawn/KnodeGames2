@@ -28,7 +28,7 @@ test("page: builds nothing from HTML strings; reads only the kit's files and the
   for (const f of ["board.json", "alltime.json", "inputs/W${w}.json", "W${pad(w)}.json"]) assert.ok(js.includes(f), f);
   assert.doesNotMatch(js, /index\.json|days\.json|rivals\.json/, "no files of the old recorder");
   const csp = html.match(/Content-Security-Policy" content="([^"]+)"/)[1];
-  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/games-data\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//);
   assert.doesNotMatch(html, /name="robots" content="noindex/, "searchable: in the menus as Test weeks (Hub #314)");
 });
 

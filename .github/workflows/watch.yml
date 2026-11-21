@@ -5,6 +5,8 @@
 name: Node watchdog
 
 on:
+  schedule:
+    - cron: "*/30 * * * *"   # an outage email arrives within about 30-60 min of the node going silent
   workflow_dispatch: {}
 
 permissions:

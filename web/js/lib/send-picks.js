@@ -23,6 +23,13 @@ export function samePick(a, b) {
   if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => one(x, b[i]));
   return one(a, b);
 }
+/** Repo Lens #R5-1: in a browser, koilib rounds a uint64 above 2^53 unless the Long library (long@5.3.2, pinned) is
+ *  loaded before it. A page that sends such a pick (Picks kind 3) loads Long; the card refuses to send one without it. */
+const SAFE_INT = 2n ** 53n - 1n;
+export function needsLong(p) {
+  return [...(p.fresh || []), ...(p.changes || [])].some((it) => WHOLE.test(String(it.wanted)) && BigInt(it.wanted) > SAFE_INT);
+}
+export const NO_LONG = "This page can't send a pick this large safely (its Long library isn't loaded). Nothing was sent.";
 /** What a guest sees instead of a Change button (D-278: a change uses the player's own Mana; a guest wallet has none). */
 export const GUEST_CHANGE = "A guest wallet can't change a pick (a change uses your own Mana). Connect a wallet to change a pick.";
 const hasPick = (x) => x !== null && x !== undefined && x !== "" && !(Array.isArray(x) && x.length === 0);
@@ -76,6 +83,7 @@ export async function send(W, p, opts = {}) {
   const label = opts.label || "Your picks";
   const stillOpen = typeof opts.stillOpen === "function" ? opts.stillOpen : () => true;
   if (p.changes.length && W.kind === "guest") throw new Error(GUEST_CHANGE);
+  if (needsLong(p) && typeof ("Long" in opts ? opts.Long : globalThis.Long) !== "function") throw new Error(NO_LONG);
   const res = { sent: 0, changed: 0, skipped: 0, ids: [] };
   const fresh = p.fresh.filter((it) => stillOpen(it));
   res.skipped += p.fresh.length - fresh.length;

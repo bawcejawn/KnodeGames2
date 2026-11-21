@@ -23,14 +23,14 @@ function start() {
   "use strict";
   const lib = window.koilib || window.koinos || window;
   const ROOT = new URL("./", location.href);
-  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames/games-data/fantasy/";
+  const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/fantasy/";
   const RPC = ["https://koinos.armana.io", "https://api.koinosblocks.com"];
   const DAY = F.DAY, LEAD = 300000, GAME = F.GAMES.team, RIVAL = F.GAMES.rival;
   let GENESIS = window.KWeeks ? window.KWeeks.GENESIS_MS : 1792368000000, WEEK = 7 * DAY;
   /** Knode's own nodes: in the pool like any other producer, and marked (owner decision 27 Oct). */
   const NAMES = { "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "Knode pool", "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR": "Knode Swap" };
   /** The week 4 test-week note goes once week 4 is over (Sun 22 Nov 7 PM ET = Mon 23 Nov 00:00 UTC; D-174). */
-  const TEST_WEEK_ENDS = Date.UTC(2026, 10, 23);
+  const TEST_WEEK_ENDS = Date.UTC(2026, 10, 30);   // weeks 4 and 5 are free play (D-238)
   if (Date.now() >= TEST_WEEK_ENDS && $("fx-testweeks")) $("fx-testweeks").hidden = true;
 
   // ── small helpers ──
@@ -45,7 +45,9 @@ function start() {
   const clock = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), x = t % 60; return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
   const say = (t) => { $("status").textContent = t; $("status").hidden = !t; };
   const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => x === b[i]);
-  const WL = (w) => (window.KWeeks ? window.KWeeks.label(w) : `Week ${w - 3}`);
+  /** The week players see on the Fantasy page is the platform's real (vault) week, the same number as the week files and
+   *  the vault: this week is "Week 5", then 6, 7 … (owner, Sat 21 Nov). Never weeks.js's "Week 1 = vault week 4" count here. */
+  const WL = (w) => `Week ${w}`;
   async function fetchJson(url) { const r = await fetch(url, { cache: "no-cache" }); if (!r.ok) throw new Error(String(r.status)); return r.json(); }
   function colorOf(a) {
     let x = 2166136261;
@@ -149,6 +151,31 @@ function start() {
     const who = me();
     if (!who || !picks) return null;
     try { const x = await picks.functions.get_pick({ game, round: String(round), player: who }); const l = x.result && x.result.pick && x.result.pick.producers; return Array.isArray(l) && l.length ? l : null; } catch { return null; }
+  }
+  /** Repo Lens #R4-2 R4-2.1: the read before a send is strict. A failed read stops the send (it never makes a change look
+   *  like a first pick, which the sponsor would pay for: D-278). Display reads (getPick) stay lenient. Returns the pick
+   *  on chain (null for none) and how many times it has been changed (get_pick "changes"). */
+  const READ_FAILED = "couldn't check your current pick";
+  async function readPick(game, round) {
+    const who = me();
+    if (!who || !picks) throw new Error(READ_FAILED);
+    let x;
+    try { x = await picks.functions.get_pick({ game, round: String(round), player: who }); } catch { throw new Error(READ_FAILED); }
+    if (!x || typeof x !== "object") throw new Error(READ_FAILED);
+    const pk = x.result && x.result.pick, l = pk && pk.producers;
+    return { existing: Array.isArray(l) && l.length ? l : null, changes: pk ? Number(pk.changes || 0) : 0 };
+  }
+  /** R4-2.3: the game's change limit, read from the Picks contract (get_game max_changes), never a copied number. If the
+   *  read fails the card shows no count; the contract still refuses a change past the limit. */
+  const limits = new Map();
+  async function maxChangesOf(game) {
+    if (limits.has(game)) return limits.get(game);
+    try {
+      const r = await picks.functions.get_game({ game });
+      const n = Number(r && r.result && r.result.game && r.result.game.max_changes);
+      if (Number.isInteger(n) && n >= 0) { limits.set(game, n); return n; }
+    } catch { /* no count shown */ }
+    return undefined;
   }
   /** The next day you can still pick for (its lock at least a minute away). */
   function targetDay(now = Date.now()) { let d = dayNo(now); while (!isPlayDay(d) || lockOfDay(d) - now < 60000) d++; return d; }
@@ -366,7 +393,7 @@ function start() {
     if (!window.KBoard || !$("fx-board")) return;
     if (!lb) {
       lb = window.KBoard.create($("fx-board"), {
-        label: "Fantasy Producers leaderboard", hide: ["today"],
+        label: "Fantasy Producers leaderboard", hide: ["today"], weekLabel: WL,
         columns: [{ key: "pts", label: "Points", d: 1 }],
         summary: (r) => `${fmt(r.pts, 0)} pts`, scored: (r) => r.pts > 0, name: nameOf,
         unranked: "The Staked board is for wallets with at least 1 VHP staked in Fantasy that week (holding VHP, or a stake in another game, doesn't count).",
@@ -419,6 +446,19 @@ function start() {
   let asking = null;   // the open "change it?" question: any way of closing the card (Escape, a click outside) answers "keep"
   function closePop() { if (modal) modal.hidden = true; if (asking) { const a = asking; asking = null; a(false); } }
   const okBtn = (t = "Done") => el("button", { class: "btn btn-primary", type: "button", onclick: closePop }, t);
+  /** The whole transaction id, a Copy button and a link to the block explorer (owner, Mon 16 Nov; rebuilt on the shared
+   *  card, Fri 20 Nov). Built with textContent and attributes only; nothing for an id that isn't a well-formed tx id. */
+  const TX_EXPLORER = "https://koinosscan.com/tx/";
+  function txLine(id) {
+    const s = String(id || "");
+    if (!/^0x[0-9a-f]{20,}$/i.test(s)) return null;
+    const copy = el("button", { class: "fx-ghost-d", type: "button", onclick: async () => {
+      try { await navigator.clipboard.writeText(s); copy.textContent = "Copied"; } catch { copy.textContent = "Copy failed"; }
+    } }, "Copy");
+    return el("div", { class: "fx-tx" },
+      el("p", { class: "mono", text: `Transaction ${s}` }),
+      el("p", {}, copy, " ", el("a", { href: TX_EXPLORER + s, target: "_blank", rel: "noopener noreferrer", text: "View on koinosscan" })));
+  }
   /** The shared card's question (D-255): "your pick this round is X. Change it to Y?" Resolves true for Change. */
   function ask(title) {
     return (lines) => new Promise((done) => {
@@ -430,25 +470,38 @@ function start() {
   }
   /** One pick through the shared card: reads the pick on chain for that round first. Returns the send result, or null
    *  when the player kept the pick they had (or nothing changed). */
+  /** R4-2.6: who pays the Mana, said by wallet kind. Knode's sponsor never pays for a KOIN Vault user (D-301: KOIN Vault
+   *  decides) and never for a change (D-278). */
+  function manaLine(kind, change) {
+    if (change) return "A change: paid with your own Mana.";
+    if (kind === "vault") return "KOIN Vault decides how the Mana is paid (Knode's Mana sponsor isn't used).";
+    if (kind === "guest") return "Free: Knode's Mana sponsor pays the Mana.";
+    return "A first pick is free: Knode's Mana sponsor pays, unless your wallet has enough Mana of its own (then it uses yours).";
+  }
   async function sendOne(game, round, wanted, label, title, lockAt) {
-    const existing = await getPick(game, round);
+    const cur = await readPick(game, round);
+    const maxChanges = await maxChangesOf(game);
     const { operation } = await picks.functions.pick({ player: me(), game, round: String(round), producers: wanted, number: "0" }, { onlyOperation: true });
     const open = () => lockAt - Date.now() >= 60000;
-    const p = SP.plan([{ key: `${game}:${round}`, label, op: operation, existing, wanted, open: open() }]);
+    const key = `${game}:${round}`;
+    const p = SP.plan([{ key, label, op: operation, existing: cur.existing, wanted, open: open() }], { maxChanges, changesUsed: { [key]: cur.changes } });
+    if (p.refused.some((r) => r.why === "no changes left")) throw new Error("changed again");
     if (p.refused.length) throw new Error("locked");
     if (p.same.length) throw new Error("already your pick");
     const cannot = (lines) => new Promise((done) => { pop("info", title, lines, [okBtn("OK")]); asking = done; });
     if (!(await SP.confirm(p, ask(title), nameOf, { guest: W.kind === "guest", cannot }))) return null;
-    pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [p.changes.length ? "A change: paid with your own Mana." : "A first pick is free: Knode's Mana sponsor pays, unless your wallet has enough Mana of its own (then it uses yours)."]);
+    pop("busy", W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}`, [manaLine(W.kind, p.changes.length > 0)]);
     return SP.send(W, p, { label, stillOpen: open });
   }
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal && !modal.hidden && !modal.querySelector(".fx-spin")) closePop(); });
   function why(e) {
     const m = String((e && e.message) || e);
-    return /locked/i.test(m) ? "That one has locked: picks close 5 minutes before the day."
+    return m.includes(READ_FAILED) ? "Couldn't check your current pick, so nothing was sent. Try again in a moment."
+      : /locked/i.test(m) ? "That one has locked: picks close 5 minutes before the day."
       : /not open yet/i.test(m) ? "That isn't open yet."
       : /used up/i.test(m) ? "Today's picks are used up. More after 00:00 UTC."
       : /already your pick/i.test(m) ? "That is already your pick."
+      : /changed again/i.test(m) ? "You've used every change for this one, so nothing was sent."
       : /closed|switched off/i.test(m) ? "This game is switched off right now."
       : /pending account resources|insufficient.*(rc|mana|resources)/i.test(m) ? "Your Mana is still held by your last transaction. Try again in a minute."
       : /reject|denied|cancel/i.test(m) ? "Cancelled in your wallet. Nothing was sent."
@@ -477,7 +530,7 @@ function start() {
       draftFor = null;
       await refreshMine();
       pop(ok ? "ok" : "info", ok ? "Team saved" : "Sent, not seen yet", [ok ? `It plays from ${when(dayStart(d))} and carries on until you change it. You can change it until ${when(lockOfDay(d))}.` : "Your wallet sent it. It usually shows within a minute.",
-        id ? el("p", { class: "mono", text: `Transaction ${String(id).slice(0, 18)}…` }) : null].filter(Boolean), [okBtn()]);
+        txLine(id)].filter(Boolean), [okBtn()]);
     } catch (e) { const w = why(e); pop(/Cancelled/.test(w) ? "info" : "bad", /Cancelled/.test(w) ? "Cancelled" : "Team not saved", [w], [okBtn("OK")]); }
     finally { sending = false; await refreshMine(); }
   }
@@ -495,9 +548,10 @@ function start() {
       const r = await sendOne(RIVAL, round, [target], `Weekly Rival: challenge ${nameOf(target)}`, "Change your rival?", lockOfDay(round));
       if (!r) { closePop(); return; }
       if (!r.sent && !r.changed) throw new Error("locked");
+      const id = r.ids[r.ids.length - 1];
       const ok = await confirmPick(RIVAL, round, [target]);
       $("fx-rival-addr").value = "";
-      pop(ok ? "ok" : "info", ok ? "Challenge sent" : "Sent, not seen yet", [ok ? `${nameOf(target)} is your rival for ${WL(rw)}. It counts if you are both staked in Fantasy and both score.` : "It usually shows within a minute."], [okBtn()]);
+      pop(ok ? "ok" : "info", ok ? "Challenge sent" : "Sent, not seen yet", [ok ? `${nameOf(target)} is your rival for ${WL(rw)}. It counts if you are both staked in Fantasy and both score.` : "It usually shows within a minute.", txLine(id)].filter(Boolean), [okBtn()]);
     } catch (e) { const w = why(e); pop(/Cancelled/.test(w) ? "info" : "bad", /Cancelled/.test(w) ? "Cancelled" : "Challenge not sent", [w], [okBtn("OK")]); }
     finally { sending = false; await refreshMine(); }
   }

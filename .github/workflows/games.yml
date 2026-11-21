@@ -10,6 +10,8 @@
 name: KnodeGames recorders
 
 on:
+  schedule:
+    - cron: "47 * * * *"     # every hour at minute 47 (after the race recorder at :37 has taken the hour's card)
   workflow_dispatch: {}
 
 concurrency:
@@ -1042,7 +1044,7 @@ jobs:
                   raise ValueError("window order must be W0 <= W1 <= L <= S0 <= S1")
 
 
-          def make_card(L, game, rnd, window, c, own_rule, paying, pooled=(), min_k=10, pool_rule="min", mode=None, include=None, version=RULE_VERSION):
+          def make_card(L, game, rnd, window, c, own_rule, paying, pooled=(), min_k=10, pool_rule="min", mode=None, include=None, version=RULE_VERSION, no_void=False):
               w = window
               _check_window(w)
               if own_rule not in OWN_RULES:
@@ -1101,6 +1103,8 @@ jobs:
                   out["mode"] = mode
               if include is not None:
                   out["include"] = list(include)
+              if no_void:   # D-312/D-317: the game never voids (Knode Games VS); the key is there only when set, so no other card changes
+                  out["noVoid"] = True
               out.update({"total": tot, "formFrom": form_from, "producers": rows})
               return out
 
@@ -1156,6 +1160,7 @@ jobs:
               mode = card.get("mode")
               if mode is not None and mode not in MODES:
                   raise ValueError("mode must be A, B, C or D")
+              no_void = card.get("noVoid") is True   # D-312/D-317: scored without voids; outOfBand says what the band would have done
               cap = LUCK_CAP if mode is None else MODE_CAP[mode]
               blocks = S1 - S0 + 1
               band_down, band_up = void_band(blocks)
@@ -1191,7 +1196,9 @@ jobs:
                   q = dict(p)
                   q.update({"quality": "flagged" if flagged else "ok", "sample": sample, "expected": expected,
                             "signed": L.signed_in(p["a"], S0, S1), "credited": credited, "pct": pct(expected, credited),
-                            "void": is_void, "moves": void_record(L, p["a"], o, card["T"], S0, S1) if is_void else None})
+                            "void": is_void and not no_void, "moves": void_record(L, p["a"], o, card["T"], S0, S1) if is_void and not no_void else None})
+                  if no_void:
+                      q["outOfBand"] = is_void
                   rows.append(q)
               # A′ (D-165, D-171), as scoreCard in vhp-ruler.js: the core is the field members with form ≥ CORE_LINE × the field's
               # median form weighted by expected blocks (exact tie: the lower member's form), at full size; a producer's yardstick
@@ -1294,7 +1301,7 @@ jobs:
 
 
           _SETTINGS, _WKEYS = ("game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"), ("W0", "W1", "L", "S0", "S1")
-          _OPTIONAL = ("mode", "include", "version")
+          _OPTIONAL = ("mode", "include", "version", "noVoid")
 
 
           def check_settings(g):
@@ -1309,6 +1316,8 @@ jobs:
                   raise ValueError("version must be 4 or 5")
               if "include" in g:
                   check_include(g["include"])
+              if "noVoid" in g and g["noVoid"] is not True:
+                  raise ValueError("noVoid must be true")
               _dec(g["game"], "game")
               _dec(g["round"], "round")
               w = g["window"]
@@ -1358,7 +1367,7 @@ jobs:
                   w = game["window"]
                   try:
                       mine = make_card(L, game["game"], game["round"], w, int(game["c"]), game["ownRule"], game["paying"], game["pooled"],
-                                       game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION))
+                                       game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True)
                       if pub_d["scored"]:
                           mine = score_card(L, mine)
                   except ValueError as e:
@@ -1372,17 +1381,18 @@ jobs:
               want["mode"] = game.get("mode")   # always compared (Repo Lens #G-19): no mode on one side is a clear refusal
               want["version"] = game.get("version", RULE_VERSION)
               want["include"] = json.dumps(game.get("include"), separators=(",", ":"))
+              want["noVoid"] = game.get("noVoid")
               want.update({"W0": w["W0"], "W1": w["W1"], "L": w["L"], "S0": w["S0"], "S1": w["S1"]})
               got = {"game": pub.get("game"), "round": pub.get("round"), "ownRule": pub.get("ownRule"), "paying": pub.get("paying"),
                      "c": str(pub.get("c")), "minK": pub.get("minK"), "poolRule": pub.get("poolRule"), "mode": pub.get("mode"),
-                     "version": pub.get("ruleVersion"), "include": json.dumps(pub.get("include"), separators=(",", ":"))}
+                     "version": pub.get("ruleVersion"), "include": json.dumps(pub.get("include"), separators=(",", ":")), "noVoid": pub.get("noVoid")}
               got.update(pub.get("window") or {})
               for k in want:
                   if got.get(k) != want[k] or type(got.get(k)) is not type(want[k]):
                       return False, "setting %s: the card says %s, the game says %s" % (k, json.dumps(got.get(k)), json.dumps(want[k])), None
               try:
                   mine = make_card(L, game["game"], game["round"], w, int(game["c"]), game["ownRule"], game["paying"], game["pooled"],
-                                   game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION))
+                                   game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True)
                   if any("credited" in p for p in pub.get("producers", [])):
                       mine = score_card(L, mine)
               except ValueError as e:
@@ -1394,6 +1404,43 @@ jobs:
               while i < min(len(a), len(published)) and a[i] == published[i]:
                   i += 1
               return False, "differs at byte %d" % i, None
+
+
+          # ── Over/Under and VS helpers (D-312 to D-337): the twins of weekOfStart, forecastExpected, medianLineHalves, listAt, isUnreliable ──
+          GENESIS_MS, WEEK_MS = 1792368000000, 604800000   # vault week 0 starts Mon 19 Oct 2026 00:00 UTC
+
+
+          def week_of_start(start_ms):
+              """The vault week a game belongs to: the week it STARTS in (Mon 00:00 UTC is the first moment of a new week)."""
+              if type(start_ms) is not int or start_ms < GENESIS_MS:
+                  raise ValueError("a game's start must be a whole number of milliseconds from week 0")
+              return (start_ms - GENESIS_MS) // WEEK_MS
+
+
+          def forecast_expected(row):
+              """The blocks a producer is forecast to sign in a game, millionths: its card's k (VHP share), scaled down by its form
+              (never up: form above 100% adds nothing), and never above the luck cap. D-383."""
+              k, form = _int(row["k"]), _int(row["form"])
+              if k < 0 or form < 0:
+                  raise ValueError("k and form can't be negative")
+              e = k * (form if form < M else M) // M
+              return e if e < LUCK_CAP else LUCK_CAP
+
+
+          def median_line_halves(expected):
+              """The Over/Under line in half-blocks (1 = half a block): the Poisson median half-line for `expected` (millionths)."""
+              e = _int(expected)
+              return 1 if e < 150000 else 2 * ((e - 150000) // M) + 1
+
+
+          def list_at(L, H):
+              """D-334: the producers on a game's list at block H: signed in the last 6 hours AND at least 10 blocks in 24 hours."""
+              return sorted(a for a in L.active(H) if L.signed_in(a, H - AVG, H - 1) >= 10)
+
+
+          def is_unreliable(row):
+              """The 'Unreliable' label: form below the 80% gate."""
+              return _int(row["form"]) < FORM_GATE
 
 
           # ── the vhp-data format and its checks: the twin of vhp-data.js (read it for the format in words) ──
@@ -2365,6 +2412,10 @@ jobs:
           # copy embedded in the step above (byte for byte the repository's file, tested), loaded from that path only. ──
           RULER_GAME = {"game": 2, "c": "500000", "minK": 10, "poolRule": "min", "ownRule": "spot", "paying": True, "pooled": ["1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr"]}   # = RULER in bot/blockx-ruler.ts (tested)
           RULER_LEAD, RULER_CARD, RULER_SIZE, RULER_CAP, RULER_BASE, RULER_VOID, RULER_WAIT = 100, 7200, 7200, 120, 100, 1200, 3 * 86400000
+          # The 48-hour old-points fallback (owner, 18 Nov 2026) = RULER_FALLBACK_MS and FALLBACK_WHY in bot/blockx-ruler.ts (tested).
+          RULER_FALLBACK = 2 * 86400000
+          FALLBACK_WHY = "old points: the ruler couldn't score this target within 48 hours, so a right pick keeps its old-rule points"
+          def is_fallback(e): return type(e) is dict and e.get("card") is None and e.get("void") is False and e.get("why") == FALLBACK_WHY
           RM, DAY = 1000000, 86400000
           _vr = []
           def VR():
@@ -2457,11 +2508,12 @@ jobs:
                   assert e["note"] is None or (type(e["note"]) is str and len(e["note"]) < 400), tag + ": note"
                   assert e["why"] is None or (type(e["why"]) is str and len(e["why"]) < 400), tag + ": why"
                   po = old.get(h)
-                  if type(po) is dict and (type(po.get("card")) is str or po.get("void") is True): assert same(e, po), tag + ": a published ruler entry would change"
+                  if type(po) is dict and (type(po.get("card")) is str or po.get("void") is True or is_fallback(po)): assert same(e, po), tag + ": a published ruler entry would change"
                   if t.get("void") is not None: assert e["void"] is True and e["card"] is None and e["points"] == 0, tag + ": the target is void, so its entry must be"
                   if e["card"] is None:
                       assert e["points"] == 0, tag + ": points without a card"
                       if e["void"] and t.get("void") is None: assert now - t["time"] >= RULER_WAIT, tag + ": voided before the ruler's 3-day wait"
+                      if is_fallback(e): assert j["mode"] == "on" and t.get("void") is None and t.get("signer") is not None and now - t["time"] >= RULER_FALLBACK, tag + ": the old-points fallback needs an ON week and 48 hours"
                       continue
                   assert type(e["card"]) is str and len(e["card"]) < 500000 and t.get("signer") is not None, tag + ": card"
                   if type(po) is dict and po.get("card") == e["card"]: continue   # checked byte for byte when it was published
@@ -2498,9 +2550,10 @@ jobs:
               for t in (wf.get("targets") if type(wf) is dict and type(wf.get("targets")) is list else []):
                   if not (type(t) is dict and start <= t.get("time", -1) < end) or t.get("void") is not None: continue
                   e = ent.get(t.get("height"))
-                  if type(e) is not dict or (e.get("card") is None and e.get("void") is not True): missing += 1; continue
+                  if type(e) is not dict or (e.get("card") is None and e.get("void") is not True and not is_fallback(e)): missing += 1; continue
                   for pk in t.get("picks") or []:
-                      tot[pk[0]] = tot.get(pk[0], 0) + (e["points"] if e["void"] is not True and pk[1] == e["signer"] else 0)
+                      # a fallback entry scores the pick's own old-rule points (the week file's); the ruler's entries score theirs
+                      tot[pk[0]] = tot.get(pk[0], 0) + ((pk[3] if is_fallback(e) else e["points"]) if e["void"] is not True and pk[1] == e["signer"] else 0)
               rows = {r.get("a"): r.get("pts") for r in (_nlw.get("rows") or []) if type(r) is dict}
               why = None
               if missing and _nlw.get("final") is True: why = "final before the ruler scored every target (%d not scored)" % missing
