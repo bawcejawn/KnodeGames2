@@ -33,7 +33,7 @@
   const dayTime = (t) => new Date(t).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
   const dayName = (t) => new Date(t).toLocaleDateString(undefined, { weekday: "long", timeZone: "UTC" });
   const dur = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d} d ${h} h` : h ? `${h} h ${String(m % 60).padStart(2, "0")} min` : `${m} min`; };
-  // What players call a week (weeks.js, D-063): vault week 4 (Mon 16 Nov) = "Week 1"; vault week 3 = "Test week"
+  // What players call a week (weeks.js, D-063): vault week 4 (Mon 16 Nov) = "Week 4"; vault week 3 = "Test week"
   const weekLabel = (w) => (w >= 4 ? `Week ${w}` : w === 3 ? "Test week" : `Week of ${new Date(BM.weekStart(w)).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`);
   const weekDate = (w) => new Date(BM.weekStart(w)).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
   const fullTime = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
@@ -499,7 +499,7 @@
   const lb = window.KBoard ? window.KBoard.create($("bk-board"), {
     label: "Bracket leaderboard", hide: ["today"],
     // Staked: wallets with 1 VHP or more staked in the Bracket that week (the Vault's player rule); Free play: the rest
-    // owner 14 Nov: the free prize is ON from Week 2 (vault week 5; the recorder gives free-play medals only when game 9's switch is on)
+    // owner 14 Nov: the free prize is ON from Week 5 (vault week 5; the recorder gives free-play medals only when game 9's switch is on)
     free: { show: 6, prize: "1st and 2nd at the end of the week win 2 and 1 VHP (from Week 5, the week of Mon 23 Nov; at least 1 point)." },
     unranked: "To be on the Staked board, stake at least 1 VHP in the Producer Bracket before the week starts.",
     columns: [{ key: "pts", label: "Points" }, { key: "correct", label: "Right" }],
@@ -556,7 +556,7 @@
     say("Loading the bracket…");
     await Promise.all([loadWeeks(), loadForm(), setupPicks().catch(() => {})]);
     view = pickView(); round = currentRound(); say("");
-    // owner 14 Nov: free prize ON from Week 2 (was OFF, #G-4 G4-1). The panel names it only for a week on show from the first
+    // owner 14 Nov: free prize ON from Week 5 (was OFF, #G-4 G4-1). The panel names it only for a week on show from the first
     // paid week on (index.json prizesFromWeek), never in a practice week or before index.json is read (Repo Lens #H-1 H1-1)
     if (window.KStake && typeof window.KStake.mount === "function" && $("bracket-stake")) window.KStake.mount($("bracket-stake"), { game: BM.GAME_ID, freePrize: Number.isInteger(prizesFrom) && view >= prizesFrom });
     await loadMine(); renderBoard();

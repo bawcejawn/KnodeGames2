@@ -24,7 +24,7 @@
  */
 (function (root) {
   "use strict";
-  // What players call a week (weeks.js, D-063): the week of Mon 16 Nov (vault week 4) is "Week 1", the week of Mon 9 Nov
+  // What players call a week (weeks.js, D-063): the week of Mon 16 Nov (vault week 4) is "Week 4", the week of Mon 9 Nov
   // (vault week 3) the "Test week" (owner, 9 Nov); earlier weeks show their date. Pages that don't load weeks.js yet (race.html, blockx.html) get the same rule here; a test keeps the
   // two in step.
   const WL = (w) => {

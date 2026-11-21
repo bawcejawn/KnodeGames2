@@ -10,7 +10,7 @@
   const G = typeof window !== "undefined" ? window : globalThis;
   const GENESIS_MS = 1792368000000;            // Mon 19 Oct 2026 00:00 UTC, vault week 0
   const WEEK_MS = 7 * 86400000;
-  const FIRST = 4;                             // vault week 4 = Mon 16 Nov 2026 = "Week 1"
+  const FIRST = 4;                             // vault week 4 = Mon 16 Nov 2026 = "Week 4" (the platform week number, owner 21 Nov)
   const TEST = 3;                              // vault week 3 = Mon 9 Nov 2026 = "Test week" (pays nothing)
   const n = (w) => { const x = Number(w); return Number.isFinite(x) ? Math.trunc(x) : NaN; };
   const date = (w) => new Date(GENESIS_MS + n(w) * WEEK_MS).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
