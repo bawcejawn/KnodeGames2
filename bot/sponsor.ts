@@ -43,7 +43,7 @@ import { readLimits as readLimitsFile, summarize, merge, chainRows, siteMap, act
 
 const E = process.env;
 const log = (...a: any[]) => console.log(...a);
-const WASM = "sponsor/build/release/contract.wasm";
+const WASM = "contracts/sponsor/build/release/contract.wasm";
 const ABI_FILE = "contracts/sponsor/abi/sponsor.koilib.json";
 // Audit SP-12: which chain this is comes from the node's chain id (main() sets it), and the testnet keeps its own
 // state and limits files, so a testnet run never writes the mainnet ones or the website's.
@@ -122,7 +122,7 @@ const readJson = (f: string, d: any = null) => (fs.existsSync(f) ? JSON.parse(fs
 const writeJson = (f: string, v: any) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify(v, null, 2) + "\n"); };
 const need = (k: string) => { if (!E[k]) throw new Error(`${k} is missing from .env`); return E[k]!; };
 const loadAbi = () => {
-  if (!fs.existsSync(ABI_FILE)) throw new Error(`${ABI_FILE} not found: in the sponsor folder run npm ci --ignore-scripts, npm test, npm run check`);
+  if (!fs.existsSync(ABI_FILE)) throw new Error(`${ABI_FILE} not found: in the contracts/sponsor folder run npm ci --ignore-scripts, npm test, npm run check`);
   return JSON.parse(fs.readFileSync(ABI_FILE, "utf8"));
 };
 
@@ -259,11 +259,11 @@ async function upload(send: boolean) {
   const provider = new Provider([rpc]);
   const s = sponsorKey(provider);
   const A = s.getAddress();
-  if (!fs.existsSync(WASM)) throw new Error(`${WASM} not found: in the sponsor folder run npm test && npm run check`);
+  if (!fs.existsSync(WASM)) throw new Error(`${WASM} not found: in the contracts/sponsor folder run npm test && npm run check`);
   const wasm = fs.readFileSync(WASM);
   // Audit L-1: only the audited build goes on chain.
   const okBuilds = allowedBuilds(mainnet);
-  if (!okBuilds.includes(sha256hex(wasm))) throw new Error(`${WASM} is not ${mainnet ? "the audited sponsor build" : "an allowed sponsor build"} (sha256 ${sha256hex(wasm)}, expected ${okBuilds.join(" or ")}). Rebuild: cd sponsor, npm ci --ignore-scripts, npm test, npm run check (best in a clean copy with no .env).`);
+  if (!okBuilds.includes(sha256hex(wasm))) throw new Error(`${WASM} is not ${mainnet ? "the audited sponsor build" : "an allowed sponsor build"} (sha256 ${sha256hex(wasm)}, expected ${okBuilds.join(" or ")}). Rebuild: cd contracts/sponsor, npm ci --ignore-scripts, npm test, npm run check (best in a clean copy with no .env).`);
   const abi = loadAbi();
   const m = await contractMetadata(provider, A);
   // Repo Lens SG-1: never put the trapping build back while the vault switch is on (an unreadable switch counts as on).
