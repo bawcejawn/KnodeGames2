@@ -28,10 +28,12 @@ export function checkGame(slug, root = ROOT) {
   const live = m.status === "live" || m.status === "review";
   if (live) {
     let gj = null;
-    try { gj = JSON.parse(fs.readFileSync(path.join(root, "games.json"), "utf8")); } catch {}
+    // The site lives in web/ (web/games.json, web/<page>); the repo root is checked too for older layouts.
+    const gjFile = ["web/games.json", "games.json"].map((f) => path.join(root, f)).find((f) => fs.existsSync(f));
+    try { if (gjFile) gj = JSON.parse(fs.readFileSync(gjFile, "utf8")); } catch {}
     const entry = gj && Array.isArray(gj.games) ? gj.games.find((g) => g.href && g.href.startsWith(m.page)) : null;
-    ok(!!entry, `games.json lists ${m.page}`);
-    ok(fs.existsSync(path.join(root, m.page)) || fs.existsSync(path.join(dir, m.page)), `page ${m.page} exists`);
+    ok(!!entry, `web/games.json lists ${m.page}`);
+    ok([path.join(root, "web", m.page), path.join(root, m.page), path.join(dir, m.page)].some((f) => fs.existsSync(f)), `page ${m.page} exists (web/${m.page})`);
   }
   for (const r of checkSendPicks(m, root)) res.push(r);
   return res;

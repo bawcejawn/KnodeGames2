@@ -45,7 +45,9 @@ function start() {
   const clock = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), x = t % 60; return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
   const say = (t) => { $("status").textContent = t; $("status").hidden = !t; };
   const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => x === b[i]);
-  const WL = (w) => (window.KWeeks ? window.KWeeks.label(w) : `Week ${w - 3}`);
+  /** The week players see on the Fantasy page is the platform's real (vault) week, the same number as the week files and
+   *  the vault: this week is "Week 5", then 6, 7 … (owner, Sat 21 Nov). Never weeks.js's "Week 1 = vault week 4" count here. */
+  const WL = (w) => `Week ${w}`;
   async function fetchJson(url) { const r = await fetch(url, { cache: "no-cache" }); if (!r.ok) throw new Error(String(r.status)); return r.json(); }
   function colorOf(a) {
     let x = 2166136261;
@@ -391,7 +393,7 @@ function start() {
     if (!window.KBoard || !$("fx-board")) return;
     if (!lb) {
       lb = window.KBoard.create($("fx-board"), {
-        label: "Fantasy Producers leaderboard", hide: ["today"],
+        label: "Fantasy Producers leaderboard", hide: ["today"], weekLabel: WL,
         columns: [{ key: "pts", label: "Points", d: 1 }],
         summary: (r) => `${fmt(r.pts, 0)} pts`, scored: (r) => r.pts > 0, name: nameOf,
         unranked: "The Staked board is for wallets with at least 1 VHP staked in Fantasy that week (holding VHP, or a stake in another game, doesn't count).",
@@ -444,6 +446,19 @@ function start() {
   let asking = null;   // the open "change it?" question: any way of closing the card (Escape, a click outside) answers "keep"
   function closePop() { if (modal) modal.hidden = true; if (asking) { const a = asking; asking = null; a(false); } }
   const okBtn = (t = "Done") => el("button", { class: "btn btn-primary", type: "button", onclick: closePop }, t);
+  /** The whole transaction id, a Copy button and a link to the block explorer (owner, Mon 16 Nov; rebuilt on the shared
+   *  card, Fri 20 Nov). Built with textContent and attributes only; nothing for an id that isn't a well-formed tx id. */
+  const TX_EXPLORER = "https://koinosscan.com/tx/";
+  function txLine(id) {
+    const s = String(id || "");
+    if (!/^0x[0-9a-f]{20,}$/i.test(s)) return null;
+    const copy = el("button", { class: "fx-ghost-d", type: "button", onclick: async () => {
+      try { await navigator.clipboard.writeText(s); copy.textContent = "Copied"; } catch { copy.textContent = "Copy failed"; }
+    } }, "Copy");
+    return el("div", { class: "fx-tx" },
+      el("p", { class: "mono", text: `Transaction ${s}` }),
+      el("p", {}, copy, " ", el("a", { href: TX_EXPLORER + s, target: "_blank", rel: "noopener noreferrer", text: "View on koinosscan" })));
+  }
   /** The shared card's question (D-255): "your pick this round is X. Change it to Y?" Resolves true for Change. */
   function ask(title) {
     return (lines) => new Promise((done) => {
@@ -515,7 +530,7 @@ function start() {
       draftFor = null;
       await refreshMine();
       pop(ok ? "ok" : "info", ok ? "Team saved" : "Sent, not seen yet", [ok ? `It plays from ${when(dayStart(d))} and carries on until you change it. You can change it until ${when(lockOfDay(d))}.` : "Your wallet sent it. It usually shows within a minute.",
-        id ? el("p", { class: "mono", text: `Transaction ${String(id).slice(0, 18)}…` }) : null].filter(Boolean), [okBtn()]);
+        txLine(id)].filter(Boolean), [okBtn()]);
     } catch (e) { const w = why(e); pop(/Cancelled/.test(w) ? "info" : "bad", /Cancelled/.test(w) ? "Cancelled" : "Team not saved", [w], [okBtn("OK")]); }
     finally { sending = false; await refreshMine(); }
   }
@@ -533,9 +548,10 @@ function start() {
       const r = await sendOne(RIVAL, round, [target], `Weekly Rival: challenge ${nameOf(target)}`, "Change your rival?", lockOfDay(round));
       if (!r) { closePop(); return; }
       if (!r.sent && !r.changed) throw new Error("locked");
+      const id = r.ids[r.ids.length - 1];
       const ok = await confirmPick(RIVAL, round, [target]);
       $("fx-rival-addr").value = "";
-      pop(ok ? "ok" : "info", ok ? "Challenge sent" : "Sent, not seen yet", [ok ? `${nameOf(target)} is your rival for ${WL(rw)}. It counts if you are both staked in Fantasy and both score.` : "It usually shows within a minute."], [okBtn()]);
+      pop(ok ? "ok" : "info", ok ? "Challenge sent" : "Sent, not seen yet", [ok ? `${nameOf(target)} is your rival for ${WL(rw)}. It counts if you are both staked in Fantasy and both score.` : "It usually shows within a minute.", txLine(id)].filter(Boolean), [okBtn()]);
     } catch (e) { const w = why(e); pop(/Cancelled/.test(w) ? "info" : "bad", /Cancelled/.test(w) ? "Cancelled" : "Challenge not sent", [w], [okBtn("OK")]); }
     finally { sending = false; await refreshMine(); }
   }
