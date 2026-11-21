@@ -317,8 +317,12 @@ jobs:
           club = None
           if os.path.exists(os.path.join(d, "clubhouse.json")):
               club = json.load(open(os.path.join(d, "clubhouse.json"), encoding="utf-8"))
-              assert type(club) is dict and set(club) - {"desk"} == {"v", "updated", "wallets"} and club["v"] == 1 and type(club["updated"]) is str and len(club["updated"]) <= 40, "clubhouse.json"
+              assert type(club) is dict and set(club) - {"desk", "hist", "keys"} == {"v", "updated", "wallets"} and club["v"] == 1 and type(club["updated"]) is str and len(club["updated"]) <= 40, "clubhouse.json"
               assert "desk" not in club or nat(club["desk"]), "clubhouse.json: desk"
+              # hist: how far each wallet's own transactions have been read (account_history seq_num), for the next run.
+              assert "hist" not in club or (type(club["hist"]) is dict and len(club["hist"]) <= 100000 and all(isaddr(a) and nat(n) for a, n in club["hist"].items())), "clubhouse.json: hist"
+              # keys: wallets whose producer key registration was read; it counts once the wallet has also signed a block (D-244).
+              assert "keys" not in club or (type(club["keys"]) is list and len(club["keys"]) <= 100000 and all(isaddr(a) for a in club["keys"]) and club["keys"] == sorted(set(club["keys"]))), "clubhouse.json: keys"
               wl = club["wallets"]
               assert type(wl) is dict and len(wl) <= 100000 and all(isaddr(a) and type(fs) is dict and 1 <= len(fs) <= 64 and all(type(k) is str and fid.fullmatch(k) is not None and type(v) is int and 0 <= v <= CW + 1 for k, v in fs.items()) for a, fs in wl.items()), "clubhouse.json: wallets"
           for f in os.listdir(d):
@@ -424,6 +428,9 @@ jobs:
                   for k, v in fs.items():
                       if oc["wallets"].get(a, {}).get(k) is None: assert v in (CW - 1, CW), "clubhouse.json: " + a + ": a new feature must be stamped with this week"
               assert "desk" not in oc or oc.get("desk", 0) <= load(new, "clubhouse.json").get("desk", 0), "clubhouse.json: the desk's swap count can't go down"
+              nh = load(new, "clubhouse.json").get("hist", {})
+              assert all(a in nh and nh[a] >= n for a, n in oc.get("hist", {}).items()), "clubhouse.json: a wallet's history can't be read backwards"
+              assert set(oc.get("keys", [])) <= set(load(new, "clubhouse.json").get("keys", [])), "clubhouse.json: a key that was read can't be dropped"
           elif os.path.exists(os.path.join(old, "clubhouse.json")):
               raise AssertionError("clubhouse.json was published before and is missing now")
           if os.path.exists(os.path.join(old, "index.json")):
