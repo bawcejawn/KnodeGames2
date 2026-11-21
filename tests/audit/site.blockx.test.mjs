@@ -174,7 +174,7 @@ test("blockx-testnet.html: testnet only — its node and data branch, no mainnet
   const h = read("ops/testnet/blockx-testnet.html");
   const csp = h.match(/http-equiv="Content-Security-Policy" content="([^"]*)"/)[1];
   const conn = csp.match(/connect-src ([^;]*)/)[1].trim().split(/\s+/);
-  assert.deepEqual(conn, ["'self'", "https://testnet.koinosfoundation.org", "https://raw.githubusercontent.com/bawcejawn/KnodeGames/testnet-data/"]);
+  assert.deepEqual(conn, ["'self'", "https://testnet.koinosfoundation.org", "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/testnet-data/"]);
   assert.match(h, /<meta name="kg-network" content="testnet">/);
   assert.match(h, /<meta name="robots" content="noindex, nofollow">/);
   assert.match(h, /TESTNET · test KOIN only/);

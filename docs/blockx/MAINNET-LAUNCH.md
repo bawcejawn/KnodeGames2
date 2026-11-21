@@ -285,8 +285,8 @@ v2 is `92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d` (the Co
 
 0. **Not during a Picks owner handover.** Accepting a new owner clears an announced upgrade (D-083), so
    `upgrade-schedule` refuses while `picks-data/deployment.json` has a `"nextOwner"` or the chain shows a proposed
-   owner. The Picks calendar (Block X chat, 12 Nov): handover accepted Wed 25 Nov, then this upgrade, signed by the new
-   owner (`OWNER_WIF` = the new owner's key from then on).
+   owner. Calendar (owner D-268, D-417, 20 Nov): this upgrade first, signed by the CURRENT owner; the Picks handover
+   comes last (earliest propose Wed 25 Nov), so no `"nextOwner"` is pinned until then.
 1. Publish the v2 source and a reproducible build; check its sha256 is the one above.
 2. **Announce** (owner): `npm run picks -- upgrade-schedule` (dry run), then
    `npm run picks -- upgrade-schedule --send --mainnet --code 92d555d0`. Wait 48 hours; the upload must follow within

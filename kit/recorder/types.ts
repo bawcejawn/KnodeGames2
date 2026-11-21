@@ -53,7 +53,10 @@ export type VhpCtx = { to: number; loaded: boolean; ruleVersion: number; card(se
  *  pins both nodes to the same last irreversible block and compares the answers like any read. Throws NotYet while
  *  that block isn't irreversible yet (the round stays PENDING / the inputs file waits). */
 export type BlockAt = (ms: number) => Promise<number>;
-export type RoundCtx<I = unknown> = { now: number; inputs?: I; published?: Published; vhp?: VhpCtx; blockAt?: BlockAt };
+/** Rolling rounds (game.json "rolling"): every published schedule file's body by round id (r#####), in round order;
+ *  read-only. Only a rolling game gets it. */
+export type Schedules = ReadonlyMap<string, any>;
+export type RoundCtx<I = unknown> = { now: number; inputs?: I; published?: Published; vhp?: VhpCtx; blockAt?: BlockAt; schedules?: Schedules };
 /** resultOf's fourth argument. */
 /** K8 (the owner's 48 h rule, 13 Nov): decide a round with no ruler card. Resolves only when the first irreversible
  *  block at or after the round's resolvesAt + 48 h exists on both nodes, and only when the ruler's data loaded this run
@@ -66,7 +69,9 @@ export const FALLBACK_GRACE_MS = 48 * 3_600_000;
  *  stake in this game (peak stake at least the week's minimum, not voided: the vault's rule) in ANY week of the season
  *  so far, this week included. Earlier weeks come only from their final week files, so nothing is guessed. */
 export type SeasonCtx = { seasonStaked: Set<string>; seasonStart: number; seasonWeek: number };
-export type ResultCtx = { vhp?: VhpCtx; blockAt?: BlockAt; fallback?: Fallback };
+/** schedule (rolling games only): this round's published schedule file body (who plays, the line). A rolling round is
+ *  only ever decided with its schedule file; one without it by its cancel time is cancelled by the kit (void). */
+export type ResultCtx = { vhp?: VhpCtx; blockAt?: BlockAt; fallback?: Fallback; schedule?: any };
 export type ReadCtx<I = unknown> = RoundCtx<I> & { read: NodeReader };
 
 export type PicksSource = { source: "picks-contract" | "race-picks" | "vault-answers" | "none"; gameId?: number };
@@ -113,6 +118,13 @@ export interface GameModule<P = unknown, R = unknown, I = unknown> {
   weekExtras?(week: WeekSpan, ctx: ExtrasCtx<I>): unknown;
   /** Extra board columns the page shows. */
   columns?: BoardColumn[];
+  /** Rolling rounds (game.json "rolling"): the body of round n's write-once schedule file (who plays, the line, the
+   *  queue position), made once, between scheduleFromMin and scheduleToMin minutes before its start, on both nodes
+   *  (they must agree). Read through ctx.read, ctx.vhp and ctx.blockAt only, at fixed heights or times, never "the
+   *  latest". ctx.schedules holds every earlier published schedule (the queue so far; a cancelled round has none, so the
+   *  queue is unchanged by it, D-344). Return a JSON object; throw NotYet to wait (a round that misses its window is
+   *  cancelled). Required for a rolling game. */
+  scheduleFor?(n: number, start: number, ctx: ReadCtx<I>): Promise<Record<string, unknown>>;
 }
 
 /** Who gets paid (RECORDER §4.3): today's rule, or D-152. A migration never changes it (D-158 #2). */

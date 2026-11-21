@@ -121,7 +121,7 @@ test("race chances from the real card: win near-equal, show and top-half spread;
   assert.ok(Math.max(...shows) / Math.min(...shows) > 2, "but not top 3");
 });
 
-test("leg prices: factor = clamp(0.5 / chance, 0.25, 3); Block X by VHP share; unknown horse can't be priced", () => {
+test("leg prices: race factor = clamp(0.5 / chance, 0.25, 3); Block X clamp(0.25 / share, 0.25, 6) (D-188); unknown horse can't be priced", () => {
   // Rounded DOWN to the hundredth (Repo Lens RL-17).
   assert.equal(C.factorOf(0.5), 1); assert.equal(C.factorOf(0.9), 0.55); assert.equal(C.factorOf(0.99), 0.5); assert.equal(C.factorOf(0.3), 1.66);
   assert.equal(C.factorOf(2.5), 0.25); assert.equal(C.factorOf(0.01), 3); assert.equal(C.factorOf(0), 3);
@@ -132,8 +132,10 @@ test("leg prices: factor = clamp(0.5 / chance, 0.25, 3); Block X by VHP share; u
   const bx = C.priceLeg(CARD, leg(C.BLOCK, B, TOP));
   const total = [...CARD.field, ...CARD.paddock].reduce((s, r) => s + r.vhp, 0);
   assert.equal(bx.chance, Math.round(CARD.field[0].vhp / total * 1e4) / 1e4);
-  assert.equal(bx.factor, Math.floor(Math.min(3, 0.5 / bx.chance) * 100 + 1e-9) / 100);
-  assert.equal(C.priceLeg(CARD, leg(C.BLOCK, B, PADDOCK)).factor, 3, "small paddock producer: ×3");
+  assert.equal(bx.factor, Math.floor(Math.min(6, 0.25 / bx.chance) * 100 + 1e-9) / 100);
+  const small = C.priceLeg(CARD, leg(C.BLOCK, B, PADDOCK));
+  assert.equal(small.factor, Math.floor(Math.min(6, 0.25 / small.chance) * 100 + 1e-9) / 100, "small paddock producer: up to ×6 (D-188)");
+  assert.ok(small.factor > 3, "a long shot now pays above the race legs' ×3 cap");
   assert.equal(C.priceLeg(CARD, leg(C.BLOCK, B, STRANGER)).factor, 1, "producer missing from the card: ×1, as Block X BX-3 (Repo Lens RL-1)");
   assert.equal(C.priceLeg(CARD, leg(C.SHOW, R, PADDOCK)), null, "a paddock horse isn't in the race field");
   assert.equal(C.priceLeg(null, leg(C.SHOW, R, TOP)), null);
@@ -266,9 +268,9 @@ test("share text", () => {
 // ── the page (site/combo.html + combo.js) ──
 const page = read("web/combo.html"), js = read("web/combo.js");
 test("combo page: scripts in order (math before the page), shared board, nav and header like every page", () => {
-  const order = ["board.js", "race-math.js", "blockx-math.js", "combo-math.js", "combo.js"].map((f) => page.indexOf(`<script src="${f}"></script>`));
+  const order = ["board.js", "race-math.js", "blockx-math.js", "combo-math.js"].map((f) => page.indexOf(`<script src="${f}"></script>`)).concat(page.indexOf('<script type="module" src="combo.js"></script>'));
   assert.ok(order.every((i) => i > 0) && order.every((i, k) => k === 0 || i > order[k - 1]), "board, race-math, blockx-math, combo-math, combo");
-  assert.ok(page.indexOf('<script src="wallet.js"></script>') < page.indexOf('<script src="combo.js"></script>'));
+  assert.ok(page.indexOf('<script src="wallet.js"></script>') < page.indexOf('<script type="module" src="combo.js"></script>'));
   assert.match(page, /<link rel="stylesheet" href="board\.css">/);
   assert.match(page, /<nav class="tabbar"/);
 });
@@ -276,7 +278,9 @@ test("combo page: sends only a Combo card through the Picks contract's pick, onl
   // The only transaction: picks.pick for game 8, with no producers and no number, sent through the shared wallet.
   assert.equal((js.match(/functions\.pick\(/g) || []).length, 1);
   assert.match(js, /picksC\.functions\.pick\(\{ player: who, game: C\.GAME_ID, round: String\(round\), producers: \[\], number: "0",/);
-  assert.equal((js.match(/W\.send\(/g) || []).length, 1);
+  // D-307: the page sends through the shared card, never W.send itself.
+  assert.equal((js.match(/\bSP\.send\(/g) || []).length, 1);
+  assert.equal((js.match(/W\.send\(/g) || []).length, 0);
   assert.doesNotMatch(js, /sendTransaction|signTransaction|transfer|approve|burn/);
   assert.doesNotMatch(js, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
   // Live only when picks-data/deployment.json names the contract and game 8 on chain is an enabled kind-4 game.

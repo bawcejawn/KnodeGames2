@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   # ── BEGIN kit-rendered jobs (tools/kit-render-workflows.mjs; edit kit/, never these lines) ──
-  # Games on the Shared Game Kit (.ai/standards/GAME_KIT.md): Fantasy Producers. One record job per game
+  # Games on the Shared Game Kit (.ai/standards/GAME_KIT.md): Fantasy Producers, Survivor. One record job per game
   # (its own timeout and artifact); each runs only when its own variable is on. The publish job runs no repository code.
   record-fantasy:
     name: "Record Fantasy Producers (kit)"
@@ -42,7 +42,7 @@ jobs:
       - name: Take fantasy's last files
         run: |
           set -euo pipefail
-          P="$RUNNER_TEMP/prev"; mkdir -p "$P/vault" "$P/inputs"
+          P="$RUNNER_TEMP/prev"; mkdir -p "$P/vault" "$P/inputs" "$P/schedule"
           if git fetch -q --depth 1 "https://github.com/${GITHUB_REPOSITORY}.git" games-data 2>/dev/null; then
             { git ls-tree --name-only FETCH_HEAD:fantasy 2>/dev/null || true; } | while IFS= read -r f; do
               if [[ "$f" =~ ^(board|alltime|W([0-9]{3}|[1-9][0-9]{3}))\.json$ ]]; then git show "FETCH_HEAD:fantasy/$f" > "$P/$f"; fi
@@ -60,6 +60,10 @@ jobs:
             done
             { git ls-tree --name-only FETCH_HEAD:fantasy/inputs 2>/dev/null || true; } | while IFS= read -r f; do
               if [[ "$f" =~ ^W(0|[1-9][0-9]{0,3})\.json$ ]]; then git show "FETCH_HEAD:fantasy/inputs/$f" > "$P/inputs/$f"; fi
+            done
+            # Rolling rounds: the published schedule files (write-once)
+            { git ls-tree --name-only FETCH_HEAD:fantasy/schedule 2>/dev/null || true; } | while IFS= read -r f; do
+              if [[ "$f" =~ ^r[0-9]{5}\.json$ ]]; then git show "FETCH_HEAD:fantasy/schedule/$f" > "$P/schedule/$f"; fi
             done
           else
             set +e; git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/games-data >/dev/null 2>&1; rc=$?; set -e
@@ -104,11 +108,98 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
+  record-survivor:
+    name: "Record Survivor (kit)"
+    if: ${{ vars.SURVIVOR_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      rc: ${{ steps.rec.outputs.rc }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund --ignore-scripts
+      - name: Take survivor's last files
+        run: |
+          set -euo pipefail
+          P="$RUNNER_TEMP/prev"; mkdir -p "$P/vault" "$P/inputs" "$P/schedule"
+          if git fetch -q --depth 1 "https://github.com/${GITHUB_REPOSITORY}.git" games-data 2>/dev/null; then
+            { git ls-tree --name-only FETCH_HEAD:survivor 2>/dev/null || true; } | while IFS= read -r f; do
+              if [[ "$f" =~ ^(board|alltime|W([0-9]{3}|[1-9][0-9]{3}))\.json$ ]]; then git show "FETCH_HEAD:survivor/$f" > "$P/$f"; fi
+              # KG parts v1: a parts week's folder (manifest, parts, p/ shards)
+              if [[ "$f" =~ ^W([0-9]{3}|[1-9][0-9]{3})$ ]]; then
+                mkdir -p "$P/$f/p"
+                { git ls-tree -r --name-only "FETCH_HEAD:survivor/$f" 2>/dev/null || true; } | while IFS= read -r x; do
+                  if [[ "$x" =~ ^(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12})\.json$ ]]; then git show "FETCH_HEAD:survivor/$f/$x" > "$P/$f/$x"; fi
+                done
+                rmdir "$P/$f/p" 2>/dev/null || true
+              fi
+            done
+            { git ls-tree --name-only FETCH_HEAD:survivor/vault 2>/dev/null || true; } | while IFS= read -r f; do
+              if [[ "$f" =~ ^((HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3}))\.json$ ]]; then git show "FETCH_HEAD:survivor/vault/$f" > "$P/vault/$f"; fi
+            done
+            { git ls-tree --name-only FETCH_HEAD:survivor/inputs 2>/dev/null || true; } | while IFS= read -r f; do
+              if [[ "$f" =~ ^W(0|[1-9][0-9]{0,3})\.json$ ]]; then git show "FETCH_HEAD:survivor/inputs/$f" > "$P/inputs/$f"; fi
+            done
+            # Rolling rounds: the published schedule files (write-once)
+            { git ls-tree --name-only FETCH_HEAD:survivor/schedule 2>/dev/null || true; } | while IFS= read -r f; do
+              if [[ "$f" =~ ^r[0-9]{5}\.json$ ]]; then git show "FETCH_HEAD:survivor/schedule/$f" > "$P/schedule/$f"; fi
+            done
+          else
+            set +e; git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/games-data >/dev/null 2>&1; rc=$?; set -e
+            if [ "$rc" -ne 2 ]; then echo "::error::The games-data branch could not be fetched (git ls-remote exit $rc). Nothing recorded this run."; exit 1; fi
+            echo "No games-data branch yet."
+          fi
+          touch "$P/.fetched"
+      - name: Take the ruler's data (vhp-data, read-only)
+        run: |
+          set -euo pipefail
+          git init -q "$RUNNER_TEMP/vhp-data"
+          if git -C "$RUNNER_TEMP/vhp-data" fetch -q --depth 1 "https://github.com/${GITHUB_REPOSITORY}.git" vhp-data 2>/dev/null; then
+            git -C "$RUNNER_TEMP/vhp-data" checkout -q FETCH_HEAD
+          else
+            echo "::warning::vhp-data couldn't be fetched this run"
+          fi
+      - name: Record
+        id: rec
+        # GitHub runs this as bash -e: the recorder's exit code is captured, never fatal, so the files it wrote (a HOLD
+        # included) are always uploaded and outputs.rc always carries 0, 1 or 2 (#B-12 NK-1).
+        run: |
+          set -uo pipefail
+          O="$RUNNER_TEMP/out"; rm -rf "$O"; mkdir -p "$O"
+          rc=0; npm run kit -- survivor || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then rm -rf "$O"; mkdir -p "$O"; echo "rc $rc: a stop, nothing uploaded"; fi
+        env:
+          RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
+          RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          KIT_PREV: ${{ runner.temp }}/prev
+          KIT_OUT: ${{ runner.temp }}/out
+          KIT_VHP_DATA: ${{ runner.temp }}/vhp-data
+          # The owner's holds (GAME_KIT.md §3): weeks kept pending, and the one-off release of a held week ("<week>:<code>").
+          SURVIVOR_HOLD_WEEKS: ${{ vars.SURVIVOR_HOLD_WEEKS }}
+          SURVIVOR_RELEASE: ${{ vars.SURVIVOR_RELEASE }}
+          SURVIVOR_RESET_FROM_WEEK: ${{ vars.SURVIVOR_RESET_FROM_WEEK }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ steps.rec.outputs.rc == '0' || steps.rec.outputs.rc == '1' }}
+        with:
+          name: kit-games-data-survivor
+          path: ${{ runner.temp }}/out/
+          retention-days: 1
+          if-no-files-found: ignore
+
   publish-kit:
     # This file and the hand-written host share one concurrency group, so the two publish jobs never push games-data at
     # the same time.
-    needs: [record-fantasy]
-    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.record-fantasy.result == 'success') }}
+    needs: [record-fantasy, record-survivor]
+    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.record-fantasy.result == 'success' || needs.record-survivor.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -119,6 +210,11 @@ jobs:
         with:
           name: kit-games-data-fantasy
           path: ${{ runner.temp }}/incoming/fantasy
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        continue-on-error: true
+        with:
+          name: kit-games-data-survivor
+          path: ${{ runner.temp }}/incoming/survivor
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -853,7 +949,7 @@ jobs:
                   raise ValueError("window order must be W0 <= W1 <= L <= S0 <= S1")
 
 
-          def make_card(L, game, rnd, window, c, own_rule, paying, pooled=(), min_k=10, pool_rule="min", mode=None, include=None, version=RULE_VERSION):
+          def make_card(L, game, rnd, window, c, own_rule, paying, pooled=(), min_k=10, pool_rule="min", mode=None, include=None, version=RULE_VERSION, no_void=False):
               w = window
               _check_window(w)
               if own_rule not in OWN_RULES:
@@ -912,6 +1008,8 @@ jobs:
                   out["mode"] = mode
               if include is not None:
                   out["include"] = list(include)
+              if no_void:   # D-312/D-317: the game never voids (Knode Games VS); the key is there only when set, so no other card changes
+                  out["noVoid"] = True
               out.update({"total": tot, "formFrom": form_from, "producers": rows})
               return out
 
@@ -967,6 +1065,7 @@ jobs:
               mode = card.get("mode")
               if mode is not None and mode not in MODES:
                   raise ValueError("mode must be A, B, C or D")
+              no_void = card.get("noVoid") is True   # D-312/D-317: scored without voids; outOfBand says what the band would have done
               cap = LUCK_CAP if mode is None else MODE_CAP[mode]
               blocks = S1 - S0 + 1
               band_down, band_up = void_band(blocks)
@@ -1002,7 +1101,9 @@ jobs:
                   q = dict(p)
                   q.update({"quality": "flagged" if flagged else "ok", "sample": sample, "expected": expected,
                             "signed": L.signed_in(p["a"], S0, S1), "credited": credited, "pct": pct(expected, credited),
-                            "void": is_void, "moves": void_record(L, p["a"], o, card["T"], S0, S1) if is_void else None})
+                            "void": is_void and not no_void, "moves": void_record(L, p["a"], o, card["T"], S0, S1) if is_void and not no_void else None})
+                  if no_void:
+                      q["outOfBand"] = is_void
                   rows.append(q)
               # A′ (D-165, D-171), as scoreCard in vhp-ruler.js: the core is the field members with form ≥ CORE_LINE × the field's
               # median form weighted by expected blocks (exact tie: the lower member's form), at full size; a producer's yardstick
@@ -1105,7 +1206,7 @@ jobs:
 
 
           _SETTINGS, _WKEYS = ("game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"), ("W0", "W1", "L", "S0", "S1")
-          _OPTIONAL = ("mode", "include", "version")
+          _OPTIONAL = ("mode", "include", "version", "noVoid")
 
 
           def check_settings(g):
@@ -1120,6 +1221,8 @@ jobs:
                   raise ValueError("version must be 4 or 5")
               if "include" in g:
                   check_include(g["include"])
+              if "noVoid" in g and g["noVoid"] is not True:
+                  raise ValueError("noVoid must be true")
               _dec(g["game"], "game")
               _dec(g["round"], "round")
               w = g["window"]
@@ -1169,7 +1272,7 @@ jobs:
                   w = game["window"]
                   try:
                       mine = make_card(L, game["game"], game["round"], w, int(game["c"]), game["ownRule"], game["paying"], game["pooled"],
-                                       game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION))
+                                       game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True)
                       if pub_d["scored"]:
                           mine = score_card(L, mine)
                   except ValueError as e:
@@ -1183,17 +1286,18 @@ jobs:
               want["mode"] = game.get("mode")   # always compared (Repo Lens #G-19): no mode on one side is a clear refusal
               want["version"] = game.get("version", RULE_VERSION)
               want["include"] = json.dumps(game.get("include"), separators=(",", ":"))
+              want["noVoid"] = game.get("noVoid")
               want.update({"W0": w["W0"], "W1": w["W1"], "L": w["L"], "S0": w["S0"], "S1": w["S1"]})
               got = {"game": pub.get("game"), "round": pub.get("round"), "ownRule": pub.get("ownRule"), "paying": pub.get("paying"),
                      "c": str(pub.get("c")), "minK": pub.get("minK"), "poolRule": pub.get("poolRule"), "mode": pub.get("mode"),
-                     "version": pub.get("ruleVersion"), "include": json.dumps(pub.get("include"), separators=(",", ":"))}
+                     "version": pub.get("ruleVersion"), "include": json.dumps(pub.get("include"), separators=(",", ":")), "noVoid": pub.get("noVoid")}
               got.update(pub.get("window") or {})
               for k in want:
                   if got.get(k) != want[k] or type(got.get(k)) is not type(want[k]):
                       return False, "setting %s: the card says %s, the game says %s" % (k, json.dumps(got.get(k)), json.dumps(want[k])), None
               try:
                   mine = make_card(L, game["game"], game["round"], w, int(game["c"]), game["ownRule"], game["paying"], game["pooled"],
-                                   game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION))
+                                   game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True)
                   if any("credited" in p for p in pub.get("producers", [])):
                       mine = score_card(L, mine)
               except ValueError as e:
@@ -1205,6 +1309,43 @@ jobs:
               while i < min(len(a), len(published)) and a[i] == published[i]:
                   i += 1
               return False, "differs at byte %d" % i, None
+
+
+          # ── Over/Under and VS helpers (D-312 to D-337): the twins of weekOfStart, forecastExpected, medianLineHalves, listAt, isUnreliable ──
+          GENESIS_MS, WEEK_MS = 1792368000000, 604800000   # vault week 0 starts Mon 19 Oct 2026 00:00 UTC
+
+
+          def week_of_start(start_ms):
+              """The vault week a game belongs to: the week it STARTS in (Mon 00:00 UTC is the first moment of a new week)."""
+              if type(start_ms) is not int or start_ms < GENESIS_MS:
+                  raise ValueError("a game's start must be a whole number of milliseconds from week 0")
+              return (start_ms - GENESIS_MS) // WEEK_MS
+
+
+          def forecast_expected(row):
+              """The blocks a producer is forecast to sign in a game, millionths: its card's k (VHP share), scaled down by its form
+              (never up: form above 100% adds nothing), and never above the luck cap. D-383."""
+              k, form = _int(row["k"]), _int(row["form"])
+              if k < 0 or form < 0:
+                  raise ValueError("k and form can't be negative")
+              e = k * (form if form < M else M) // M
+              return e if e < LUCK_CAP else LUCK_CAP
+
+
+          def median_line_halves(expected):
+              """The Over/Under line in half-blocks (1 = half a block): the Poisson median half-line for `expected` (millionths)."""
+              e = _int(expected)
+              return 1 if e < 150000 else 2 * ((e - 150000) // M) + 1
+
+
+          def list_at(L, H):
+              """D-334: the producers on a game's list at block H: signed in the last 6 hours AND at least 10 blocks in 24 hours."""
+              return sorted(a for a in L.active(H) if L.signed_in(a, H - AVG, H - 1) >= 10)
+
+
+          def is_unreliable(row):
+              """The 'Unreliable' label: form below the 80% gate."""
+              return _int(row["form"]) < FORM_GATE
 
 
           # ── the vhp-data format and its checks: the twin of vhp-data.js (read it for the format in words) ──
@@ -1867,6 +2008,10 @@ jobs:
               i = os.path.join(d, "inputs")
               if os.path.isdir(i):
                   out += ["inputs/" + f for f in sorted(os.listdir(i)) if re.fullmatch(r"W(0|[1-9][0-9]{0,3})[.]json", f)]
+              # Rolling rounds (R-5): a schedule file's cards (the line, a roster) are rebuilt like an inputs file's
+              sd = os.path.join(d, "schedule")
+              if os.path.isdir(sd) and not os.path.islink(sd):
+                  out += ["schedule/" + f for f in sorted(os.listdir(sd)) if re.fullmatch(r"r[0-9]{5}[.]json", f)]
               # KG parts v1: a parts week's cards are in its wk part (extra.opt.cards)
               if os.path.isdir(d):
                   for w in sorted(os.listdir(d)):
@@ -1947,10 +2092,11 @@ jobs:
           SEAL_BRANCH: games-data
           IN: ${{ runner.temp }}/incoming
           LIST: ${{ runner.temp }}/kit-publish.txt
-          KIT_GAMES: '[{"slug":"fantasy","game":4,"genesis":1792368000000,"weekMs":604800000,"sundayFunRound":true,"payoutRule":"d152","vaultValues":"dense255","entry":{"minRounds":1,"minPoints":1},"minPts":0,"rowCap":0,"maxRoundPoints":90000,"liveWeek":false,"roundsCorrectable":false,"inputsFile":true,"vhpData":true,"cardPerRound":true,"parts":"d"}]'
+          KIT_GAMES: '[{"slug":"fantasy","game":4,"genesis":1792368000000,"weekMs":604800000,"sundayFunRound":true,"payoutRule":"d152","vaultValues":"dense255","entry":{"minRounds":1,"minPoints":1},"minPts":0,"rowCap":0,"maxRoundPoints":90000,"liveWeek":false,"roundsCorrectable":false,"inputsFile":true,"vhpData":true,"cardPerRound":true,"parts":"d"},{"slug":"survivor","game":3,"genesis":1792368000000,"weekMs":604800000,"sundayFunRound":false,"payoutRule":"d152","vaultValues":"dense255","entry":{"minRounds":1,"minPoints":1},"minPts":0,"rowCap":0,"maxRoundPoints":638975,"liveWeek":true,"roundsCorrectable":false,"vhpData":true,"cardPerRound":true,"seasonWeeks":2,"parts":"d"}]'
           CHECK_NOW_MS: ""      # the job's own clock, always (KC-29)
           # The owner's releases, read by the check itself: a recorder run can't release its own hold (KC-3).
           KIT_RELEASE_FANTASY: ${{ vars.FANTASY_RELEASE }}
+          KIT_RELEASE_SURVIVOR: ${{ vars.SURVIVOR_RELEASE }}
         run: |
           set -euo pipefail
           if [ ! -d "$IN" ]; then echo "Nothing to publish."; exit 0; fi
@@ -1961,8 +2107,8 @@ jobs:
           parent=""
           if git fetch -q --depth 1 "$remote" games-data 2>/dev/null; then
             parent=$(git rev-parse FETCH_HEAD); git read-tree FETCH_HEAD
-            for g in fantasy; do
-              mkdir -p "$PUB/$g/vault" "$PUB/$g/inputs"
+            for g in fantasy survivor; do
+              mkdir -p "$PUB/$g/vault" "$PUB/$g/inputs" "$PUB/$g/schedule"
               { git ls-tree --name-only "$parent:$g" 2>/dev/null || true; } | while IFS= read -r f; do
                 if [[ "$f" =~ ^(board|alltime|W([0-9]{3}|[1-9][0-9]{3}))\.json$ ]]; then git show "$parent:$g/$f" > "$PUB/$g/$f"; fi
                 if [[ "$f" =~ ^W([0-9]{3}|[1-9][0-9]{3})$ ]]; then
@@ -1976,6 +2122,9 @@ jobs:
               { git ls-tree --name-only "$parent:$g/inputs" 2>/dev/null || true; } | while IFS= read -r f; do
                 if [[ "$f" =~ ^W(0|[1-9][0-9]{0,3})\.json$ ]]; then git show "$parent:$g/inputs/$f" > "$PUB/$g/inputs/$f"; fi
               done
+              { git ls-tree --name-only "$parent:$g/schedule" 2>/dev/null || true; } | while IFS= read -r f; do
+                if [[ "$f" =~ ^r[0-9]{5}\.json$ ]]; then git show "$parent:$g/schedule/$f" > "$PUB/$g/schedule/$f"; fi
+              done
               { git ls-tree --name-only "$parent:$g/vault" 2>/dev/null || true; } | while IFS= read -r f; do
                 if [[ "$f" =~ ^((HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3}))\.json$ ]]; then git show "$parent:$g/vault/$f" > "$PUB/$g/vault/$f"; fi
               done
@@ -1986,7 +2135,7 @@ jobs:
             git read-tree --empty
           fi
           # G3: rebuild every new ruler card with the embedded vhp_ruler.py (no repository code); the check holds the rest.
-          for g in fantasy; do
+          for g in fantasy survivor; do
             python3 -I -B "$RUNNER_TEMP/ruler-code/kit_cards.py" "$RUNNER_TEMP/vhp-data" "$IN/$g" "$PUB/$g" "$RUNNER_TEMP/kit-cards/$g.json" || echo "::error::$g: its ruler cards couldn't be rebuilt this run; its new files are held"
           done
           # The kit's publish check, inline (kit/publish/check.inline.mjs byte for byte): it judges every file against the
@@ -2078,6 +2227,102 @@ jobs:
           export const dayOf = (locksAt) => Math.floor((locksAt - 1) / DAY) * DAY;
           /** Sunday UTC (D-129): a day d is Sunday when (d / DAY + 4) % 7 === 0 (1 Jan 1970 was a Thursday). */
           export const isSunday = (day) => (((Math.floor(day / DAY) + 4) % 7) + 7) % 7 === 0;
+
+          // ───────────────────────── rolling rounds (Over/Under, D-342 to D-370) ─────────────────────────
+          // A rolling game (game.json "rolling") starts a new game every roundMin minutes on a fixed grid from the vault's
+          // genesis (round n starts at genesis + n × roundMin), each lasting gameMin. Round n's id is "r" + n in 5 digits. It
+          // counts for the vault week its START is in (Mon 00:00 UTC starts the new week; Ruler weekOfStart). Its picks lock
+          // leadMin before the start.
+          // Before each start the recorder publishes a write-once schedule file, schedule/r#####.json, between scheduleFromMin
+          // and scheduleToMin minutes before the start (the game's own content: who plays, the line). This job accepts a NEW one
+          // only from scheduleFromMin (less a run's slack) until cancelAfterMin minutes before the start, by its own clock. A
+          // round with no published schedule file by then is CANCELLED for everyone (void), and the game's queue is unchanged
+          // (D-344): the game decides its queue from the schedule files that exist, never from a cancelled round.
+          // None of this applies to a game without "rolling": its files are exactly as before (Vault K-2).
+          export const ROLLING_KEYS = ["roundMin", "gameMin", "leadMin", "scheduleFromMin", "scheduleToMin", "cancelAfterMin"];
+          export const ROLLING_ID = /^r([0-9]{5})$/;
+          export const SCHEDULE_FILE = /^schedule\/r([0-9]{5})\.json$/;
+          export const SCHEDULE_KEYS = ["v", "game", "round", "start", "written", "body"];
+          export const MAX_SCHEDULE_BYTES = 64 * 1024;
+          export const MAX_ROLLING_NO = 99999;
+          export const rollingId = (n) => {
+            if (!(Number.isSafeInteger(n) && n >= 0 && n <= MAX_ROLLING_NO)) throw new Error(`rolling round ${n} is outside 0–${MAX_ROLLING_NO}`);
+            return "r" + String(n).padStart(5, "0");
+          };
+          export const rollingNo = (id) => { const m = typeof id === "string" ? ROLLING_ID.exec(id) : null; return m ? Number(m[1]) : null; };
+          export const scheduleName = (n) => `schedule/${rollingId(n)}.json`;
+          /** "" when the rolling settings are usable, else why not (game.json's schema says the same in words). */
+          export function rollingProblem(r) {
+            if (!r || typeof r !== "object" || Array.isArray(r) || Object.keys(r).join() !== ROLLING_KEYS.join()) return `rolling: { ${ROLLING_KEYS.join(", ")} } in this order`;
+            if (!ROLLING_KEYS.every((x) => Number.isSafeInteger(r[x]) && r[x] >= 0)) return "rolling: whole minutes";
+            if (!(r.roundMin >= 5 && DAY % (r.roundMin * 60000) === 0)) return "rolling.roundMin: at least 5 and a whole number of rounds a day";
+            if (!(r.gameMin >= r.roundMin && r.gameMin % r.roundMin === 0 && r.gameMin <= 7 * 24 * 60)) return "rolling.gameMin: a whole number of rounds, at most a week";
+            if (!(r.scheduleFromMin > r.scheduleToMin && r.scheduleToMin > r.cancelAfterMin && r.cancelAfterMin > r.leadMin)) return "rolling: scheduleFromMin > scheduleToMin > cancelAfterMin > leadMin";
+            if (!(r.scheduleFromMin - r.scheduleToMin >= r.roundMin)) return "rolling: the schedule window (scheduleFromMin − scheduleToMin) must be at least one round, so a run every round always lands in it";
+            // Up to 3 days: a daily game (VS) publishes its roster before picks open, 48 h ahead.
+            if (!(r.scheduleFromMin <= 3 * 24 * 60)) return "rolling.scheduleFromMin: at most 3 days (4320)";
+            return "";
+          }
+          /** The grid of a rolling game (cfg: { genesis, rolling }). All times UTC ms. */
+          export function rollingClock(cfg) {
+            const r = cfg.rolling, M = 60000, roundMs = r.roundMin * M;
+            const start = (n) => cfg.genesis + n * roundMs;
+            return {
+              roundMs, gameMs: r.gameMin * M, leadMs: r.leadMin * M,
+              start,
+              /** The first round number whose start is at or after t. */
+              firstAtOrAfter: (t) => Math.max(0, Math.ceil((t - cfg.genesis) / roundMs)),
+              locksAt: (n) => start(n) - r.leadMin * M,
+              resolvesAt: (n) => start(n) + r.gameMin * M,
+              scheduleFrom: (n) => start(n) - r.scheduleFromMin * M,
+              scheduleTo: (n) => start(n) - r.scheduleToMin * M,
+              cancelAt: (n) => start(n) - r.cancelAfterMin * M,
+            };
+          }
+          /** D-344: round n is cancelled for everyone once `now` reaches its cancel time without a published schedule file. The
+           *  recorder uses this one rule. */
+          export const rollingCancelled = (cfg, n, now, hasSchedule) => !hasSchedule && now >= rollingClock(cfg).cancelAt(n);
+          /** The recorder's schedule window for round n: from scheduleFrom (inclusive) to scheduleTo (exclusive). */
+          export const inScheduleWindow = (cfg, n, now) => { const c = rollingClock(cfg); return c.scheduleFrom(n) <= now && now < c.scheduleTo(n); };
+          /** The UTC day a rolling round counts for: the day its START is in (not dayOf(locksAt): a 00:00 start is that day's). */
+          export const startDay = (start) => Math.floor(start / DAY) * DAY;
+          /** "" when a schedule file is in the kit's shape for this game and name, else why not. Its body is the game's own JSON. */
+          export function scheduleShape(j, name, cfg) {
+            const m = SCHEDULE_FILE.exec(name);
+            if (!m) return "not a schedule file's name";
+            // R-5: a ruler game's schedule file also lists the ruler cards its body used ("cards", as an inputs file does), which
+            // the publish job rebuilds from the published vhp-data before it accepts the file.
+            const keys = cfg.vhpData ? [...SCHEDULE_KEYS, "cards"] : SCHEDULE_KEYS;
+            if (!j || typeof j !== "object" || Array.isArray(j) || Object.keys(j).join() !== keys.join()) return `not a schedule file's shape ({${keys.join(", ")}})`;
+            if (cfg.vhpData && !isCardList(j.cards)) return "its cards aren't a card list";
+            const n = Number(m[1]), c = rollingClock(cfg);
+            if (j.v !== 1 || j.game !== cfg.game || j.round !== rollingId(n)) return "wrong version, game or round";
+            if (j.start !== c.start(n)) return "its start isn't its round's start on the grid";
+            if (!nat(j.written)) return "bad written time";
+            if (j.written < c.scheduleFrom(n) - FUTURE_SLACK_MS || j.written > c.scheduleTo(n) + FUTURE_SLACK_MS) return "written outside its schedule window";
+            if (!j.body || typeof j.body !== "object" || Array.isArray(j.body)) return "its body must be a JSON object";
+            return "";
+          }
+          /** "" when a rolling game's week file keeps the grid's rules, else why not: every round is r##### on the grid, starts
+           *  inside the week, counts for the UTC day of its start, and a round with a result ("s") has a published schedule file
+           *  (a cancelled round can only be void). `sched`: the round ids with a schedule file published after this job. */
+          export function rollingWeekWhy(j, cfg, sched) {
+            const c = rollingClock(cfg);
+            for (const r of j.rounds) {
+              const n = rollingNo(r[0]);
+              if (n === null) return `round ${r[0]}: a rolling round's id is r##### (5 digits)`;
+              const s = c.start(n);
+              if (!(s >= j.start && s < j.end)) return `round ${r[0]}: it starts outside week ${j.week} (a rolling round counts for the week it starts in)`;
+              if (r[1] !== startDay(s)) return `round ${r[0]}: its day must be the UTC day of its start`;
+              if (r[3] === "s" && !sched.has(r[0])) return `round ${r[0]}: scored, but it has no published schedule file (a round without one is cancelled, D-344)`;
+            }
+            // cardPerRound for a rolling ruler game: every round decided FROM its schedule (not a cancelled one) used a card.
+            if (cfg.cardPerRound && j.cards !== undefined) {
+              const decided = j.rounds.filter((r) => (r[3] === "s" || r[3] === "v") && sched.has(r[0])).length - (j.fallbacks?.length ?? 0);
+              if (j.cards.length < decided) return `${decided} rounds decided from a schedule file but only ${j.cards.length} ruler cards (cardPerRound)`;
+            }
+            return "";
+          }
 
           // ───────────────────────── the week file ─────────────────────────
           export const WEEK_KEYS = ["v", "game", "week", "start", "end", "min", "state", "seen", "rounds", "players"];
@@ -2186,7 +2431,8 @@ jobs:
                   && Number.isSafeInteger(f[1]) && f[1] >= dayOfRound.get(f[0]) + FALLBACK_GRACE_MS && typeof f[2] === "string" && f[2].length >= 1 && f[2].length <= 200
                   && (i === 0 || j.fallbacks[i - 1][0] < f[0]))) return "bad fallbacks (sorted [decided round, at, why], at least 48 h after the round's own day)";
             }
-            if (cfg.cardPerRound && j.cards !== undefined) {
+            // A rolling game counts only rounds decided from a schedule file (a cancelled round has no card): rollingWeekWhy.
+            if (cfg.cardPerRound && j.cards !== undefined && !cfg.rolling) {
               const decided = j.rounds.filter((r) => r[3] === "s" || r[3] === "v").length - (j.fallbacks?.length ?? 0);
               if (j.cards.length < decided) return `${decided} decided rounds but only ${j.cards.length} ruler cards (cardPerRound)`;
             }
@@ -2572,7 +2818,7 @@ jobs:
             return { manifest: m, week: partsToWeek(parts, cfg) };
           }
 
-          const NAMES = new RegExp(`^(board\\.json|alltime\\.json|W([0-9]{3}|[1-9][0-9]{3})\\.json|vault/(HOLD-|RELEASE-)?W${VNUM}\\.json|inputs/W${VNUM}\\.json)$`);
+          const NAMES = new RegExp(`^(board\\.json|alltime\\.json|W([0-9]{3}|[1-9][0-9]{3})\\.json|vault/(HOLD-|RELEASE-)?W${VNUM}\\.json|inputs/W${VNUM}\\.json|schedule/r[0-9]{5}\\.json)$`);
           const ISO = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/;
           const same = (a, b) => a !== null && b !== null && Buffer.compare(a, b) === 0;
           const isHold = (h, cfg, w) => !!h && typeof h === "object" && Object.keys(h).join() === "game,week,reason" && h.game === cfg.game && h.week === w && typeof h.reason === "string" && h.reason.length > 0 && h.reason.length <= 300;
@@ -2584,7 +2830,7 @@ jobs:
               for (const f of fs.readdirSync(d).sort()) {
                 const p = path.join(d, f), r = rel ? `${rel}/${f}` : f, s = fs.lstatSync(p);
                 if (s.isSymbolicLink()) bad.push(r);
-                else if (s.isDirectory()) { if (r === "vault" || r === "inputs") walk(p, r); else bad.push(r + "/"); }
+                else if (s.isDirectory()) { if (r === "vault" || r === "inputs" || r === "schedule") walk(p, r); else bad.push(r + "/"); }
                 else if (s.isFile()) out.push(r); else bad.push(r);
               }
             };
@@ -2666,6 +2912,32 @@ jobs:
               inputsOk.set(w, sha256(raw)); publish.push(f);
             }
 
+            // Rolling rounds: schedule files are write-once, published only inside their window by this job's clock; one that
+            // misses its round's cancel time is held, and that round is cancelled for everyone (D-344).
+            const schedOk = new Set();     // round ids whose schedule file is published after this job (incoming or published)
+            for (const f of files.filter((x) => x.startsWith("schedule/"))) {
+              if (!NAMES.test(f)) continue;
+              const id = SCHEDULE_FILE.exec(f) ? `r${SCHEDULE_FILE.exec(f)[1]}` : "";
+              const raw = readRaw(inDir, f), old = readRaw(pubDir, f);
+              const p = parseCanon(raw);
+              if (!p.ok) { hold(f, p.why); continue; }
+              if (old) { if (!same(raw, old)) hold(f, "it changes a published schedule file (write-once)"); else schedOk.add(id); continue; }
+              if (!cfg.rolling) { hold(f, "this game has no rolling rounds"); continue; }
+              if (raw.length > MAX_SCHEDULE_BYTES) { hold(f, `a schedule file over ${MAX_SCHEDULE_BYTES} bytes`); continue; }
+              const why = scheduleShape(p.v, f, cfg);
+              if (why) { hold(f, why); continue; }
+              const n = rollingNo(id), c = rollingClock(cfg);
+              if (now < c.scheduleFrom(n) - FUTURE_SLACK_MS) { hold(f, "a schedule file before its window, by this job's clock"); continue; }
+              if (now > c.cancelAt(n)) { hold(f, "a schedule file after its round's cancel time (start − cancelAfterMin), by this job's clock: the round is cancelled for everyone (D-344)"); continue; }
+              if (p.v.written > now + FUTURE_SLACK_MS) { hold(f, "written in the future by this job's clock"); continue; }
+              { const cw2 = cardsWhy(raw, old, p.v); if (cw2) { hold(f, cw2); continue; } }
+              schedOk.add(id); publish.push(f);
+            }
+            for (const f of fs.existsSync(path.join(pubDir, "schedule")) ? fs.readdirSync(path.join(pubDir, "schedule")) : []) {
+              const m = /^(r[0-9]{5})\.json$/.exec(f);
+              if (m && parseCanon(readRaw(pubDir, `schedule/${f}`)).ok) schedOk.add(m[1]);
+            }
+
             for (const f of files) {
               if (!NAMES.test(f)) { hold(f, "a name the game may not publish"); continue; }
               if (!WEEK_FILE.test(f)) continue;
@@ -2676,6 +2948,7 @@ jobs:
               if (why) { hold(f, why); continue; }
               const w = j.week;
               heldWeeks.add(w);
+              if (cfg.rolling) { const rw = rollingWeekWhy(j, cfg, schedOk); if (rw) { hold(f, rw); continue; } }
               if (cfg.inputsFile && (inputsOk.get(w) ?? pubInputs(w)) !== j.inputs) { hold(f, "its inputs hash isn't the published inputs file's (FC-9)"); continue; }
               { const cw2 = cardsWhy(raw, old, j); if (cw2) { hold(f, cw2); continue; } }
               const pv = old ? parseCanon(old) : null;
@@ -2909,11 +3182,13 @@ jobs:
           main();
           KIT_CHECK_INLINE
           # KG parts v1: a parts week published again (pending or open) replaces its whole folder, so no stale part stays.
-          grep -oE '^[a-z][a-z0-9-]{1,23}/W([0-9]{3}|[1-9][0-9]{3})/' "$LIST" | sort -u | while IFS= read -r dir; do
+          # "|| true": a list with no week folder (only a price list, a vault file or a board) is normal; under pipefail a
+          # grep with no match would end the job before anything is published (Fantasy W5 price list, Fri 20 Nov).
+          { grep -oE '^[a-z][a-z0-9-]{1,23}/W([0-9]{3}|[1-9][0-9]{3})/' "$LIST" || true; } | sort -u | while IFS= read -r dir; do
             git ls-files -z -- "$dir" | xargs -0 -r git update-index --force-remove --
           done
           while IFS= read -r name; do
-            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|alltime|W([0-9]{3}|[1-9][0-9]{3}))|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|W([0-9]{3}|[1-9][0-9]{3})/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
+            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|alltime|W([0-9]{3}|[1-9][0-9]{3}))|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|schedule/r[0-9]{5}|W([0-9]{3}|[1-9][0-9]{3})/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
             h=$(git hash-object -w "$IN/$name")
             git update-index --add --cacheinfo "100644,$h,$name"
           done < "$LIST"
@@ -2960,19 +3235,19 @@ jobs:
   kit-alerts:
     # Its own job, always run (#B-12 NK-16): the alerts fire even when publish-kit is skipped (every kit job failed,
     # timed out or was cancelled). Failing this job is what emails the owner; the two cases say different things (KC-28).
-    needs: [record-fantasy, publish-kit]
+    needs: [record-fantasy, record-survivor, publish-kit]
     if: ${{ always() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions: {}
     steps:
       - name: Alert on a kit recorder that stopped
-        if: ${{ (needs.record-fantasy.result == 'success' && needs.record-fantasy.outputs.rc != '0' && needs.record-fantasy.outputs.rc != '1') || needs.record-fantasy.result == 'failure' || needs.record-fantasy.result == 'cancelled' }}
+        if: ${{ (needs.record-fantasy.result == 'success' && needs.record-fantasy.outputs.rc != '0' && needs.record-fantasy.outputs.rc != '1') || needs.record-fantasy.result == 'failure' || needs.record-fantasy.result == 'cancelled' || (needs.record-survivor.result == 'success' && needs.record-survivor.outputs.rc != '0' && needs.record-survivor.outputs.rc != '1') || needs.record-survivor.result == 'failure' || needs.record-survivor.result == 'cancelled' }}
         run: |
           echo "::error::A kit game's recorder stopped (or its job failed, timed out or was cancelled): nothing from that game was recorded this run. See its record job."
           exit 1
       - name: Alert on a kit recorder that needs the owner
-        if: ${{ needs.record-fantasy.outputs.rc == '1' }}
+        if: ${{ needs.record-fantasy.outputs.rc == '1' || needs.record-survivor.outputs.rc == '1' }}
         run: |
           echo "::error::A kit game's recorder raised an alert that needs the owner (see its record job). Its files were checked and published as usual."
           exit 1
