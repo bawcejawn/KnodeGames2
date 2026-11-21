@@ -43,6 +43,7 @@
  *   npm run combo. The run exits 1 after writing its files when it raised an error (Repo Lens RL-5).
  */
 import { Provider, Contract } from "koilib";
+import { nodeProvider } from "../node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -550,7 +551,7 @@ async function main() {
   const RPC = E.RPC || "https://koinos.armana.io";
   const RPC_CHECK = E.RPC_CHECK && E.RPC_CHECK !== "off" && E.RPC_CHECK !== RPC ? E.RPC_CHECK : "";
   if (!RPC_CHECK) console.log("::warning::running on ONE node (RPC_CHECK is off): no slot is fixed and nothing is voided");
-  const r = await run({ p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null });
+  const r = await run({ p: nodeProvider(RPC), check: RPC_CHECK ? nodeProvider(RPC_CHECK) : null });
   if (r.errors.length) process.exitCode = 1;            // files are written; the job still publishes them (RL-5)
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

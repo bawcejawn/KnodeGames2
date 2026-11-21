@@ -42,6 +42,7 @@
  *   npm run bracket         (or: npx tsx bot/games/bracket.ts)
  */
 import { Provider, Contract } from "koilib";
+import { nodeProvider } from "../node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
@@ -811,5 +812,5 @@ export async function run(o: Opts) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run({ p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null }).catch((e) => { console.error(e); process.exit(1); });
+  run({ p: nodeProvider(RPC), check: RPC_CHECK ? nodeProvider(RPC_CHECK) : null }).catch((e) => { console.error(e); process.exit(1); });
 }

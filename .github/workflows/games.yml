@@ -117,6 +117,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           BLOCKX_PREV: ${{ runner.temp }}/prev/blockx
           BLOCKX_OUT: ${{ runner.temp }}/games-data/blockx
           RACE_DATA: ${{ runner.temp }}/race
@@ -187,6 +188,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           QUESTIONS_PREV: ${{ runner.temp }}/prev/questions
           QUESTIONS_OUT: ${{ runner.temp }}/questions-out
           # The owner's holds: QUESTIONS_HOLD = "<week>[,<week>]" (reason in QUESTIONS_HOLD_REASON), later
@@ -268,6 +270,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           BRACKET_PREV: ${{ runner.temp }}/prev/bracket
           BRACKET_OUT: ${{ runner.temp }}/games-data/bracket
           # The first week the vault pays game 9 (its "from week" once game 9 is applied). Unset: no medals or prize lists.

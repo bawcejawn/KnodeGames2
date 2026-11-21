@@ -26,6 +26,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Contract, Provider } from "koilib";
+import { nodeProvider } from "./node.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const VAULT = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";   // the game contract = the prize vault (v6); it also produces blocks
@@ -185,7 +186,7 @@ function within<T>(p: Promise<T>, ms = CALL_MS): Promise<T> {
  *  on the page (stats.js draws every value as a number, and addresses through names.js). */
 export function vaultReader(rpcs: string[]) {
   const abi = JSON.parse(fs.readFileSync(path.join(ROOT, "contracts/vault/abi/kpred.koilib.json"), "utf8"));
-  const fns = rpcs.map((rpc) => new Contract({ id: VAULT, provider: new Provider([rpc]), abi }).functions);
+  const fns = rpcs.map((rpc) => new Contract({ id: VAULT, provider: nodeProvider(rpc), abi }).functions);
   // Repo Lens C9-1 and its fix-check: a node that once held a request without answering (a timeout) goes to the back
   // for the rest of the run, so it costs one 8 s wait, not one per call. A node that answers with an error (a 500 or a
   // 429) is asked once more before the next node, and isn't sent to the back for it.
