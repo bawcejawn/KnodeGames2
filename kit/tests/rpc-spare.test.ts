@@ -2,7 +2,7 @@
 // stands in for it that run. Always two DIFFERENT nodes; every run logs whether the spare answered.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pickNodes } from "../recorder/cli.ts";
+import { pickNodes, nodeKey } from "../recorder/cli.ts";
 
 const node = (url: string, ok: boolean) => ({ label: url, vault: { label: url, read: async () => ({}) }, contract: () => ({ label: url, read: async () => ({}) }), head: async () => { if (!ok) throw new Error(`${url} down`); return { height: 1, lib: 1, time: 1 }; } }) as any;
 const run = async (up: Record<string, boolean>, rpc: string, check: string, spare?: string) => {
@@ -31,4 +31,18 @@ test("RPC_SPARE: never two copies of the same node, and a stop when two working 
   assert.match((await run({ A: false, B: true, S: false }, "A", "B", "S")).error ?? "", /RPC isn't answering, nor is RPC_SPARE/);
   assert.match((await run({ A: false, B: true }, "A", "B")).error ?? "", /RPC_SPARE isn't set/);
   assert.match((await run({ A: false, B: false, S: true }, "A", "B", "S")).error ?? "", /RPC and RPC_CHECK aren't answering/);
+});
+
+test("#R1-5 J52-1: the same node written differently (a trailing slash, capitals, spaces) is still the same node", async () => {
+  assert.equal(nodeKey(" https://API.Koinos.io// "), "https://api.koinos.io");
+  const up = { "https://a.example": true, "https://b.example": false, "https://A.example/": true };
+  assert.match((await run(up, "https://a.example", "https://b.example", "https://A.example/")).error ?? "", /same node as the other one/);
+});
+
+test("#R1-5 J52-2: a spare of only spaces is no spare; spaces around a good address still work", async () => {
+  const r1 = await run({ A: false, B: true }, "A", "B", "   ");
+  assert.match(r1.error ?? "", /RPC_SPARE isn't set/);
+  assert.deepEqual(r1.logs, [], "no probe of an empty spare");
+  const r2 = await run({ A: false, B: true, S: true }, "A", "B", "  S  ");
+  assert.deepEqual(r2.used, ["S", "B"]);
 });

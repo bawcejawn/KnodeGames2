@@ -9,6 +9,10 @@ import { kitConfig, loadManifest, readDeployment } from "./manifest.ts";
 import { runGame } from "./runtime.ts";
 import { print } from "./alerts.ts";
 
+/** One node address in a comparable form: trimmed, lower-case, no trailing slashes (#R1-5 J52-1), so
+ *  "https://API.koinos.io/" and "https://api.koinos.io" count as the same node. */
+export const nodeKey = (url: string) => url.trim().toLowerCase().replace(/\/+$/, "");
+
 /** The two nodes for this run: RPC and RPC_CHECK, or RPC_SPARE in place of one that doesn't answer its head (with the
  *  same retries as every read). The kit always reads two DIFFERENT nodes: the spare never stands in for the other's
  *  own address. When RPC_SPARE is set, every run also logs whether it answered, so the owner can judge it before it is
@@ -27,7 +31,7 @@ export async function pickNodes(make: (label: string, url: string) => Promise<Ki
   if (okA && okB) return [a, b];
   if (okA !== okB && s && okS) {
     const bad = okA ? "RPC_CHECK" : "RPC", good = okA ? rpc : check;
-    if (sp === good) throw new Error(`${bad} isn't answering and RPC_SPARE is the same node as the other one: two different nodes are required (RECORDER §2.1)`);
+    if (nodeKey(sp) === nodeKey(good)) throw new Error(`${bad} isn't answering and RPC_SPARE is the same node as the other one: two different nodes are required (RECORDER §2.1)`);
     log(`::warning::${bad} (${okA ? check : rpc}) isn't answering: RPC_SPARE (${sp}) stands in for it this run`);
     return okA ? [a, s] : [s, b];
   }
@@ -46,7 +50,7 @@ export async function main(argv = process.argv.slice(2), env = process.env): Pro
     const dep = readDeployment();
     const cfg = kitConfig(m, dep);
     const rpc = env.RPC || dep.rpc, check = env.RPC_CHECK;
-    if (!check || check === rpc) { console.error("::error::two different nodes are required (RPC and RPC_CHECK): RECORDER §2.1"); clear(); return 2; }
+    if (!check || nodeKey(check) === nodeKey(rpc)) { console.error("::error::two different nodes are required (RPC and RPC_CHECK): RECORDER §2.1"); clear(); return 2; }
     const ids = { vault: dep.contract, picks: dep.sponsor?.picks, racepicks: dep.sponsor?.race };
     const nodes = await pickNodes((label, url) => koinosNode(label, url, ids), rpc, check, env.RPC_SPARE, (x) => console.log(x));
     // A field the vault ABI doesn't know is silently dropped by the decoder: game 1's rule week would read as "not set"
