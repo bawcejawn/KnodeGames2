@@ -73,7 +73,7 @@ test("the reader fails loudly: wrong hash, missing folder, a list that is final 
   const m = JSON.parse(fs.readFileSync(path.join(d, "BW005", "manifest.json"), "utf8"));
   const shard = m.parts.find((p) => p.part === "p/3").name, f = path.join(d, "BW005", shard);
   fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace(/\n$/, " \n"));
-  assert.throws(() => P.readList(d, v2.week, 5), /canonical/);
+  assert.throws(() => P.readList(d, v2.week, 5), /canonical|bytes are not/);
 });
 
 test("a final folder is never changed: the same rows write nothing, different rows stop the run", () => {

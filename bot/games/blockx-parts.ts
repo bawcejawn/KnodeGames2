@@ -5,6 +5,7 @@
 // until the owner switches it (after Golf's reader and the Vault fallback reader are merged).
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as crypto from "node:crypto";
 import * as KP from "../../kit/parts/parts.inline.mjs";
 
 export const GAME = "blockx";
@@ -83,10 +84,16 @@ export function readList(baseDir: string, list: any, week: number) {
   const want = new Set(EXPECT17);
   const got = new Set<string>((m.parts ?? []).map((p: any) => p.part));
   for (const p of want) if (!got.has(p)) fail(`part ${p} is missing`);
+  // Repo Lens #R3-6 R3-6.1: the manifest hash must be the hash of the manifest's own part list, and every part file must be
+  // the bytes the manifest names (shape doc section 5 step 3: what checkParts proves). Otherwise a changed or swapped shard
+  // that is still in canonical form would be read as the field.
+  if (!Array.isArray(m.parts) || KP.partSetHash({ game: GAME, file: list.parts, week }, m.parts) !== m.hash) fail("the manifest's parts do not match its hash");
   const out: any[] = [], seen = new Set<string>();
   for (const e of m.parts) {
-    if (!e.part.startsWith("p/")) continue;
+    if (typeof e?.name !== "string" || e.name !== KP.partName(e.part, e.sha256)) fail(`part ${e?.part}: its file name is not the manifest's`);
     const text = fs.readFileSync(path.join(dir, e.name), "utf8");
+    if (crypto.createHash("sha256").update(Buffer.from(text, "utf8")).digest("hex") !== e.sha256 || Buffer.byteLength(text, "utf8") !== e.bytes) fail(`part ${e.part}: its bytes are not the ones the manifest names`);
+    if (!e.part.startsWith("p/")) continue;
     const d = KP.decodePart(text);
     for (const r of d.rows) {
       if (KP.shardOf(r.player, SHARDS) !== e.part.slice(2)) fail(`${r.player} is in the wrong shard`);
