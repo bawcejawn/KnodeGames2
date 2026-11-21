@@ -105,7 +105,9 @@ export async function pool<T, R>(items: T[], limit: number, fn: (x: T) => Promis
 }
 
 // ───────────────────────── a real node (koilib, read-only) ─────────────────────────
-const NETWORK = /fetch failed|ECONN|ETIMEDOUT|EAI_AGAIN|socket|network|50[234]|429|timeout|no answer within/i;
+// "invalid json response body": the node (or its front door) answered with a web page instead of JSON, e.g. a busy or
+// rate-limit page (koinos.armana.io and api.koinos.io from GitHub's runners, Fri 20 Nov): retried like any network error.
+const NETWORK = /fetch failed|ECONN|ETIMEDOUT|EAI_AGAIN|socket|network|50[234]|429|timeout|no answer within|invalid json response body/i;
 
 /** Retries network errors only (a contract's refusal would be refused again), with a per-call time limit. */
 export async function withRetries<T>(label: string, fn: () => Promise<T>, tries: number, timeoutMs = 30000, sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))): Promise<T> {

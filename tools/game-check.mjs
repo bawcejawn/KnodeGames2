@@ -52,9 +52,9 @@ export function sendPicksProblems(src) {
   });
   return out;
 }
-/** Pages allowed to send picks themselves for now, each with the PR that removes it. Library (19 Nov): Survivor (#17)
- *  merges before the card; Survivor's follow-up PR moves it onto the card and deletes this line. Nothing else is added. */
-export const SEND_PICKS_ALLOW = { "web/survivor.js": "until Survivor's follow-up PR moves it onto the card (D-278)" };
+/** Pages allowed to send picks themselves for now, each with the PR that removes it. Empty since Survivor's follow-up PR
+ *  (#36) moved web/survivor.js onto the card; nothing else is added. */
+export const SEND_PICKS_ALLOW = {};
 export function checkSendPicks(m, root = ROOT) {
   if (!m || typeof m.page !== "string") return [];
   const js = path.join(root, "web", m.page.replace(/\.html$/, ".js"));
