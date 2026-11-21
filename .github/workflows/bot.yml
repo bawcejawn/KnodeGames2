@@ -160,6 +160,7 @@ jobs:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           # A second, independent node: results are posted only when both agree on the window's blocks (audit M-9).
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}   # a second, independent node (audit M-4); set the variable to "off" to turn it off
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           GEN_DIR: game-data
           # Repo Lens J16-1: question ids the owner OK'd to void although they are newer than the bot's saved state
           # (normally empty; the bot's NEEDS ATTENTION message says when to set it).
