@@ -17,7 +17,7 @@
   p.setAttribute("role", "note");
   const b = document.createElement("b");
   b.textContent = "Fantasy Producers: free play.";
-  p.append(b, " Weeks 4 and 5 take no stakes. Week 5 runs from Sunday 22 November to Sunday 29 November, 7 PM ET.");
+  p.append(b, " Weeks 4 and 5 are free play. Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET). Week 5 runs from Sunday 22 November to Sunday 29 November, 7 PM ET.");
   main.prepend(p);
 })();
 

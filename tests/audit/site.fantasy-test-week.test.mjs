@@ -34,7 +34,7 @@ test("Fantasy test week banner: All games and Fantasy only (Home has none, owner
 
 test("Fantasy test week banner: the words follow the site's rules and the owner's dates", () => {
   const [[, text]] = fx("fantasy.html", "2026-11-18T12:00:00Z");
-  assert.match(text, /^Fantasy Producers: free play\. Weeks 4 and 5 take no stakes\. Week 5 runs from Sunday 22 November to Sunday 29 November, 7 PM ET\.$/);
+  assert.match(text, /^Fantasy Producers: free play\. Weeks 4 and 5 are free play\. Stake now: it counts from week 6 \(Sun 29 Nov, 7 PM ET\)\. Week 5 runs from Sunday 22 November to Sunday 29 November, 7 PM ET\.$/);
   assert.doesNotMatch(text, /\b(bet|odds|gambl|earn|returns|guaranteed|beta)/i);
   assert.doesNotMatch(NAV.slice(NAV.indexOf("Fantasy's free test week")), /innerHTML|localStorage|sessionStorage|fetch\(/);
 });
@@ -44,7 +44,7 @@ test("Fantasy page note and the games list say week 4 is a free test and every w
   assert.match(h, /<b>Week 4 is a free test week\.<\/b>[^<]*test play starts with the Tue 17 Nov round \(first lock Mon 16 Nov, 6:55 PM ET\)\. Week 5 \(Sun 22 Nov, 7 PM ET to Sun 29 Nov, 7 PM ET\) is free play too\. Week 5 starts with no teams: pick yours before Sun 22 Nov, 6:55 PM ET\. <b>Stake now: it counts from week 6 \(Sun 29 Nov, 7 PM ET\)\. Weeks 4 and 5 are free play\.<\/b>/);
   assert.doesNotMatch(h, /planned for Mon 30 Nov|Test weeks/);
   const f = (g.games || g).find((x) => x.id === "fantasy");
-  assert.match(f.line, /Weeks 4 and 5 are free play, with no stakes \(to Sun 29 Nov, 7 PM ET\)\.$/);
+  assert.match(f.line, /Weeks 4 and 5 are free play\. Stake now: it counts from week 6 \(Sun 29 Nov, 7 PM ET\)\.$/);
   assert.doesNotMatch(f.line, /Test weeks/);
   // The page hides its note from Mon 23 Nov 00:00 UTC (Sun 22 Nov 7 PM ET), the end of week 4.
   assert.match(fs.readFileSync(`${APP}/web/fantasy.js`, "utf8"), /TEST_WEEK_ENDS = Date\.UTC\(2026, 10, 30\);   \/\/ weeks 4 and 5 are free play \(D-238\)\n  if \(Date\.now\(\) >= TEST_WEEK_ENDS && \$\("fx-testweeks"\)\) \$\("fx-testweeks"\)\.hidden = true;/);
