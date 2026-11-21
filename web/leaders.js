@@ -72,7 +72,8 @@
         for (const p of part.prizes) if (p && typeof p.player === "string") m.set(p.player, Math.min(2, Math.max(1, Number(p.place) || 2)));
         return m;
       }
-      const ok = rows.filter((r) => (Number(r[cfg.main]) || 0) > 0 && (!cfg.free.minDays || (Number(r.days) || 0) >= cfg.free.minDays));
+      // Days played: `days` (Block X), or `events` (Last Node Standing: one event a day).
+      const ok = rows.filter((r) => (Number(r[cfg.main]) || 0) > 0 && (!cfg.free.minDays || (Number(r.days ?? r.events) || 0) >= cfg.free.minDays));
       if (cfg.free.byPlace) {
         // Golf's rule (golf-math.js freeMedals, the vault file's first/second): 1st = the first place's wallets; 2nd
         // only when 1st is a single wallet; a place shared by more than 10 is left empty.
