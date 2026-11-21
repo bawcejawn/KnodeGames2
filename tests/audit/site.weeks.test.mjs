@@ -1,4 +1,4 @@
-// D-063: players see the week of Mon 16 Nov 2026 (vault week 4) as "Week 1" and the week of Mon 9 Nov (vault week 3) as
+// D-063: players see the week of Mon 16 Nov 2026 (vault week 4) as "Week 4" (changed 21 Nov: the platform week number) and the week of Mon 9 Nov (vault week 3) as
 // the "Test week" (owner, 9 Nov 2026); earlier weeks show their date.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -11,16 +11,16 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(`${APP}/web/weeks.js`, "utf8"), ctx);
 const K = ctx.KWeeks;
 
-test("vault week 4 is Week 1, vault week 3 the Test week; earlier weeks show their date; the week of a time", () => {
-  assert.equal(K.label(4), "Week 1");
-  assert.equal(K.label(5), "Week 2");
+test("vault week 4 is Week 4, vault week 3 the Test week; earlier weeks show their date; the week of a time", () => {
+  assert.equal(K.label(4), "Week 4");
+  assert.equal(K.label(5), "Week 5");
   assert.equal(K.label(3), "Test week");
   assert.equal(K.short(3), "Test");
   assert.equal(K.isTest(3), true);
   assert.equal(K.isTest(4), false);
   assert.equal(K.label(2), "Week of 2 Nov");
   assert.equal(K.label(0), "Week of 19 Oct");
-  assert.equal(K.short(4), "1");
+  assert.equal(K.short(4), "4");
   assert.equal(K.short(2), "2 Nov");
   assert.equal(K.of(Date.parse("2026-11-09T00:00:00Z")), 3);
   assert.equal(K.of(Date.parse("2026-11-08T23:59:59Z")), 2);
