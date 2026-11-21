@@ -5,14 +5,39 @@
 // Wallet S (staked) picks number 3; F (free) picks number 0 ("Knode Games vs All") on the first two days.
 import { fakeNode, world, type World } from "../../../kit/testing/fake-nodes.ts";
 import { at, DAY, HOUR } from "../../../kit/testing/fake-clock.ts";
-import { rulerLedger, P, FROM } from "../../../kit/testing/ruler-fixture.ts";
+import { createHash } from "node:crypto";
+import { P, FROM } from "../../../kit/testing/ruler-fixture.ts";
+import { rulerLib } from "../../../kit/recorder/sources/vhp-ruler.ts";
 import type { Sample } from "../../../kit/testing/conformance.ts";
 
+/** The kit's ruler fixture (five producers, a block every 3 s, a deterministic generator) plus the pool node (the Vault) as a sixth
+ *  producer, so the day's card has the pool node's row. Same generator as kit/testing/ruler-fixture.ts. */
+const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
+const PRODUCERS = [...P, POOL], VHPS = [400, 250, 200, 140, 1, 150];
+const UNIT = 10n ** 15n, BURN = 408000000n, PRE = 15 * 28800;
+function ledger(extraBlocks: number): any {
+  const N = PRE + extraBlocks, tot = VHPS.reduce((a, b) => a + b);
+  let s = 7n;
+  const next = () => { s = (s * 6364136223846793005n + 1442695040888963407n) & ((1n << 64n) - 1n); return Number(s >> 11n) / 2 ** 53; };
+  const who: string[] = new Array(N), ids: string[] = new Array(N);
+  const bal = new Map(PRODUCERS.map((a, i) => [a, BigInt(VHPS[i]) * UNIT])), deltas: any[] = [];
+  for (let i = 0; i < N; i++) {
+    let x = next() * tot, j = 0;
+    while (x >= VHPS[j]) { x -= VHPS[j]; j++; }
+    who[i] = PRODUCERS[j];
+    ids[i] = "0x1220" + createHash("sha256").update(`kit ruler block ${FROM + i}`).digest("hex");
+    deltas.push({ h: FROM + i, a: who[i], d: -BURN, inc: 0n });
+    bal.set(who[i], bal.get(who[i])! - BURN);
+  }
+  const to = FROM + N - 1;
+  return rulerLib().ledger({ from: FROM, to, signers: who, ids, deltas, anchors: Object.fromEntries([...bal].map(([a, v]) => [a, { h: to, v }])), bad: [], rebuilt: [], pending: [] });
+}
+
 export const S = "1SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS", F = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-const WEEK = 6, BLOCK = 3000, T_FROM = at(WEEK) - 15 * DAY;      // block FROM's time
+const WEEK = 6, BLOCK = 3000, T_FROM = at(WEEK) - 17 * DAY;      // block FROM's time
 const blockOf = (t: number) => FROM + Math.floor((t - T_FROM) / BLOCK);
-const EXTRA = 8 * 28800;                                           // ledger: 15 + 8 days from FROM, to a day after the week
-const LAST = FROM + 15 * 28800 + EXTRA - 1;
+const EXTRA = 10 * 28800;                                           // ledger: 15 + 8 days from FROM, to a day after the week
+const LAST = FROM + 15 * 28800 + EXTRA - 1;   // the list card (a paying card) needs 14 d 6 h of data before its moment (week start - 2 d), so the chain starts 17 days before the week
 const SAT_END = at(WEEK) + 7 * DAY;
 
 export function sampleWorld(t: number, decided: boolean): World {
@@ -39,7 +64,7 @@ export function sample(): Sample {
   return {
     week: WEEK,
     nodes: (t) => { now.t = t; return [fakeNode("a", w), fakeNode("b", w)]; },
-    vhpLedger: rulerLedger(EXTRA),
+    vhpLedger: ledger(EXTRA),
     checkAt: chain(1),                                   // the direct checks run after the week (hour 0 is before it)
     undecided: ["d20261206"],
     hours: { chain, job: (i) => chain(i) + 5 * 60000, count: 8, decideAfter: 2, decide: () => { decided = true; } },

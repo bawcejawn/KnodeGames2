@@ -6,10 +6,13 @@
 // INPUTS: the week's seven rosters, one write-once inputs file made before picks open (inputsLeadHours 48). Each day's roster
 //   is the same list for the whole week, taken from one ruler card that ends 48 h before the week starts (see STAND-INS).
 //
-// STAND-INS (marked, swapped when the Ruler's #33 merges; a test pins the swap): (1) the roster list is "producers in the
-//   card's field" (card entry flag, minK 10); the Ruler's listAt/isUnreliable replace it. (2) the pool node's row is read from
-//   the same card; the Ruler's noVoid replaces it. (3) the card settings (c, poolRule, ownRule) are copied from Survivor's
-//   card and wait for the Ruler's confirmation.
+// STAND-INS (#33 is merged, but the kit does not yet hand a game the Ruler's list helpers or the noVoid card key):
+//   (1) the roster list is "producers in the card's field" (card entry flag, minK 10), to become listAt when the kit exposes it
+//       (Ruler's helper); (2) the pool node's row is read from the same card (row missing = PENDING, VS-2); (3) card settings are the
+//       Ruler's list for game 17 (c "500000", minK 10, poolRule "min", ownRule "spot", paying true, pooled = the Vault) WITHOUT
+//       noVoid: the kit's card-setting key sets (kit/publish/check.inline.mjs) don't allow it yet, so a producer the card voids
+//       has no fpct and its matchup is skipped (D-317 wants it scored). Asked of Architecture. Unreliable producers stay on the
+//       TEST list (D-398), so VS needs no isUnreliable. games/vs/tests/ruler-swap.test.ts pins the settings to the Ruler's list.
 import { PENDING, VOID, NotYet, type GameModule, type Round, type Score, type Pick } from "../../kit/recorder/types.ts";
 import type { RawPick } from "../../kit/recorder/sources/picks-contract.ts";
 import * as V from "./math.js";
@@ -17,13 +20,15 @@ import * as V from "./math.js";
 const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
 const DAY = V.DAY;
 const CARD_BLOCKS = 7200;                                      // the card's size window: the 6 hours before the lock
-const CARD = Object.freeze({ game: V.GAME, c: "500000", minK: 10, poolRule: "min", ownRule: "spot", paying: false, pooled: [POOL] });
+const CARD = Object.freeze({ game: V.GAME, c: "500000", minK: 10, poolRule: "min", ownRule: "spot", paying: true, pooled: [POOL] });
 
 export type DayResult = { round: string; node: string | null; rows: Record<string, string | null> };
 export type VsInputs = { week: number; rosters: Record<string, any> };
 
 const ymd = (day: number) => new Date(day).toISOString().slice(0, 10).replaceAll("-", "");
-const fp = (x: unknown) => (x === null || x === undefined ? null : String(x));
+/** An fpct as whole-number text for the result (VS-3): numbers and BigInts only through BigInt, so a fraction stops loudly and a
+ *  large number never turns into "1e+21". */
+const fp = (x: unknown) => (x === null || x === undefined ? null : BigInt(x as any).toString());
 
 async function settingsFor(day: number, blockAt: (ms: number) => Promise<number>) {
   const S0 = await blockAt(day);
@@ -72,6 +77,8 @@ export const game: GameModule<RawPick, DayResult, VsInputs> = {
     const by = new Map<string, any>((card.producers as any[]).map((p) => [p.a, p]));
     const rows: Record<string, string | null> = {};
     for (const a of roster.rows) rows[a] = fp(by.get(a)?.fpct);
+    // VS-2: no row for the pool node in the card is "not decided yet", never "everyone scores 0".
+    if (!by.has(POOL)) return PENDING;
     return { round: ymd(round.day), node: fp(by.get(POOL)?.fpct), rows };
   },
 
@@ -79,10 +86,13 @@ export const game: GameModule<RawPick, DayResult, VsInputs> = {
     const roster = inputs?.rosters?.[String(round.day)];
     if (!roster || !V.checkRoster(roster).ok) throw new Error(`VS: round ${round.id} has no valid roster in the inputs`);
     const out: Score = new Map();
+    // VS-1: a pick for Monday or Tuesday is made before the week starts (picks open 2 days ahead); the kit refuses a score time
+    // outside the week, so the time is clamped into [week start, the round's day] (as Fantasy does).
+    const weekStart = Math.min(...Object.keys(inputs!.rosters).map(Number));
     for (const p of picks) {
       const n = (p.pick as any)?.number;
       const points = n === undefined ? 0 : V.scorePick(roster, n, { node: result.node, rows: result.rows });
-      out.set(p.wallet, { points, at: points > 0 ? p.at : 0 });
+      out.set(p.wallet, { points, at: points > 0 ? Math.min(round.day, Math.max(weekStart, p.at)) : 0 });
     }
     return out;
   },

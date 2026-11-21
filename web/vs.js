@@ -96,7 +96,7 @@ function start() {
     for (const a of roster.rows) {
       const cb = el("input", { type: "checkbox", id: `p-${d}-${a}` });
       cb.checked = ticked.has(a);
-      cb.addEventListener("change", () => { const s = draft.get(d) || new Set(); if (cb.checked) s.add(a); else s.delete(a); draft.set(d, s); sendBtn(); });
+      cb.addEventListener("change", () => { const s = draft.get(d) || new Set(); if (cb.checked) s.add(a); else s.delete(a); if (s.size === 0) draft.delete(d); else draft.set(d, s); sendBtn(); });   // VS-4: unticking the last producer drops the draft; only the "vs All" button makes an empty one
       list.append(el("label", { class: "vs-prod", for: cb.id }, cb, el("span", { text: nameOf(a) })));
     }
     box.append(el("p", { class: "note", text: "Tick the producers that beat the Knode Games pool node. Leave a producer unticked to say the pool node beats it." }), list,
