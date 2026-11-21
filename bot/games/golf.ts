@@ -329,6 +329,9 @@ export function partsRows(dir: string, game: string, list: any, w: number, final
     if (p.part === "top") continue;   // top repeats the top 100: never counted
     const cols = new Map((p.header.cols as [string, string][]).map(([n, t]) => [n, t]));
     if (cols.get("player") !== "a" || cols.get("pts") !== "i" || !cols.has("ranked")) return { error: `${list.parts}/${p.part} lacks the player, pts and ranked columns` };
+    // Block X's pts10 (tenths of pts; M-205/M-263, Block X within-N): optional, and a whole-number column when there.
+    const p10 = cols.get("pts10");
+    if (p10 !== undefined && p10 !== "i") return { error: `${list.parts}/${p.part} has a pts10 column that isn't whole numbers` };
     const shard = p.part.slice(2);
     for (const x of p.rows) {
       if (!isAddr(x.player)) return { error: `${list.parts}/${p.part} has a row that isn't a wallet` };
@@ -336,11 +339,21 @@ export function partsRows(dir: string, game: string, list: any, w: number, final
       if (seen.has(x.player)) return { error: `${list.parts} lists a wallet twice` };
       if (shardOf(x.player, 16) !== shard) return { error: `${list.parts}/${p.part} holds a wallet that belongs in another shard` };
       seen.add(x.player);
-      rows.push({ a: x.player, pts: x.pts, ranked: x.ranked === 1 || x.ranked === true, ...(Number.isInteger(x.days) ? { days: x.days } : {}) });
+      rows.push({ a: x.player, pts: x.pts, ranked: x.ranked === 1 || x.ranked === true, ...(Number.isInteger(x.days) ? { days: x.days } : {}), ...(p10 !== undefined ? { pts10: x.pts10 } : {}) });
     }
   }
   if (rows.length !== list.players) return { error: `${list.parts} has ${rows.length} players but board.json says ${list.players}` };
   return { rows };
+}
+/** Which field sets Block X's hole (M-263): "pts" when no row has pts10, exactly as before (dark); "pts10" (tenths of pts,
+ *  Block X's within-N unit) when every row has it as a whole number; a failed read when only some do, or one is bad.
+ *  Golf scores by rank, so pts10 = pts x 10 on an old week gives the same strokes; pts10 only splits ties pts can't see. */
+export function blockxScoreKey(rows: any[]): "pts" | "pts10" | { error: string } {
+  const n = rows.filter((r) => r && r.pts10 !== undefined).length;
+  if (n === 0) return "pts";
+  if (n !== rows.length) return { error: "gives pts10 for some players but not all" };
+  if (!rows.every((r) => Number.isSafeInteger(r.pts10) && r.pts10 >= 0 && r.pts10 <= 1e12)) return { error: "has a pts10 that isn't a whole number from 0" };
+  return "pts10";
 }
 /** The rows Golf scores for a board view: v 1, the list's own rows; v 2, its parts (or a failed read). */
 function viewRows(dir: string, game: string, b: any, v: { view: any; last: boolean }, w: number): { rows: any[] } | { error: string } {
@@ -399,7 +412,9 @@ const READERS: Record<string, (src: Source, w: number, c: Ctx) => Promise<Read>>
     if (!v) return movedOn(b, w) ? { ...KEPT } : { state: "live", rows: [], why: "waiting for the Block X results" };
     const got = viewRows(dir, "blockx", b, v, w);
     if ("error" in got) return fail(got.error);
-    return { state: v.last && v.view.final === true ? "final" : "live", rows: ptsRows(got.rows) };
+    const key = blockxScoreKey(Array.isArray(got.rows) ? got.rows : []);
+    if (typeof key !== "string") return fail(key.error);
+    return { state: v.last && v.view.final === true ? "final" : "live", rows: ptsRows(got.rows, key) };
   },
 
   // Producer Bracket (the Bracket chat's note, Sat 14 Nov): read its WEEK FILE, never board.json (the board keeps at most
