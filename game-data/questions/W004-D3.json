@@ -1047,7 +1047,9 @@
             }
           }
         }
-      }
+      },
+      "chainOutcome": 3,
+      "chainDataHash": "0xcbf616d5340844a6898f682202bf62e5f2cd67d8945fd63527842917c702bde6"
     }
   ],
   "daySeal": "d002725219383af30d5ef7e17e2f68bf3b18024cd27e7731ed9100496b19c009"
