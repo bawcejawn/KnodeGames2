@@ -17,12 +17,14 @@ test("every owner-signed command checks the target's code hash before signing", 
 });
 
 // Added with the fix: assertAuditedContract refuses a missing contract, another build, or overrides off.
-import { assertAuditedContract, PICKS_SHA256 } from "../../bot/picks.ts";
+import { assertAuditedContract, PICKS_SHA256, PICKS_V2_SHA256 } from "../../bot/picks.ts";
 test("assertAuditedContract: the expected build with all three overrides, or nothing is signed", async () => {
   const net = { testnet: false, picks: "1P" };
   const meta = (m: any) => async () => m;
-  await assertAuditedContract(net, {} as any, meta({ exists: true, hash: "0x1220" + PICKS_SHA256, call: true, tx: true, upload: true }) as any);
+  // Once picks-data/deployment.json records Picks v2, only v2 is accepted (FC-27); before that, the audited v1.
+  const live = JSON.parse(fs.readFileSync("picks-data/deployment.json", "utf8")).wasmSha256 === PICKS_V2_SHA256 ? PICKS_V2_SHA256 : PICKS_SHA256;
+  await assertAuditedContract(net, {} as any, meta({ exists: true, hash: "0x1220" + live, call: true, tx: true, upload: true }) as any);
   await assert.rejects(assertAuditedContract(net, {} as any, meta({ exists: false }) as any), /no contract on chain/);
   await assert.rejects(assertAuditedContract(net, {} as any, meta({ exists: true, hash: "0x1220" + "00".repeat(32), call: true, tx: true, upload: true }) as any), /not the expected Picks build/);
-  await assert.rejects(assertAuditedContract(net, {} as any, meta({ exists: true, hash: "0x1220" + PICKS_SHA256, call: true, tx: false, upload: true }) as any), /overrides/);
+  await assert.rejects(assertAuditedContract(net, {} as any, meta({ exists: true, hash: "0x1220" + live, call: true, tx: false, upload: true }) as any), /overrides/);
 });

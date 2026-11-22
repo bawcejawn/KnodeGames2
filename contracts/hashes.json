@@ -12,9 +12,8 @@
   },
   "picks": {
     "address": "1LmgqBGctL9F2YkyjTXgieTXwnYHh8Y6Pm",
-    "live": "700c296a1064b904299c156061d6caf8fcabd0b1765968903f29d89d2426c594",
-    "source": "92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d",
-    "note": "The source is Picks v2 (the Combo card type), not uploaded yet. Live v1 is old repo picks/ at c1c01733."
+    "live": "92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d",
+    "source": "92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d"
   },
   "race": {
     "address": "1EN7xU8R9tQXjHvrX79qZvvvGkkKWVnB5K",

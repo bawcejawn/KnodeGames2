@@ -140,7 +140,9 @@ test("BX-21: the Picks ABI used for owner calls is pinned to the audited one", (
   assert.match(fs.readFileSync("bot/picks.ts", "utf8"), /!\[PICKS_ABI_SHA256, PICKS_V2_ABI_SHA256\]\.includes\(sha256hex\(raw\)\)/);
 });
 test("BX-9/BX-20: the contract must check out on BOTH mainnet nodes before the owner signs", async () => {
-  const good = { exists: true, hash: "0x1220" + PICKS_SHA256, call: true, tx: true, upload: true };
+  // Once picks-data/deployment.json records Picks v2, only v2 is accepted on chain (FC-27); before that, the audited v1.
+  const recorded = JSON.parse(fs.readFileSync("picks-data/deployment.json", "utf8")).wasmSha256;
+  const good = { exists: true, hash: "0x1220" + (recorded === PICKS_V2_SHA256 ? PICKS_V2_SHA256 : PICKS_SHA256), call: true, tx: true, upload: true };
   const bad = { ...good, hash: "0x1220" + "11".repeat(32) };
   const A: any = { id: "a" }, B: any = { id: "b" };
   const meta = (byNode: Record<string, any>) => async (node: any) => byNode[node.id];
