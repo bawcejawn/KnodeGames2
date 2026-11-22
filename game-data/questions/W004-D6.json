@@ -394,7 +394,9 @@
             }
           }
         }
-      }
+      },
+      "chainOutcome": 5,
+      "chainDataHash": "0x0e0df24aa1b2b01689eb8c48948db9a0c8659d86e1d85fe198e7d183dfcfb509"
     },
     {
       "id": "W004-D6-3",
@@ -785,7 +787,9 @@
             }
           }
         }
-      }
+      },
+      "chainOutcome": 7,
+      "chainDataHash": "0x0e0df24aa1b2b01689eb8c48948db9a0c8659d86e1d85fe198e7d183dfcfb509"
     }
   ],
   "daySeal": "d2c4cc0e9a1e13a049682fa9c7c660f3a2f790bb4f4eab74bce8057c2b2841b4"
