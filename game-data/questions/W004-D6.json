@@ -361,7 +361,40 @@
           "seal": "959931a4a459d031fc19e9f2b497a0d9484ed0c5583690e154b202e44a732931"
         }
       ],
-      "vhpSeal": "097487fc3d0738c1c6adb87a9b11a21be068dec9f1dbecd1bd04fc5d11b76159"
+      "vhpSeal": "097487fc3d0738c1c6adb87a9b11a21be068dec9f1dbecd1bd04fc5d11b76159",
+      "result": {
+        "void": false,
+        "option": 4,
+        "value": "1,740",
+        "dataHash": "0e0df24aa1b2b01689eb8c48948db9a0c8659d86e1d85fe198e7d183dfcfb509",
+        "resolvedAt": "2026-11-22T09:50:47.440Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41264029,
+          "decidedHeight": 41289423,
+          "readings": [
+            41279805,
+            41280370,
+            41281604,
+            41282789,
+            41283968,
+            41285150,
+            41286282,
+            41287441,
+            41288608,
+            41289260
+          ],
+          "readingsInWindow": 10,
+          "values": {
+            "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": {
+              "release": "218878181505571",
+              "end": "217075113878372",
+              "change": "−0.82%",
+              "height": 41289260
+            }
+          }
+        }
+      }
     },
     {
       "id": "W004-D6-3",
@@ -719,7 +752,40 @@
           "seal": "b822064004c3e174508686370f3811a54931b034c120cc968f22066c11c5a9f1"
         }
       ],
-      "vhpSeal": "777e95f95a8a891a3ecc7f71a81b0ec33d15fc60acb97de150cdc5dfd76e3013"
+      "vhpSeal": "777e95f95a8a891a3ecc7f71a81b0ec33d15fc60acb97de150cdc5dfd76e3013",
+      "result": {
+        "void": false,
+        "option": 6,
+        "value": "763",
+        "dataHash": "0e0df24aa1b2b01689eb8c48948db9a0c8659d86e1d85fe198e7d183dfcfb509",
+        "resolvedAt": "2026-11-22T09:50:47.440Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41264029,
+          "decidedHeight": 41289428,
+          "readings": [
+            41279805,
+            41280370,
+            41281604,
+            41282789,
+            41283968,
+            41285150,
+            41286282,
+            41287441,
+            41288608,
+            41289260
+          ],
+          "readingsInWindow": 10,
+          "values": {
+            "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU": {
+              "release": "88829336211793",
+              "end": "88051621887900",
+              "change": "−0.88%",
+              "height": 41289260
+            }
+          }
+        }
+      }
     }
   ],
   "daySeal": "d2c4cc0e9a1e13a049682fa9c7c660f3a2f790bb4f4eab74bce8057c2b2841b4"
