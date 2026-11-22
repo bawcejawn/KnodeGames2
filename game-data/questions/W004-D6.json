@@ -121,9 +121,17 @@
             "18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m": "70548104529465"
           },
           "seal": "971c4a2dcea981cd0b0c775118c2e0c2df73d0221bd89d0669f7508aee2b63db"
+        },
+        {
+          "height": 41282789,
+          "readAt": "2026-11-22T04:08:28.848Z",
+          "values": {
+            "18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m": "70524772624121"
+          },
+          "seal": "5119ff1e0ded0f1d6b485a9878bdb8e3403ae7b213874da0ada0efc1eaf573c2"
         }
       ],
-      "vhpSeal": "d013ed6956cae02d256b8f81dc10bc2906c440c329e01ef424a03ed3e856919e"
+      "vhpSeal": "89267bd7bbba9bbe39e57e5eb3c7690d50760e895f83b18387bf6bc237dafa14"
     },
     {
       "id": "W004-D6-2",
@@ -257,9 +265,17 @@
             "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": "217607660798473"
           },
           "seal": "4e0ffff8f2e41b7f1159ec8aa59b442d0b39180791e3c534c907ff0e0af93c36"
+        },
+        {
+          "height": 41282789,
+          "readAt": "2026-11-22T04:08:28.848Z",
+          "values": {
+            "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": "217521291838623"
+          },
+          "seal": "c05a98bc32aa089a422eb0b52629ad211d36007b28c308c08e4199fd8bd994bb"
         }
       ],
-      "vhpSeal": "8eb8fa02fd0c9a09474c0da4eb08070b20274e6707b7c62103ab265a54824980"
+      "vhpSeal": "4456494c632b91a1b55ae94d3b415735a1f0fa047a131c44234c1225c9e23b8b"
     },
     {
       "id": "W004-D6-3",
@@ -377,9 +393,17 @@
             "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu": "117997927032125"
           },
           "seal": "1c0ff2bfa211bf2fd4dd9e00ec283268662b110c071dec294387214542ce65b2"
+        },
+        {
+          "height": 41282789,
+          "readAt": "2026-11-22T04:08:28.848Z",
+          "values": {
+            "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu": "117949216573052"
+          },
+          "seal": "83239ca3ea883f7219904d90901424f7c6193d9b487739e9a44b077f5b516549"
         }
       ],
-      "vhpSeal": "358fad550fed08028edb58b61c37f4dc810bfd9af254de835529ced7c2946d47"
+      "vhpSeal": "56368bdcd94ac4abfe72338cd2b13173d3ac68049900d42c55b0a042089ad1d5"
     },
     {
       "id": "W004-D6-4",
@@ -513,9 +537,17 @@
             "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU": "88293130587918"
           },
           "seal": "89e9164b7a56e3a95d6d2ecb51a95dc0658e4dee5b01953bc0097934aa798b92"
+        },
+        {
+          "height": 41282789,
+          "readAt": "2026-11-22T04:08:28.848Z",
+          "values": {
+            "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU": "88256290740021"
+          },
+          "seal": "573032fca7e4f1ae1df36e3f3790a5a2be412a65376481e351117529272a12d3"
         }
       ],
-      "vhpSeal": "73620cbbc9afef9b5698f87f52ae4ee0070a8873e4e436245aa5184e6f19e1ab"
+      "vhpSeal": "086dca44040ff6b8eb31960d0c419c7951724c5eadc52603474fa423128fa78e"
     }
   ],
   "daySeal": "d2c4cc0e9a1e13a049682fa9c7c660f3a2f790bb4f4eab74bce8057c2b2841b4"
