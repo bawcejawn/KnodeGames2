@@ -10,7 +10,7 @@
 /* Top menu (computers and tablets): pill tabs, the current one filled with the brand gradient. */
 .tabs a, .tabs .dd > summary { font-weight: 700; }
 .tabs a:hover, .tabs .dd > summary:hover, .tabs .dd[open] > summary { color: var(--ink); background: color-mix(in srgb, var(--violet) 10%, var(--surface)); }
-.tabs a[aria-current="page"], .tabs .dd.on > summary { color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-2)); box-shadow: 0 6px 16px -8px var(--violet); }
+.tabs a[aria-current="page"], .tabs .dd.on > summary { color: #fff; background: linear-gradient(135deg, #1F5AE6, var(--violet-2)); box-shadow: 0 6px 16px -8px var(--violet); }
 .tabs .dd-menu { border-radius: 20px; border-color: color-mix(in srgb, var(--violet) 22%, var(--line)); box-shadow: 0 24px 48px -20px rgba(31, 90, 230, .45); }
 .tabs .dd-menu a:hover { background: color-mix(in srgb, var(--violet) 10%, var(--surface)); }
 .tabs .dd-menu a[aria-current="page"] { color: var(--violet); background: color-mix(in srgb, var(--violet) 12%, var(--surface)); }
@@ -41,7 +41,7 @@
   .top-row .btn-play-free, .top-row .btn-wallet { padding-left: 11px; padding-right: 11px; font-size: .84rem; }
   .tabbar { background: #14161F; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px -12px rgba(20, 22, 31, .55); }
   .tabbar a, .tabbar button { border-radius: 16px; font-weight: 700; }
-  .tabbar a[aria-current="page"], .tabbar .tb-more.on, .tabbar .tb-more[aria-expanded="true"] { color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-2)); }
+  .tabbar a[aria-current="page"], .tabbar .tb-more.on, .tabbar .tb-more[aria-expanded="true"] { color: #fff; background: linear-gradient(135deg, #1F5AE6, var(--violet-2)); }
   .more-panel { border-radius: 26px 26px 0 0; }
   .more-panel .ms-h { color: var(--violet); font-weight: 800; letter-spacing: .06em; }
   .more-panel a { border-radius: 18px; }
