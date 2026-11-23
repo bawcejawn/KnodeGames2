@@ -770,7 +770,9 @@
     const hm = new Map((card ? card.field : []).map((x) => [x.a, x.h]));
     const total = card ? card.field.concat(card.paddock || []).reduce((s, x) => s + x.vhp, 0) : 0;
     const vhp = new Map((card ? card.field : []).map((x) => [x.a, x.vhp]));
-    const rows = M.track(st || [], card ? (M.ledgerLine(cur, (h) => cardAt(rtype, h)) || 0) : 0, ended);
+    // M-448: hours later than the 6-hour races recorded so far have no card yet; use the card in force now for them, so a
+    // daily or weekly race has a finish line from its first hour (before, no line put the leader at the finish).
+    const rows = M.track(st || [], card ? (M.ledgerLine(cur, (h) => cardAt(rtype, h) || card) || 0) : 0, ended);
     const trk = new Map(rows.map((r) => [r.a, r]));
     const rank = new Map((st || []).map((x, i) => [x.a, i + 1]));
     // Time bar: how much of the race has passed.
