@@ -78,7 +78,7 @@
     const live = wf.holes.filter((h) => h.status !== "skipped");
     const counted = live.length >= 2 ? live.length - 1 : 0;
     const state = wf.final ? "final" : Date.now() >= wf.end ? "results being checked" : "in play";
-    $("card-sub").textContent = `${weekLabel(wf.week)}, from ${day(wf.start)} (UTC) · ${state}${wf.practice ? " · practice (no prizes)" : ""} · ${live.length} holes, par ${G.PAR * counted} after the mulligan`
+    $("card-sub").textContent = `${weekLabel(wf.week)}, from ${day(wf.start)} (UTC) · ${state}${wf.practice ? " · free play (no prizes)" : ""} · ${live.length} holes, par ${G.PAR * counted} after the mulligan`
       + (whose === "leader" ? " · showing the leader's card" : "");
     const byHole = new Map(card ? card.holes.map((x) => [x[0], x]) : []);
     let n = 0;
@@ -153,8 +153,8 @@
         freeWinners: (_part, rows, weekly) => (weekly ? G.freeMedals(rows) : new Map()),
         summary: (r) => `${G.toParText(r.topar)} · ${r.pts} pts`,
         me: (r, place) => `${place ? `You: #${place} at` : "Your score (only you see this):"} ${G.toParText(r.topar)}, ${r.pts} points.`,
-        unranked: "To be on the Staked board, stake in Block Golf this week (at least the vault's minimum, 1 VHP today).",
-        free: { show: 6, prize: "The Free play board pays no VHP prize for now. Players staked in Block Golf share its weekly bucket." },
+        unranked: "Block Golf is free to play: everyone is on one board.",
+        free: { show: 6, prize: "Block Golf pays no prizes." },
       });
     }
     lb.setMe(me());
@@ -217,9 +217,19 @@
 
   if (window.KWallet && window.KWallet.subscribe) window.KWallet.subscribe(drawAll);
   if (window.KNames && typeof window.KNames.onChange === "function") window.KNames.onChange(drawAll);
-  // Stake badge at the top and the full stake panel lower down (D-031), like every game page.
-  if (window.KStake && typeof window.KStake.badge === "function" && $("stake-badge")) window.KStake.badge($("stake-badge"), { game: GAME_ID });
-  if (window.KStake && typeof window.KStake.mount === "function" && $("golf-stake")) window.KStake.mount($("golf-stake"), { game: GAME_ID });
+  // D-586: Block Golf is free to play, so no stake badge and nothing that invites staking. The stake panel is shown only
+  // to a wallet that still has stake in Block Golf, so it can withdraw (game 6 is stopped on chain: the panel then
+  // offers Withdraw only, never Stake or Move).
+  if (window.KStake && typeof window.KStake.mount === "function" && typeof window.KStake.status === "function" && $("golf-stake")) {
+    let mounted = false;
+    const withdrawBox = async () => {
+      const W = window.KStake.wallet && window.KStake.wallet(), who = W && W.address;
+      if (mounted || !who || W.kind === "guest") return;
+      try { const st = await window.KStake.status(GAME_ID, who); if (!mounted && st && st.amount > 0n) { mounted = true; window.KStake.mount($("golf-stake"), { game: GAME_ID }); } } catch { /* chain unreachable: try on the next wallet change */ }
+    };
+    if (window.KWallet && window.KWallet.subscribe) window.KWallet.subscribe(withdrawBox);
+    withdrawBox();
+  }
   setInterval(() => { if (!document.hidden) load(); }, 600000);
   load();
 })();

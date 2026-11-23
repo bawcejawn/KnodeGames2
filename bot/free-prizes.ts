@@ -35,7 +35,7 @@ export const WEEK_MS = 7 * 24 * 3_600_000;
  *  Weeks before the rule week pay game 1's free prize the old way (settle and claim); the switch doesn't reach them. */
 export const GAMES: Record<string, string> = {
   "1": "Daily Questions", "2": "Who Signs Block X", "3": "Survivor", "4": "Fantasy Producers", "6": "Block Golf", "7": "Producer Race",
-  "8": "Combo Card", "9": "Producer Bracket", "13": "Last Node Standing",
+  "8": "Combo Card", "9": "Producer Bracket", "13": "Last Node Standing", "16": "Over Under", "17": "Knode Games VS",
 };
 const MAX_CHANGES = 200;
 const ISO_UTC = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d{3})?Z$/;

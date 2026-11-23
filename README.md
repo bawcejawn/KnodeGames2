@@ -66,7 +66,7 @@ npm run test:hashes
 |---|---|---|
 | Vault | `1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr` | `11043e1fde1d8d7dbac75e9e5e788d058a7116b0dab6149fc09ecdc7b1c4258b` |
 | Knode Swap (desk) | `1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR` | `309506ccfaadd3427e937aa88cd34c9ea2a9e6088e49e51f014d546489dd5f35` |
-| Picks | `1LmgqBGctL9F2YkyjTXgieTXwnYHh8Y6Pm` | `700c296a1064b904299c156061d6caf8fcabd0b1765968903f29d89d2426c594` |
+| Picks | `1LmgqBGctL9F2YkyjTXgieTXwnYHh8Y6Pm` | `92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d` |
 | Race picks | `1EN7xU8R9tQXjHvrX79qZvvvGkkKWVnB5K` | `9993581baf822cd070331008441c5ad974f5c0b134520dfb7422b9efd1873864` |
 | Mana sponsor | `1ByDDSBUzy5zkRceELc54Jh8i41yNRoKt8` | `b84e1add3ffa14a7d1933d5ce5a4ad33caa4bca887a489f87f710b3c121c83a6` |
 

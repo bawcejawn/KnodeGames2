@@ -166,6 +166,8 @@ export const STANDARD = "standard";
 export const STANDARD_ID = /^[a-z][a-z0-9-]{1,23}$/;   // Repo Lens G92-2: the course and the publish job keep ids of at most 24
 
 // ── the Clubhouse: the accumulated record and the feature readers (claude/golf/CLUBHOUSE-BUILD-PLAN-2026-11-15.md) ──
+/** D-586 (owner, Sat 21 Nov): Block Golf is free to play only. Every week from this one is free; no vault file. */
+export const FREE_FROM_WEEK = 5;
 export const CLUB_SOURCE: Source = { id: G.CLUBHOUSE, name: "Clubhouse", reader: "clubhouse", live: true };
 /** clubhouse.json: every wallet's features, each with the vault week it was first seen. Only ever grows. */
 export type Club = { v: 1; updated: string; wallets: Record<string, Record<string, number>>; desk?: number; hist?: Record<string, number>; keys?: string[] };   // desk: the swap desk's swap count at the last read; keys: wallets whose producer key registration was read (D-244, Repo Lens #K-3 K3-1)
@@ -681,8 +683,15 @@ export async function run(o: Opts) {
   const now = o.now ?? Date.now();
   const PREV = o.prev, OUT = o.out || "games-data/golf";
   const STAKED_FROM = Number.isInteger(o.stakedFromWeek) && (o.stakedFromWeek as number) >= 0 ? (o.stakedFromWeek as number) : null;
-  const ruleOf = (w: number) => { const r = G.rule(w, STAKED_FROM); return { ...r, minField: o.minField ?? r.minField }; };
-  const weekPractice = (w: number) => { const j = readJson(PREV, wName(w)); return j && typeof j.practice === "boolean" ? j.practice : G.rule(w, STAKED_FROM).practice; };
+  // D-586: from FREE_FROM_WEEK on, every week is free (the practice rule: everyone who scored, one board, no vault
+  // file), whatever GOLF_STAKED_FROM_WEEK says. It stays published in index.json (the publish job can't change it).
+  const stakedFromFor = (w: number) => (w >= FREE_FROM_WEEK ? null : STAKED_FROM);
+  const ruleOf = (w: number) => { const r = G.rule(w, stakedFromFor(w)); return { ...r, minField: o.minField ?? r.minField }; };
+  const weekPractice = (w: number) => {
+    const j = readJson(PREV, wName(w));
+    if (j && typeof j.practice === "boolean" && (j.final === true || w < FREE_FROM_WEEK)) return j.practice;
+    return G.rule(w, stakedFromFor(w)).practice;
+  };
   const ruleFixed = (practice: boolean) => { const r = G.rule(0, practice ? null : 0); return { ...r, minField: o.minField ?? r.minField }; };
   const sources = (o.sources ?? [...sourcesFromGames(), CLUB_SOURCE]).filter((s) => READERS[s.reader]);
   const KNODE = o.knodeGame === undefined ? MAINNET_KNODE_GAME || null : o.knodeGame;
@@ -854,8 +863,10 @@ export async function run(o: Opts) {
     if (!old && known.has(w)) throw new Error(`week ${w} was recorded before but its file can't be read: stopping`);
     if (old && old.final === true) { weeks.set(w, old); continue; }
     const start = M.weekStart(w), end = M.weekStart(w + 1);
-    // Practice or staked is fixed when the week is first recorded (fix-check N2).
-    const R = old && typeof old.practice === "boolean" ? ruleFixed(old.practice) : ruleOf(w);
+    // Practice or staked is fixed when the week is first recorded (fix-check N2). D-586: a week from FREE_FROM_WEEK
+    // recorded as staked but not final yet is scored again as free (refree): nothing from its staked reading is kept.
+    const refree = !!old && old.practice === false && w >= FREE_FROM_WEEK;
+    const R = old && typeof old.practice === "boolean" && !refree ? ruleFixed(old.practice) : ruleOf(w);
     // The week's holes are fixed once it has been recorded; until then, the live games that joined by this week.
     const ids: string[] = old && old.holes.length ? old.holes.map((h) => h.id) : G.courseFor(w, course, liveIds);
     // A. Each hole's standings and status (before the field is known).
@@ -870,7 +881,7 @@ export async function run(o: Opts) {
       const s = byId.get(id);
       const was = old?.holes.find((h) => h && h.id === id) ?? null;
       const kept = was && Array.isArray(was.rows) && was.rows.length ? was.rows.map(([a, score, scored, ranked]) => ({ a, score, scored: !!scored, ranked: G.weightOf(ranked) })) : null;
-      const wasFinal = !!was && now >= end && was.status === "final" && Array.isArray(was.rows);
+      const wasFinal = !refree && !!was && now >= end && was.status === "final" && Array.isArray(was.rows);
       const keep = () => drafts.push({ id, name: was!.name, status: "final", why: "", rows: [], keptFinal: { ...was!, why: "" } });
       let rd: Read;
       if (!s) { if (wasFinal) { keep(); continue; } rd = { state: "live", rows: [], why: "its game has no reader on this recorder" }; }
@@ -997,7 +1008,7 @@ export async function run(o: Opts) {
     // Two runs an hour apart must agree (WEEK_CYCLE.md §2): the first ready run stamps the fingerprint; a later run
     // with the same fingerprint makes the week final. Any change starts the check again. A held week never goes final.
     const sig = ready ? weekSig(holes, cards, notFreeList) : "";
-    const prevCheck = old && old.check && typeof old.check.sig === "string" && Number.isInteger(old.check.at) ? old.check : null;
+    const prevCheck = !refree && old && old.check && typeof old.check.sig === "string" && Number.isInteger(old.check.at) ? old.check : null;
     const same = !!prevCheck && prevCheck.sig === sig;
     const held = ready && heldWeek(w);
     if (held) problems.push(holdSetting.bad
@@ -1089,17 +1100,18 @@ export function statusLines(idx: any, files: Map<number, any>, now: number): str
   out.push(`Last published: ${plain(idx.updated)}. Course: ${course.map(([g, w]) => `${plain(g)} (from ${label(w as number)})`).join(", ") || "none yet"}.`);
   out.push(idx.stakedFromWeek === null || idx.stakedFromWeek === undefined
     ? "Every week is a PRACTICE week (no prizes): GOLF_STAKED_FROM_WEEK isn't set."
-    : `Staked play from vault week ${idx.stakedFromWeek} (${label(idx.stakedFromWeek)}); earlier weeks are practice.`);
+    : (idx.stakedFromWeek < FREE_FROM_WEEK ? `Staked play from vault week ${idx.stakedFromWeek} (${label(idx.stakedFromWeek)}) to vault week ${FREE_FROM_WEEK - 1}. ` : "")
+      + `Block Golf is free to play from vault week ${FREE_FROM_WEEK} (${label(FREE_FROM_WEEK)}, D-586): one board, no prizes, no vault file. GOLF_STAKED_FROM_WEEK = ${idx.stakedFromWeek} stays as a label: never change or delete it.`);
   for (const [w, f] of [...files].sort((x, y) => x[0] - y[0])) {
     if (!f || typeof f !== "object" || !Array.isArray(f.holes) || !Array.isArray(f.cards) || !Number.isInteger(f.end)) { out.push(`${label(w)} (vault week ${w}): its file couldn't be read.`); continue; }
     const at = f.check && Number.isInteger(f.check.at) ? new Date(f.check.at).toISOString().slice(0, 16) : "?";
     const state = f.final ? "FINAL" : f.check ? `waiting for its second matching run (first one ${at} UTC)` : now >= f.end ? "results being checked (review)" : "in play";
-    out.push(`${label(w)} (vault week ${w}), ${f.practice ? "practice" : "staked"}: ${state}; ${f.cards.length} scorecard(s).`);
+    out.push(`${label(w)} (vault week ${w}), ${f.practice ? (w >= FREE_FROM_WEEK ? "free" : "practice") : "staked"}: ${state}; ${f.cards.length} scorecard(s).`);
     for (const h of f.holes) out.push(`   hole ${plain(h?.id)}: ${plain(h?.status)}${h?.why ? ` (${plain(h.why)})` : ""}; ${Number(h?.field) || 0} in the field`);
   }
   out.push("", "Switches (GitHub → Settings → Secrets and variables → Actions → Variables):",
     "   GOLF_ENABLED = true                turns the hourly recorder on (false or deleted: off)",
-    "   GOLF_STAKED_FROM_WEEK = <week>     the first staked vault week; set it once, after game-apply 6; never change it",
+    "   GOLF_STAKED_FROM_WEEK = 5          a label since D-586 (Block Golf is free): never change or delete it (the publish job refuses)",
     "   GOLF_HOLD_WEEKS = <week>[,<week>]  holds those weeks from going final; delete it (or remove the week) to release");
   return out;
 }

@@ -31,7 +31,7 @@ test("render: every committed kit workflow is exactly what the kit renders (run 
 // this compared games.yml with origin/main, which failed any PR that changes a hand-written job on purpose, such as
 // the Ruler's vhp_ruler.py in #33, whenever origin/main existed; a shallow CI checkout skipped it.)
 test("render: kit games live in kit-games.yml; games.yml holds no kit block and rendering leaves its hand-written lines as they are (D-160)", () => {
-  assert.deepEqual(kitGames(ROOT).flatMap((x: any) => x.games.map((g: any) => `${x.file}:${g.slug}`)), ["games.yml:fantasy", "games.yml:survivor", "games.yml:vs"], "the kit games are exactly the games with a GameModule");
+  assert.deepEqual(kitGames(ROOT).flatMap((x: any) => x.games.map((g: any) => `${x.file}:${g.slug}`)), ["games.yml:fantasy", "games.yml:overunder", "games.yml:survivor", "games.yml:vs"], "the kit games are exactly the games with a GameModule");
   const now = fs.readFileSync(path.join(ROOT, ".github/workflows/games.yml"), "utf8");
   assert.ok(!now.includes(BEGIN) && !now.includes(END), "no kit block in the host");
   const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
@@ -51,10 +51,10 @@ test("render: kit-games.yml runs twice an hour (:27 and :57) and never beside th
   assert.deepEqual(kit.concurrency, host.concurrency, "the same concurrency group as the host");
   assert.equal(kit.concurrency["cancel-in-progress"], false);
   assert.deepEqual(kit.permissions, { contents: "read" });
-  assert.deepEqual(Object.keys(kit.jobs).sort(), ["kit-alerts", "publish-kit", "record-fantasy", "record-survivor", "record-vs"]);
-  for (const j of ["kit-alerts", "publish-kit", "record-fantasy", "record-survivor", "record-vs"]) assert.ok(!(j in host.jobs), `${j} is not in games.yml`);
+  assert.deepEqual(Object.keys(kit.jobs).sort(), ["kit-alerts", "publish-kit", "record-fantasy", "record-overunder", "record-survivor", "record-vs"]);
+  for (const j of ["kit-alerts", "publish-kit", "record-fantasy", "record-overunder", "record-survivor", "record-vs"]) assert.ok(!(j in host.jobs), `${j} is not in games.yml`);
 
-  assert.deepEqual(kit.jobs["publish-kit"].needs, ["record-fantasy", "record-survivor", "record-vs"], "it no longer waits on a job in another file");
+  assert.deepEqual(kit.jobs["publish-kit"].needs, ["record-fantasy", "record-overunder", "record-survivor", "record-vs"], "it no longer waits on a job in another file");
   // The publish check's freshness window (NK-11) still covers the kit's own record job: it now starts after the host ends.
   assert.ok(RECORD_TIMEOUT_MIN <= LEGACY_WAIT_MAX_MIN);
   assert.equal(kitFileName("games.yml"), "kit-games.yml");
