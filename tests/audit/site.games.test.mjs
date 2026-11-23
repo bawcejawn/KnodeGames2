@@ -81,13 +81,13 @@ test("every game card offers Free play; live cards carry a prize/practice label 
   assert.match(read("web/games.html"), /<script src="weeks\.js"><\/script>\s*<script src="games\.js">/);
 });
 
-// Combo chat, 15 Nov: Combo Card is on main as a preview (cards can be built and shared, not sent until Mon 7 Dec).
+// Combo chat, 15 Nov: Combo Card is on main as a preview (cards can be built and shared, not sent until practice play opens).
 test("Combo Card preview: linked from the home tile, the games list and the menus, marked Preview, never live", () => {
   const c = games.find((g) => g.id === "combo");
-  assert.equal(c.status, "preview"); assert.equal(c.href, "combo.html"); assert.equal(c.opens, "Opens Mon 7 Dec");
-  assert.match(c.line, /Preview: build and share cards now; sending opens Mon 7 Dec\.$/);
+  assert.equal(c.status, "preview"); assert.equal(c.href, "combo.html"); assert.equal(c.opens, "Practice from Wed 25 Nov");
+  assert.match(c.line, /Preview: build and share cards now; practice play from Wed 25 Nov, staking from Sun 6 Dec, 7 PM ET\.$/);
   const h = read("web/index.html");
-  assert.match(h, /<a class="also-card gtile" href="combo\.html">[^]*?<b>Combo Card<\/b><p><span class="tile-tag">Preview<\/span>[^<]*Opens Mon 7 Dec\./);
+  assert.match(h, /<a class="also-card gtile" href="combo\.html">[^]*?<b>Combo Card<\/b><p><span class="tile-tag">Preview<\/span>[^<]*Practice from Wed 25 Nov\./);
   assert.doesNotMatch(h, /gtile soon" aria-disabled="true"><span aria-hidden="true">🎟️/);
   const nav = read("tools/site-nav.mjs");
   assert.equal((nav.match(/\["Combo Card · Preview", "combo\.html"/g) || []).length, 2, "Play group and Games menu");
