@@ -80,6 +80,7 @@ function start() {
     render();
   }
 
+  const EMPTY_NOTE = "No producers this week. The producer list appears on Mon 30 Nov. Until then you can only pick the pool node against all, and nothing scores.";
   function dayCard(d) {
     const roster = files.rosters.get(d);
     const box = el("div", { class: "vs-day" }, el("h3", { text: dayLabel(d) }));
@@ -99,7 +100,9 @@ function start() {
       cb.addEventListener("change", () => { const s = draft.get(d) || new Set(); if (cb.checked) s.add(a); else s.delete(a); if (s.size === 0) draft.delete(d); else draft.set(d, s); sendBtn(); });   // VS-4: unticking the last producer drops the draft; only the "vs All" button makes an empty one
       list.append(el("label", { class: "vs-prod", for: cb.id }, cb, el("span", { text: nameOf(a) })));
     }
-    box.append(el("p", { class: "note", text: "Tick the producers that beat the Knode Games pool node. Leave a producer unticked to say the pool node beats it." }), list,
+    box.append(roster.rows.length === 0   // week 5's roster is empty (VS-9): say so where the list would be, not "Tick the producers"
+      ? el("p", { class: "note vs-empty", text: EMPTY_NOTE })
+      : el("p", { class: "note", text: "Tick the producers that beat the Knode Games pool node. Leave a producer unticked to say the pool node beats it." }), list,
       el("button", { type: "button", class: "btn", onclick: () => { draft.set(d, new Set()); render(); } }, "Knode Games vs All (pool node beats everyone)"));
     if (draft.has(d)) box.append(el("p", { class: "vs-ready", text: "Ready to send." }));
     return box;

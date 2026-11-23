@@ -24,3 +24,8 @@ test("the page says picks open 2 days ahead, no changes, names only; no banned w
   assert.doesNotMatch(js + html.replace(/<meta[^>]*>/g, ""), /\b(bet|bets|betting|earn|earns|returns|odds|guaranteed|beta)\b/i);
   assert.doesNotMatch(js.replace(/\/\*[\s\S]*?\*\//g, ""), /fpct|multiplier/i, "the page never reads a line before lock");
 });
+
+test("an empty roster says so in plain words, instead of 'Tick the producers' over an empty list", () => {
+  assert.ok(js.includes('"No producers this week. The producer list appears on Mon 30 Nov. Until then you can only pick the pool node against all, and nothing scores."'));
+  assert.match(js, /roster\.rows\.length === 0[^?]*\?\s*el\("p", \{ class: "note vs-empty", text: EMPTY_NOTE \}\)\s*:\s*el\("p", \{ class: "note", text: "Tick the producers/);
+});
