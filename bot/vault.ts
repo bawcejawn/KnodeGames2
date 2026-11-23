@@ -20,6 +20,7 @@
  * then seals the week. The owner then has 24 hours to correct anything (npm run bot -- game-correct …).
  */
 import fs from "node:fs";
+import { PICKS_OF, weekFileSpec, identicalGroups, identicalNotice } from "./identical-picks.ts";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash, createPublicKey, verify } from "node:crypto";
@@ -375,8 +376,16 @@ function readWeekFile(ctx: VaultCtx, readFile: (spec: string) => FileRead, sourc
 /** The public key results files must be sealed with (deployment.json "resultsSealKey"), or "" (no seal required).
  *  Tests and the rehearsal that pass only `readResults` never need one; game-post by hand from a folder the owner names
  *  doesn't either (the owner decides there). */
-const sealKeyFor = (ctx: VaultCtx, legacy: boolean, only?: { source?: string }) =>
-  legacy || only?.source ? "" : String(ctx.deployment?.resultsSealKey ?? "");
+const sealKeyFor = (ctx: VaultCtx, legacy: boolean, only: { source?: string } | undefined, w: number) =>
+  legacy || only?.source || w < sealFromWeek(ctx.deployment) ? "" : String(ctx.deployment?.resultsSealKey ?? "");
+/** Repo Lens L2-2 (audit AB-058 follow-up): deployment.json "resultsSealFromWeek" = the first vault week whose files
+ *  must be sealed, so weeks published before the key existed don't hold. Unset = every week (as before). Anything but a
+ *  whole number ≥ 0 counts as 0: every week needs a seal (fail closed). */
+export function sealFromWeek(deployment: any): number {
+  const v = deployment?.resultsSealFromWeek;
+  if (v === undefined || v === null) return 0;
+  return Number.isSafeInteger(v) && v >= 0 ? v : 0;
+}
 
 /** Without RPC_CHECK on mainnet the hourly bot neither posts nor finalizes (audit AB-065, earlier QA5 M-4). */
 const ONE_NODE = "RPC_CHECK is off, missing, or the same host as RPC, so the bot has only one node. On mainnet it neither posts nor finalizes other games' results with one node (audit AB-065): one lying node could cut honest stakers out. Set RPC_CHECK to a second, independent node (GitHub → Settings → Secrets and variables → Actions → Variables), or post by hand: npm run bot -- game-post <game> <week> (dry run first).";
@@ -413,7 +422,6 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
   // them (and only them). The hourly bot and game-post pass neither, so they read everything from git (readSpec).
   const legacy = !!ctx.readResults && !ctx.readFile;
   const readFile = ctx.readFile ?? (legacy ? (): FileRead => ({ state: "missing" }) : readSpec);
-  const sealKey = sealKeyFor(ctx, legacy, only);
   const memo = only ? undefined : ctx.memo;
   if (memo) pruneMemo(memo, k.week);
   // An alert once per key with a memo (the hourly bot); every time without one.
@@ -431,6 +439,7 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
     const id = num(g.id);
     if (only && only.game !== id) continue;
     const w = only ? only.week : k.week - 1;
+    const sealKey = sealKeyFor(ctx, legacy, only, w);
     if (!vaultHandles(id, k.c, w)) { if (only) throw new Error(`Week ${w} of the question game is paid by the old rules (settle and claim), not from a results file.`); continue; }
     const name = g.name ?? `game ${id}`;
     if (w < 0) { if (only) throw new Error(`${name} has no results for week ${w}.`); continue; }
@@ -457,7 +466,20 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
       if (sf.why) { alert(`${id}:${w}:sealed-nofile`, `${name} week ${w} is SEALED on chain, but its results file can't be used (${sf.why}), so nobody can check who it will pay. The bot won't finalize it. Check the rows on chain (npm run bot -- status) and correct them (game-correct) or void the week (game-void) before ${ends}.`); continue; }
       const v = await chainVsFile(gw, sf.r, k.minStakeFor(w), g.staked || big(gw.bucket) > 0n, true, (a) => readPlayer(ctx, id, w, a));
       if (v.diffs.length) alert(`${id}:${w}:sealed-diff:${hashOf(v.diffs).slice(0, 12)}`, `${name} week ${w} is SEALED on chain with results that differ from its published file: ${v.diffs.join("; ")}. The bot won't finalize it. If you did not do this, the operator or owner key may be compromised: correct it (npm run bot -- game-correct ${id} ${w} <wallet> <points> --send) or void it (game-void) before ${ends}.`);
-      else log(ctx, `  ${name} week ${w}: sealed; the chain matches the results file`);
+      else {
+        log(ctx, `  ${name} week ${w}: sealed; the chain matches the results file`);
+        // Audit AB-061 (owner's option A): a notice, once per game-week, when staked wallets with points made exactly
+        // the same picks. Nothing is held. Only games whose week file lists every wallet's picks (identical-picks.ts).
+        const picksOf = PICKS_OF[id];
+        if (picksOf && !legacy && sf.r) {
+          const wf = readFile(weekFileSpec(source, w));
+          if (wf.state === "ok") {
+            const scorers = (sf.r.rows ?? []).filter((x: any) => num(x?.points) > 0).map((x: any) => String(x.player));
+            const groups = identicalGroups(picksOf(wf.data), scorers);
+            if (groups.length) alert(`${id}:${w}:identical:${hashOf(groups).slice(0, 12)}`, identicalNotice(name, w, groups));
+          }
+        }
+      }
       continue;
     }
     if (k.time >= due) { if (only) throw new Error(`Week ${w} of ${name} is past its results deadline (${utc(due)}).`); continue; }
@@ -621,6 +643,30 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
         r.first = []; r.second = [];
       }
     }
+    // Repo Lens L2-4 (audit AB-058 follow-up): a free-prize winner must also be on the game's board, in its Free play
+    // list (a row marked ranked: false) with points: the board is published and sealed with the file, so a winner the
+    // board doesn't show isn't posted. A board that can't be read or isn't sealed holds the winners and the seal, as
+    // unreadable switches do (FP-2); under 6 h to the deadline the week seals without them. Boards that don't mark
+    // Staked / Free rows can't tell the two apart: the check is skipped, and the owner is told once per game-week
+    // (J17-3). A game with board "none" (Survivor) has no board to check.
+    let freeOnBoard: Set<string> | null = null;
+    if (prizeWeek && !legacy && cfg[String(id)]?.board !== "none" && ((r.first ?? []).length || (r.second ?? []).length)) {
+      const bspec = boardSpec(source, cfg[String(id)]?.board);
+      const b = readFile(bspec);
+      const lw = b.state === "ok" ? b.data?.lastWeek : null;
+      const bad = b.state !== "ok" ? `its board ${bspec} is ${b.state === "missing" ? "missing" : `unreadable (${b.error})`}`
+        : sealKey && sealProblem(readFile, bspec, b, sealKey) ? `its board ${bspec} isn't sealed by the publish job (${sealProblem(readFile, bspec, b, sealKey)})`
+        : !lw || num(lw.week) !== w || !Array.isArray(lw.rows) ? `its board ${bspec} has no lastWeek for week ${w}` : "";
+      if (bad) {
+        const late = due - k.time < 6 * HOUR_MS;
+        ctx.problems.push(`${name} week ${w}: the free-prize winners can't be checked against the board (${bad}). ${late ? "Under 6 h to the deadline, so sealed WITHOUT free winners (the prize goes back to the pool)" : `Free winners and the seal held until it reads (due ${utc(due)})`}.`);
+        r.first = []; r.second = [];
+        holdSeal = holdSeal || !late;
+      } else if (lw.rows.some((x: any) => typeof x?.ranked === "boolean")) {
+        freeOnBoard = new Set<string>();
+        for (const row of lw.rows) if (row && row.ranked === false && ADDRESS.test(String(row.a)) && (boardScore(row) ?? 1) > 0) freeOnBoard.add(row.a);
+      } else alert(`${id}:${w}:board-unmarked`, `${name} week ${w}: its board ${bspec} doesn't mark Staked / Free rows (ranked), so the free-prize winners can't be checked against it (Repo Lens L2-4, J17-3). They are posted as before; the game's recorder should mark its rows.`);
+    }
     if (prizeWeek) {
       for (const [place, list] of [[1, r.first ?? []], [2, r.second ?? []]] as Array<[number, string[]]>) {
         const fresh: string[] = [];
@@ -630,6 +676,7 @@ export async function vaultResultsPass(ctx: VaultCtx, send: Send, only?: { game:
           if (num(p.entry?.prize_place) > 0 || num(p.entry?.points) > 0) { ctx.problems.push(`${name} week ${w}: ${a} already has another result on chain; not posted as a prize winner.`); continue; }
           const peak = p.entry ? big(p.entry.peak_stake) : big(p.active_stake);
           if (peak >= min) { ctx.problems.push(`${name} week ${w}: ${a} is in the results file as a prize winner but was staked in the game that week, so it can't win the free prize. Check the game's recorder.`); continue; }
+          if (freeOnBoard && !freeOnBoard.has(a)) { ctx.problems.push(`${name} week ${w}: ${a} is in the results file as a prize winner but isn't on the board's Free play list with points, so it isn't posted. Check the game's recorder.`); continue; }
           fresh.push(a);
         }
         const already = place === 1 ? num(gw.first_n) : num(gw.second_n);
@@ -760,7 +807,6 @@ export async function vaultFinalizePass(ctx: VaultCtx, send: Send) {
   const cfg = ctx.deployment?.vaultGames ?? {};
   const legacy = !!ctx.readResults && !ctx.readFile;
   const readFile = ctx.readFile ?? (legacy ? (): FileRead => ({ state: "missing" }) : readSpec);
-  const sealKey = sealKeyFor(ctx, legacy);
   /** Audit AB-060: a sealed week is finalized only if the chain pays what its results file says (on both nodes).
    *  A week the owner corrected (last_change_time) is the owner's call: the hourly alert already reported it. */
   const verified = async (g: any, w: number, gw: any): Promise<boolean> => {
@@ -769,7 +815,7 @@ export async function vaultFinalizePass(ctx: VaultCtx, send: Send) {
     const stop = (kind: string, why: string) => { alert(`${id}:${w}:final-${kind}`, `${name} week ${w}: NOT finalized: ${why}. Correct it (npm run bot -- game-correct ${id} ${w} <wallet> <points> --send) or void it (game-void) while the window is open; if the chain is right, finalize it by hand: npm run bot -- game-finalize ${id} ${w}.`); return false; };
     const source = cfg[String(id)]?.results;
     if (!source) return stop("nosource", `deployment.json has no results source for the game (vaultGames.${id}.results), so the sealed rows can't be checked`);
-    const f = readWeekFile(ctx, readFile, source, id, w, sealKey);
+    const f = readWeekFile(ctx, readFile, source, id, w, sealKeyFor(ctx, legacy, undefined, w));
     if (f.why) return stop("nofile", `its results file can't be used (${f.why}), so the sealed rows can't be checked`);
     try {
       const v = await chainVsFile(gw, f.r, k.minStakeFor(w), g.staked || big(gw.bucket) > 0n, true, (a) => readPlayer(ctx, id, w, a));

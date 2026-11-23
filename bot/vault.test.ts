@@ -213,7 +213,7 @@ test("fix-check VN-3: a game restarted after a gap still gets its last earned we
 // ═══════════════ the checks before paying (I-034, I-051, I-052, I-064) ═══════════════
 import os from "node:os";
 import path from "node:path";
-import { orderBreak, boardSpec, boardScore, readSpec, hashOf, STABLE_MS, type VaultMemo, type FileRead } from "./vault.ts";
+import { orderBreak, boardSpec, boardScore, readSpec, hashOf, sealFromWeek, STABLE_MS, type VaultMemo, type FileRead } from "./vault.ts";
 
 /** Fantasy (game 2, staked: B 20 VHP, C 5 VHP) and Block X (game 3, free prize) with week 1 closed and funded. */
 async function weekOneClosed() {
@@ -245,7 +245,9 @@ function fctx(sim: SimChain, files: Record<string, any>, memo?: VaultMemo): Vaul
   return { chain: sim, operator, dryRun: false, problems: [], quiet: true, readFile, memo, readPrizeSwitches: () => null, check: sim,
     deployment: { vaultGames: { "2": { results: "mem:fantasy/vault" }, "3": { results: "mem:blockx/vault" } } } };
 }
-const allFiles = () => ({ "mem:fantasy/vault/W1.json": fantasyW1(), "mem:fantasy/board.json": fantasyBoard(), "mem:blockx/vault/W1.json": blockxW1() });
+// Repo Lens L2-4: Block X publishes its board too; its free-prize winners D and E are on its Free play list.
+const blockxBoard = (rows?: any[]) => ({ v: 1, lastWeek: { week: 1, rows: rows ?? [{ a: addr(D), pts: 40, place: 1, ranked: false }, { a: addr(E), pts: 20, place: 2, ranked: false }] } });
+const allFiles = () => ({ "mem:fantasy/vault/W1.json": fantasyW1(), "mem:fantasy/board.json": fantasyBoard(), "mem:blockx/vault/W1.json": blockxW1(), "mem:blockx/board.json": blockxBoard() });
 const fantasySends = ["Fantasy week 1: points for 2 player(s)", "Fantasy week 1: seal the results (the owner can correct them for 24 h)"];
 
 test("checks: a results file is posted only once it is unchanged on a later run (hourly bot memo)", { skip: !fs.existsSync(NEW) && `${NEW} missing` }, async () => {
@@ -906,4 +908,93 @@ test("AB-058: with a seal key set, an unsealed results file holds the week, and 
   await vaultFinalizePass(v2, sendAs(sim, operator, fin));
   assert.ok(!fin.some((x) => x.startsWith("Fantasy")));
   assert.match(v2.problems.join(" | "), /Fantasy week 1: NOT finalized: its results file can't be used \(the results file .* isn't sealed/);
+});
+
+// ═══════════════ Repo Lens L2-2 / L2-4 (audit AB-058 follow-ups) ═══════════════
+test("L2-2: sealFromWeek reads deployment.json resultsSealFromWeek; anything but a whole number ≥ 0 means every week", () => {
+  assert.equal(sealFromWeek(undefined), 0);
+  assert.equal(sealFromWeek({}), 0);
+  assert.equal(sealFromWeek({ resultsSealFromWeek: 5 }), 5);
+  assert.equal(sealFromWeek({ resultsSealFromWeek: 0 }), 0);
+  for (const bad of ["5", -1, 1.5, NaN, null, true, {}]) assert.equal(sealFromWeek({ resultsSealFromWeek: bad }), 0, String(bad));
+});
+
+test("L2-2: with resultsSealFromWeek after the week, its unsealed files post as before; from that week they hold", { skip: !fs.existsSync(NEW) && `${NEW} missing` }, async () => {
+  const { generateKeyPairSync } = await import("node:crypto");
+  const pub = generateKeyPairSync("ed25519").publicKey.export({ type: "spki", format: "der" }).toString("base64");
+  const { sim } = await weekOneClosed();
+  const held = fctx(sim, allFiles()), s1: string[] = [];
+  held.deployment.resultsSealKey = pub; held.deployment.resultsSealFromWeek = 1;   // week 1 itself must be sealed
+  await vaultResultsPass(held, sendAs(sim, operator, s1));
+  assert.deepEqual(s1.filter((x) => x.startsWith("Fantasy")), []);
+  assert.match(held.problems.join(" | "), /Fantasy week 1: held, nothing posted: the results file .* isn't sealed by the publish job/);
+  const v = fctx(sim, allFiles()), s: string[] = [];
+  v.deployment.resultsSealKey = pub; v.deployment.resultsSealFromWeek = 2;          // seals start with week 2
+  await vaultResultsPass(v, sendAs(sim, operator, s));
+  assert.ok(s.includes(fantasySends[1]), "week 1 posted and sealed without seal files");
+  assert.doesNotMatch(v.problems.join(" | "), /isn't sealed/);
+});
+
+test("L2-4: a free-prize winner who isn't on the board's Free play list with points is not posted", { skip: !fs.existsSync(NEW) && `${NEW} missing` }, async () => {
+  for (const [label, rows] of [
+    ["not on the board", [{ a: addr(D), pts: 40, place: 1, ranked: false }]],
+    ["on the Staked list", [{ a: addr(D), pts: 40, place: 1, ranked: false }, { a: addr(E), pts: 20, place: 1, ranked: true }]],
+    ["no points", [{ a: addr(D), pts: 40, place: 1, ranked: false }, { a: addr(E), pts: 0, place: 2, ranked: false }]],
+  ] as Array<[string, any[]]>) {
+    const { sim } = await weekOneClosed();
+    const files: any = { ...allFiles(), "mem:blockx/board.json": blockxBoard(rows) };
+    const v = fctx(sim, files), s: string[] = [];
+    await vaultResultsPass(v, sendAs(sim, operator, s), { game: 3, week: 1 });
+    assert.ok(s.includes(`Block X week 1: prize place 1 → ${addr(D)}`), `${label}: D still posted`);
+    assert.ok(!s.some((x) => x.includes("prize place 2")), `${label}: E not posted`);
+    assert.match(v.problems.join(" | "), new RegExp(`${addr(E)} is in the results file as a prize winner but isn't on the board's Free play list`), label);
+  }
+});
+
+test("L2-4: a missing or unreadable board holds the free winners and the seal; a board without Staked/Free marks isn't checked", { skip: !fs.existsSync(NEW) && `${NEW} missing` }, async () => {
+  for (const board of [undefined, "ERR"]) {
+    const { sim } = await weekOneClosed();
+    const files: any = allFiles();
+    if (board === undefined) delete files["mem:blockx/board.json"]; else files["mem:blockx/board.json"] = board;
+    const v = fctx(sim, files), s: string[] = [];
+    await vaultResultsPass(v, sendAs(sim, operator, s), { game: 3, week: 1 });
+    assert.deepEqual(s.filter((x) => x.startsWith("Block X")), [], `${board ?? "missing"}: nothing posted or sealed`);
+    assert.match(v.problems.join(" | "), /Block X week 1: the free-prize winners can't be checked against the board .*held until it reads/);
+  }
+  const { sim } = await weekOneClosed();
+  const files: any = { ...allFiles(), "mem:blockx/board.json": blockxBoard([{ a: addr(D), pts: 40, place: 1 }]) };   // no `ranked`
+  const v = fctx(sim, files), s: string[] = [];
+  await vaultResultsPass(v, sendAs(sim, operator, s), { game: 3, week: 1 });
+  assert.ok(s.includes(`Block X week 1: prize place 2 → ${addr(E)}`), "unmarked board: not checked, winners posted as before");
+  assert.match(v.problems.join(" | "), /Block X week 1: its board mem:blockx\/board\.json doesn't mark Staked \/ Free rows .*J17-3/, "J17-3: the owner is told");
+});
+
+// ═══════════════ Audit AB-061: a sealed week's identical picks are reported once, nothing held ═══════════════
+test("AB-061: once a week is sealed and matches its file, identical picks among its scorers are reported once; nothing changes", { skip: !fs.existsSync(NEW) && `${NEW} missing` }, async () => {
+  const { PICKS_OF } = await import("./identical-picks.ts");
+  PICKS_OF[2] = (wf: any) => new Map((wf?.picks?.rows ?? []).map((r: any) => [r[0], String(r[1])]));   // Fantasy as a covered game, for this test
+  try {
+    const { sim } = await weekOneClosed();
+    const files: any = { ...allFiles(), "mem:fantasy/W001.json": { picks: { rows: [[addr(B), 5], [addr(C), 5]] } } };
+    await vaultResultsPass(fctx(sim, files), sendAs(sim, operator, []), { game: 2, week: 1 });   // posts and seals
+    const memo: VaultMemo = {};
+    const v = fctx(sim, files, memo), s: string[] = [];
+    await vaultResultsPass(v, sendAs(sim, operator, s));
+    assert.deepEqual(s.filter((x) => x.startsWith("Fantasy")), [], "nothing sent");
+    assert.match(v.problems.join(" | "), new RegExp(`Fantasy week 1: some winning wallets may be playing as one: 1 group\\(s\\) made exactly the same picks: 2 wallets \\(${[addr(B), addr(C)].sort().join(", ")}\\)`));
+    const v2 = fctx(sim, files, memo);
+    await vaultResultsPass(v2, sendAs(sim, operator, []));
+    assert.doesNotMatch(v2.problems.join(" | "), /playing as one/, "once per game-week");
+    const v3 = fctx(sim, { ...files, "mem:fantasy/W001.json": { picks: { rows: [[addr(B), 5], [addr(C), 6]] } } });
+    await vaultResultsPass(v3, sendAs(sim, operator, []));
+    assert.doesNotMatch(v3.problems.join(" | "), /playing as one/, "different picks: no notice");
+  } finally { delete PICKS_OF[2]; }
+});
+
+// Repo Lens #J-17b J17b-2 (Info): the unmarked-board notice is remembered per game AND week (the memo key), so it comes
+// once per game-week and again the next week. (Its text is tested in the L2-4 unmarked-board test above.)
+test("J17b-2: the unmarked-board notice's memo key carries the game and the week", () => {
+  const src = fs.readFileSync(new URL("./vault.ts", import.meta.url), "utf8");
+  const keys = src.match(/alert\(`[^`]*board-unmarked`/g) ?? [];
+  assert.deepEqual(keys, ["alert(`${id}:${w}:board-unmarked`"]);
 });

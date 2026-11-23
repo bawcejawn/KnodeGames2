@@ -243,6 +243,20 @@ export function decidedHeight(q: QuestionInput, win: Blk[]): number {
   return q.windowEnd;
 }
 
+/** The option the first `upto` blocks of the window give, as scoreQuestion counts it (audit AB-059), for the kinds
+ *  decidedHeight can call decided statistically: counts, differences and the empty-block share (over the whole
+ *  window's width, as the end result is). undefined for the others (they are decided only when certain). */
+export function optionAt(q: QuestionInput, win: Blk[], upto: number): number | undefined {
+  const kind = KINDS[q.template], part = win.slice(0, Math.max(0, upto));
+  const countOf = (who: string) => part.reduce((n, x) => n + (x.signer === who ? 1 : 0), 0);
+  if (kind === "single") return optionFor(countOf(q.subjects[0]), q.thresholds);
+  if (kind === "tail") return optionFor((q.group ?? []).reduce((s, who) => s + countOf(who), 0), q.thresholds);
+  if (kind === "h2h") return optionFor(countOf(q.subjects[0]) - countOf(q.subjects[1]), q.thresholds);
+  if (kind === "combo") return (countOf(q.subjects[0]) - countOf(q.subjects[1]) > q.thresholds[0] ? 2 : 0) + (countOf(q.subjects[2]) - countOf(q.subjects[3]) > q.thresholds[1] ? 1 : 0);
+  if (q.template === "M6") return optionFor(Math.round((1000 * part.filter((x) => x.ntx === 0).length) / win.length), q.thresholds);
+  return undefined;
+}
+
 export type AnswerResult = {
   void: boolean;
   option?: number;
@@ -332,25 +346,7 @@ export function scoreQuestion(q: QuestionInput, blocks: Blk[], opts: { vhpReadin
   const countOf = (who: string) => win.reduce((n, x) => n + (x.signer === who ? 1 : 0), 0);
   const alpha = q.model?.voidAlpha ?? VOID_ALPHA_V5;
   const minVoid = q.model?.minVoidBlocks ?? MIN_VOID_BLOCKS_V5;
-  const offline: string[] = [];
-  // Questions released with the VHP-swing rule: a silence after the answer was decided no longer voids (the outcome is
-  // public by then). Older questions keep looking at every block of the window.
-  const vhpRule = !!q.model?.vhp && q.model.voidVhpSwing !== undefined;
-  const decided = vhpRule ? decidedHeight(q, win) : q.windowEnd;
-  const width = win.length, upTo = decided - q.windowStart + 1;
-  for (const who of q.subjects ?? []) {
-    const rate = q.model?.rates?.[who];
-    if (typeof rate !== "number" || !(rate > 0 && rate < 1)) {
-      return { ok: false, pending: false, reason: `no release-time rate for ${who}, so an offline check would be a guess` };
-    }
-    // Gaps are measured only inside the window. The block before windowStart is not treated as part of the absence.
-    let last = -1, gap = 0;
-    for (let i = 0; i < upTo; i++) if (win[i].signer === who) { gap = Math.max(gap, i - last - 1); last = i; }
-    gap = Math.max(gap, upTo - 1 - last);
-    const limit = Math.max(minVoid, Math.log(alpha / width) / Math.log(1 - rate));
-    if (gap > limit) offline.push(who);
-  }
-
+  const width = win.length;
   let value = 0, option = 0, text = "";
   if (kind === "h2h") {
     if (q.subjects.length < 2) return { ok: false, pending: false, reason: "a head-to-head question needs two producers" };
@@ -384,6 +380,33 @@ export function scoreQuestion(q: QuestionInput, blocks: Blk[], opts: { vhpReadin
   if (!Number.isInteger(option) || option < 0 || (q.options && option >= q.options.length)) {
     return { ok: false, pending: false, reason: `option ${option} is not one of the published choices` };
   }
+  const offline: string[] = [];
+  // Questions released with the VHP-swing rule: a silence after the answer was decided no longer voids (the outcome is
+  // public by then). Older questions keep looking at every block of the window.
+  const vhpRule = !!q.model?.vhp && q.model.voidVhpSwing !== undefined;
+  let decided = vhpRule ? decidedHeight(q, win) : q.windowEnd;
+  // Audit AB-059: "decided" before the last block is a statistical bound from each producer's blocks so far. A producer
+  // that boosts its VHP after that block can still change the answer, and readings and silences after it don't count.
+  // So if the answer at the end differs from the answer at the "decided" block, it wasn't decided: the whole window
+  // counts (every VHP reading in it, and every block for the offline rule).
+  if (decided < q.windowEnd) {
+    const early = optionAt(q, win, decided - q.windowStart + 1);
+    if (early !== undefined && early !== option) decided = q.windowEnd;
+  }
+  const upTo = decided - q.windowStart + 1;
+  for (const who of q.subjects ?? []) {
+    const rate = q.model?.rates?.[who];
+    if (typeof rate !== "number" || !(rate > 0 && rate < 1)) {
+      return { ok: false, pending: false, reason: `no release-time rate for ${who}, so an offline check would be a guess` };
+    }
+    // Gaps are measured only inside the window. The block before windowStart is not treated as part of the absence.
+    let last = -1, gap = 0;
+    for (let i = 0; i < upTo; i++) if (win[i].signer === who) { gap = Math.max(gap, i - last - 1); last = i; }
+    gap = Math.max(gap, upTo - 1 - last);
+    const limit = Math.max(minVoid, Math.log(alpha / width) / Math.log(1 - rate));
+    if (gap > limit) offline.push(who);
+  }
+
   if (!text) text = valueText(q.unit, value);
   const resolvedAt = new Date(win[win.length - 1].ts).toISOString();
   // Questions released with a VHP snapshot: void when a producer it is about (or the network) moved its VHP too much.

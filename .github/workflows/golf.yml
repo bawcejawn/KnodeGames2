@@ -469,6 +469,13 @@ jobs:
               done < <(find "$IN" -type f -name '*.json' -print0 | sort -z)
               rm -f "$RUNNER_TEMP/seal.pem" "$RUNNER_TEMP/seal.msg" "$RUNNER_TEMP/seal.json"
             else
+              # Repo Lens I-5: once game-data/deployment.json (this run's commit) has resultsSealKey, a run without the secret
+              # publishes nothing rather than unsealed files. If that file can't be read, the job warns and goes on as before.
+              dep="${SEAL_DEPLOYMENT_URL:-}"
+              [ -n "$dep" ] || [ -z "${GITHUB_SHA:-}" ] || dep="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/game-data/deployment.json"
+              if [ -n "$dep" ] && curl -fsS --max-time 20 "$dep" 2>/dev/null | grep -Eq '"resultsSealKey"[[:space:]]*:[[:space:]]*"[^"]'; then
+                echo "::error::deployment.json has resultsSealKey, but the RESULTS_SEAL_KEY secret is not set, so nothing is published unsealed. Add the secret (docs/ops/RESULTS-SEAL.md)."; exit 1
+              fi
               echo "::warning::RESULTS_SEAL_KEY is not set: results files and boards go out unsealed (the vault bot holds unsealed weeks once deployment.json has resultsSealKey)."
             fi
             # END results-seal
