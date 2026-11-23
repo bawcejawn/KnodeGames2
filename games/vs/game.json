@@ -22,6 +22,7 @@
   "rowCap": 0,
   "entry": { "minRounds": 1, "minPoints": 1 },
   "maxRoundPoints": 64,
+  "liveWeek": true,
   "inputsFile": true,
   "inputsLeadHours": 48,
   "vhpData": true

@@ -21,6 +21,7 @@
   "rowCap": 0,
   "entry": { "minRounds": 1, "minPoints": 1 },
   "maxRoundPoints": 1,
+  "liveWeek": true,
   "vhpData": true,
   "cardPerRound": false,
   "rolling": { "roundMin": 30, "gameMin": 720, "leadMin": 5, "scheduleFromMin": 213, "scheduleToMin": 183, "cancelAfterMin": 135 }
