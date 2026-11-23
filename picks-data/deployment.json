@@ -5,5 +5,6 @@
   "wasmSha256": "92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d",
   "uploadTx": "0x122053715ccbd181042367b7635b1f38ffb587bbbbb63e7cd351f380702149c5af9c",
   "uploadedAt": "2026-11-22T23:30:00Z",
-  "cards": true
+  "cards": true,
+  "nextOwner": "1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd"
 }
