@@ -807,7 +807,8 @@
       if (rk && before && before.has(a) && before.get(a) !== rk) { const d = before.get(a) - rk; pill = el("span", { class: `rt-pill ${d > 0 ? "up" : d < 0 ? "down" : ""}`, text: d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : "–", title: d === 0 ? "Same place" : `${d > 0 ? "Gained" : "Lost"} ${Math.abs(d)} place${Math.abs(d) === 1 ? "" : "s"}` }); }
       const cells = upc.map((u) => {
         const k = `${rtype}:${u.index}`, mine = rtPicks.get(k), draft = rtDrafts.get(k), chosen = (draft || mine) === a;
-        const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` }, chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : "Pick");
+        const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
+          el("span", { text: chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
         if (!who || !raceContract || sending) b.disabled = true;
         b.addEventListener("click", () => {
           if (batchOn()) { if (rtDrafts.get(k) === a) rtDrafts.delete(k); else rtDrafts.set(k, a); rtRender(true); return; }

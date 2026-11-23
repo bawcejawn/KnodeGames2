@@ -113,7 +113,7 @@ function start() {
         "aria-label": `${txt} ${lineText(e.line)} for ${nameOf(e.producer)}`, disabled: !open(s, now) || !!mine ? "" : null, onclick: () => choose(s, c) }, txt);
       return el("article", { class: "ou-g" + (want ? " on" : "") }, head,
         el("p", { class: "ou-g-who" }, el("b", { text: nameOf(e.producer) }), el("span", { class: "ou-form", text: ` · ${label}` })),
-        el("p", { class: "ou-g-line" }, el("span", { text: "Line: " }), el("b", { text: `${lineText(e.line)} blocks` }), el("span", { text: " in its next 14,400 blocks" })),
+        el("p", { class: "ou-g-line" }, el("span", { text: "Line: " }), el("b", { text: `${lineText(e.line)} blocks` }), el("span", { text: " in its next 14,400 blocks (about 12 hours)" })),
         el("div", { class: "ou-btns" }, btn(F.OVER, "Over", "ou-o"), btn(F.UNDER, "Under", "ou-u")),
         el("p", { class: "ou-small", text: mine ? `Your pick: ${mine === "1" ? "Over" : "Under"}. No changes.` : unread.has(s) ? "Couldn't read your pick for this game. Nothing is sent for it until it reads." : "" }));
     }));
