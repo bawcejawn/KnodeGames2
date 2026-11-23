@@ -3,7 +3,7 @@
   "orphans": [],
   "lastCompound": 41327041,
   "warnings": [],
-  "lastProduced": 41329607,
+  "lastProduced": 41331452,
   "producedByDay": {
     "1427": 52,
     "1428": 42,
@@ -13,16 +13,16 @@
     "1432": 59,
     "1433": 46,
     "1434": 55,
-    "1435": 4
+    "1435": 7
   },
-  "producerScannedTo": 41330376,
+  "producerScannedTo": 41331619,
   "settings": "{\"min_stake\":\"100000000\",\"min_stake_next\":\"0\",\"min_stake_next_week\":\"0\",\"max_sponsor_rc\":\"0\",\"min_sponsor_rc\":\"0\",\"paused\":false}",
-  "sealedAt": 41330368,
+  "sealedAt": 41331563,
   "desk": {
     "settings": "{\"fee_bps\":300,\"min_swap\":\"100000000\",\"max_swap\":\"0\",\"paused\":false,\"timelock\":\"172800000\"}",
-    "koin": "500671115276",
+    "koin": "501096547443",
     "koinOut": "291097000000",
-    "at": 1795468137240
+    "at": 1795471863880
   },
   "deskProducerKey": "AzCYCDLDa49PPVHKk60xQbOErS6XY1TcEA8bkSo8Sk6E",
   "notified": [
@@ -37,8 +37,8 @@
       "last": 41330429
     },
     "0f9c74801844e61a0d252c7e2e0e93ef398c9f03aa78522a727ea65db31ebb5e": {
-      "n": 8,
-      "last": 41330429
+      "n": 9,
+      "last": 41331623
     },
     "3769e8886b32d73bed44b0cf05793b4764ef9b67ed1909cef0ef98b879a7c34a": {
       "n": 8,
@@ -74,7 +74,7 @@
     "2026-11-20": "872571128",
     "2026-11-21": "747653904",
     "2026-11-22": "316291684",
-    "2026-11-23": "808430522"
+    "2026-11-23": "931416415"
   },
   "games": "[[1,true,true,true,0,0,0],[2,true,true,true,1,3,0],[6,false,true,true,1,5,5],[7,true,true,true,1,3,0],[9,true,true,true,1,5,0]]",
   "vault": {
@@ -94,9 +94,6 @@
     }
   },
   "ownResolves": [
-    1794592505127,
-    1794596244401,
-    1794610138746,
     1794633226156,
     1794640946240,
     1794651313999,
@@ -153,7 +150,10 @@
     1795327730388,
     1795327757812,
     1795343945700,
-    1795343958874
+    1795343958874,
+    1795471757237,
+    1795471813611,
+    1795471842928
   ],
-  "seal": "2dea46d06c7a725c02a40d2b6024615d45e4cd9064e058ed0b13f960be36cac0"
+  "seal": "3c4bf8bee4bc75c2be9be10d8d7ab672004d7e9cc7811d857400459524f4c3d8"
 }

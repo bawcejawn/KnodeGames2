@@ -139,7 +139,44 @@
           "seal": "ecfee81076148994e6b523504d77de0637d2cfd378b34e6d8a65cf5761f047cc"
         }
       ],
-      "vhpSeal": "6c6ed3d4bdaee6ad1fea9899d7ab386604f4a3fa5c2b81e6ca573c4442224007"
+      "vhpSeal": "6c6ed3d4bdaee6ad1fea9899d7ab386604f4a3fa5c2b81e6ca573c4442224007",
+      "result": {
+        "void": false,
+        "option": 1,
+        "value": "216",
+        "dataHash": "efecf99e378ea32e2914d912c48114d7cc1ca443ca6c305e0c70438bc8a0fa53",
+        "resolvedAt": "2026-11-23T21:52:47.970Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41305911,
+          "decidedHeight": 41331332,
+          "readings": [
+            41322419,
+            41323528,
+            41324686,
+            41325862,
+            41327025,
+            41328185,
+            41329253,
+            41330429
+          ],
+          "readingsInWindow": 8,
+          "values": {
+            "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU": {
+              "release": "87547296939030",
+              "end": "86807125929611",
+              "change": "−0.85%",
+              "height": 41330429
+            },
+            "18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m": {
+              "release": "70762351603030",
+              "end": "70535927492725",
+              "change": "−0.32%",
+              "height": 41324686
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D1-00-2",
@@ -265,9 +302,17 @@
             "14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb": "54828946953750"
           },
           "seal": "fed76711f8d51a6284c6c9c6fa06b83d165b53383c84ae6ce19c717d84c91f08"
+        },
+        {
+          "height": 41331623,
+          "readAt": "2026-11-23T22:08:23.805Z",
+          "values": {
+            "14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb": "54808886059787"
+          },
+          "seal": "48d56134a18e6fc729343c779231be07a212b8322ff36e364d8863b873275bd3"
         }
       ],
-      "vhpSeal": "598a96be07ec8d5877bfe6cb1456166633fd1eaed57942d86dc256a1984fb929"
+      "vhpSeal": "980c9857b741926d3014c39a3b2d207e121105751776c6f11dda75c1063c1ca5"
     },
     {
       "id": "W005-D1-00-3",
@@ -395,7 +440,38 @@
           "seal": "2fd276a9609754654d7f58b6357b0b795c97feddb6f889821d5ad06fd914eaca"
         }
       ],
-      "vhpSeal": "5c7f856001c4ecdd0ba17c6f1d09dd296c2c45f220fcebabe0af1e065748172e"
+      "vhpSeal": "5c7f856001c4ecdd0ba17c6f1d09dd296c2c45f220fcebabe0af1e065748172e",
+      "result": {
+        "void": false,
+        "option": 1,
+        "value": "1,756",
+        "dataHash": "efecf99e378ea32e2914d912c48114d7cc1ca443ca6c305e0c70438bc8a0fa53",
+        "resolvedAt": "2026-11-23T21:52:47.970Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41305911,
+          "decidedHeight": 41330826,
+          "readings": [
+            41322419,
+            41323528,
+            41324686,
+            41325862,
+            41327025,
+            41328185,
+            41329253,
+            41330429
+          ],
+          "readingsInWindow": 8,
+          "values": {
+            "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": {
+              "release": "215919095767191",
+              "end": "214182887409999",
+              "change": "−0.80%",
+              "height": 41330429
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D1-00-4",
@@ -531,7 +607,44 @@
           "seal": "3667c885d507723db2f9a3115e82538607dbffddb9bf0ec91e69e17c7a759faa"
         }
       ],
-      "vhpSeal": "dd01469585ab13068692e556d559bc35fb9929a586ee5377513beb5c1b3b0f72"
+      "vhpSeal": "dd01469585ab13068692e556d559bc35fb9929a586ee5377513beb5c1b3b0f72",
+      "result": {
+        "void": false,
+        "option": 0,
+        "value": "475",
+        "dataHash": "efecf99e378ea32e2914d912c48114d7cc1ca443ca6c305e0c70438bc8a0fa53",
+        "resolvedAt": "2026-11-23T21:52:47.970Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41305911,
+          "decidedHeight": 41331286,
+          "readings": [
+            41322419,
+            41323528,
+            41324686,
+            41325862,
+            41327025,
+            41328185,
+            41329253,
+            41330429
+          ],
+          "readingsInWindow": 8,
+          "values": {
+            "1UG4UUn7Da9JqE4PKbYUWgjbNwE5F9531": {
+              "release": "226303013012910",
+              "end": "224457088990516",
+              "change": "−0.82%",
+              "height": 41330429
+            },
+            "15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ": {
+              "release": "163848589807160",
+              "end": "162491882637123",
+              "change": "−0.83%",
+              "height": 41330429
+            }
+          }
+        }
+      }
     }
   ],
   "daySeal": "fa03b48143a4cc2697868f11ff6d9a5010689d9572a7fa8fa91092d8df87ea73"
