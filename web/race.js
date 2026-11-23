@@ -703,7 +703,12 @@
   // Shown only from M.TYPES_FROM_WEEK (the week the Race contract v2 is live). The 6-hour race above is unchanged.
   const typesLive = () => M.TYPES_ON_WEEK !== null && M.weekOf(Date.now()) >= M.TYPES_ON_WEEK;   // #C-12 C12-1: needs TYPES_READY
   // D-173: points per place come WITH the types (never before): the rules note is reworded then.
-  if (typesLive() && $("pts-note")) $("pts-note").textContent = "Points are per place, by race: 1st / 2nd / 3rd score 3 / 2 / 1 in a 1-hour or 2-hour race, 4 / 2 / 1 in a 6-hour race, 6 / 3 / 2 in a daily race and 12 / 6 / 4 in the weekly race. A 2nd or 3rd place scores only if that producer signed at least one block.";
+  // Owner, 23 Nov (M-375): new points and weekly caps from vault week 6 (Sun 29 Nov 2026, 7 PM ET); before then, the
+  // current table and a notice of the change.
+  const V3_TEXT = "Points are per place, by race. 1-hour race: only 1st scores, 2 points, and at most 24 wins a week count (48 points). 2-hour race: 1st 2, 2nd 1, and at most 60 points a week count. 6-hour race: 1st 3, 2nd 2, 3rd 1. Daily race: 6 / 3 / 2. Weekly race: 12 / 6 / 4. The caps are per wallet, Monday to Saturday, and the earliest races count first; a result over a cap scores nothing. A 2nd or 3rd place scores only if that producer signed at least one block.";
+  if (typesLive() && $("pts-note")) $("pts-note").textContent = M.weekOf(Date.now()) >= M.POINTS_V3_FROM_WEEK ? V3_TEXT
+    : "Points are per place, by race: 1st / 2nd / 3rd score 3 / 2 / 1 in a 1-hour or 2-hour race, 4 / 2 / 1 in a 6-hour race, 6 / 3 / 2 in a daily race and 12 / 6 / 4 in the weekly race. A 2nd or 3rd place scores only if that producer signed at least one block. "
+      + `New from ${new Date(M.weekStart(M.POINTS_V3_FROM_WEEK)).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}: ${V3_TEXT}`;
   const ORDER = [1, 2, 0, 3, 4];
   const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
   let rtype = 0, tweeks = new Map(), rtPicks = new Map(), rtKey = "";
@@ -838,7 +843,30 @@
     }
     nav.hidden = false; nav.classList.remove("soon");
     nav.replaceChildren(...ORDER.map((t) => el("button", { type: "button", "aria-pressed": String(t === rtype), onclick: () => rtSelect(t) },
-      M.TYPES[t].name, el("small", { text: `1st ${M.TYPES[t].places[0]} · 2nd ${M.TYPES[t].places[1]} · 3rd ${M.TYPES[t].places[2]}` }))));
+      M.TYPES[t].name, el("small", { text: chipText(t) }))));
+  }
+  /** A type's points chip for this week (M-375: "1st 2 · max 24 wins a week" for the 1-hour race from week 6). */
+  function chipText(t) {
+    const w = M.weekOf(Date.now()), pl = M.placesFor(t, w), cap = M.capOf(t, w);
+    const parts = [`1st ${pl[0]}`, ...(pl[1] ? [`2nd ${pl[1]}`] : []), ...(pl[2] ? [`3rd ${pl[2]}`] : [])];
+    if (cap) parts.push(t === 1 ? `max ${cap / pl[0]} wins a week` : `max ${cap} pts a week`);
+    return parts.join(" · ");
+  }
+  /** M-375: what the connected wallet has counted this week against a type's cap, from the week's T file and the
+   *  Ruler's places (the same order and rule as the recorder: earliest races first; Sunday fun races use no cap).
+   *  Display only: the board's numbers are the recorder's. null when there's no cap or nothing to count. */
+  function capUsed(who, type, week) {
+    const cap = M.capOf(type, week), tf = tweeks.get(week);
+    if (!who || !cap || !tf) return null;
+    const pl = M.placesFor(type, week), c = M.capCounter();
+    const races = tf.races.filter((r) => r && r.type === type && !M.restRace(r.start) && r.result && r.result.final === true && Array.isArray(r.result.picks)).sort((a, b) => a.start - b.start);
+    for (const r of races) {
+      const pick = r.result.picks.find((p) => p[0] === who), o = pick ? ruledFor(r, type) : null;
+      if (!o || o.pending || !Array.isArray(o.placings)) continue;
+      const i = o.placings.indexOf(pick[1]), ok = i === 0 || (i > 0 && i < 3 && o.shows.includes(pick[1]));
+      if (ok) c.take(who, week, type, pl[i]);
+    }
+    return { used: c.used(who, week, type), cap };
   }
   function rtSelect(t) {
     rtype = t;
@@ -871,7 +899,16 @@
     $("rt-title").textContent = `${T.name} race · ${dayTime(cur.start)} – ${rtype >= 3 ? dayTime(cur.end) : clock(cur.end)}${rtype === 3 ? " (the UTC day)" : rtype === 4 ? " (Monday to Saturday, UTC)" : ""}`;
     $("rt-tag").textContent = `${dur(cur.end - Date.now())} left`;
     const card = cardAt(rtype, Math.floor(Date.now() / M.HOUR) * M.HOUR);
-    const notes = [`1st scores ${T.places[0]} points, 2nd ${T.places[1]} and 3rd ${T.places[2]}, on the one Producer Race board.`];
+    const wNow = M.weekOf(cur.start), PL = M.placesFor(rtype, wNow), CAP = M.capOf(rtype, wNow);
+    const notes = [!PL[1] ? `Only 1st scores: ${PL[0]} points, on the one Producer Race board.`
+      : !PL[2] ? `1st scores ${PL[0]} points and 2nd ${PL[1]}, on the one Producer Race board.`
+      : `1st scores ${PL[0]} points, 2nd ${PL[1]} and 3rd ${PL[2]}, on the one Producer Race board.`];
+    if (CAP) {
+      notes.push(rtype === 1 ? `At most ${CAP / PL[0]} wins a week count (Monday to Saturday, earliest first).` : `At most ${CAP} points a week count (Monday to Saturday, earliest first).`);
+      const u = capUsed(who, rtype, wNow);
+      if (u) notes.push(rtype === 1 ? `Your 1-hour wins counted this week: ${u.used / PL[0]} of ${u.cap / PL[0]}${u.used >= u.cap ? " (cap reached: more 1-hour wins this week score nothing)" : ""}.`
+        : `Your 2-hour points counted this week: ${u.used} of ${u.cap}${u.used >= u.cap ? " (cap reached)" : ""}.`);
+    }
     if (fun) notes.push("Sunday fun race: it counts on Today and All time, not the week.");
     if (card && !card.field.some((x) => x.a === POOL)) {
       const tot = card.field.concat(card.paddock || []).reduce((t, x) => t + x.vhp, 0), need = card.blocksPerRace > 0 ? Math.ceil(M.MIN_K * tot / card.blocksPerRace) : 0;

@@ -2105,6 +2105,8 @@ jobs:
           NOCARD_FROM = int(os.environ.get("RACE_NOCARD_FROM") or NOCARD_FROM_WEEK)   # the tests set RACE_NOCARD_FROM; the workflow never does
           TYPES_FROM_WEEK = 5   # = M.TYPES_FROM_WEEK (owner, 13 Nov: vault week 5, Mon 23 Nov 2026; a test checks they match)
           TYPES_FROM = int(os.environ.get("RACE_TYPES_FROM") or TYPES_FROM_WEEK)
+          POINTS_V3_FROM_WEEK = 6   # = M.POINTS_V3_FROM_WEEK (owner, 23 Nov, M-375: vault week 6; a test checks they match)
+          POINTS_V3_FROM = int(os.environ.get("RACE_POINTS_V3_FROM") or POINTS_V3_FROM_WEEK)   # the tests set it; the workflow never does
           DAY_S = 86400
           def vault_ok(f, j, early=False):
               # The KnodeGames Vault's results (game 7, the Producer Race). rows: staked players, points 1-255 in board
@@ -2238,6 +2240,17 @@ jobs:
               # under the old table (PRIZES_FROM <= week < TYPES_FROM), the old win / show (a 2nd or 3rd = a show).
               PTS_OLD = {0: (3, 1, 1), 1: (2, 1, 1), 2: (2, 1, 1), 3: (6, 2, 2), 4: (12, 4, 4)}
               PTS_NEW = {0: (4, 2, 1), 1: (3, 2, 1), 2: (3, 2, 1), 3: (6, 3, 2), 4: (12, 6, 4)}
+              # Owner, 23 Nov (M-375), from POINTS_V3_FROM (= M.PLACES_V3 / M.CAPS_V3): 1-hour 1st only, 2 (at most 48 points,
+              # 24 wins, a wallet a week); 2-hour 2 / 1 (at most 60 a week); 6-hour 3/2/1. Caps apply in race order.
+              # M-375 caps BEGIN (tests/audit/race-points-v3.test.mjs runs these lines on their own against M.capCounter)
+              PTS_V3 = {0: (3, 2, 1), 1: (2, 0, 0), 2: (2, 1, 0), 3: (6, 3, 2), 4: (12, 6, 4)}
+              CAPS_V3 = {1: 48, 2: 60}
+              def take_cap(used, key, n, cap):
+                  if cap is None or n <= 0: return n
+                  u = used.get(key, 0); m = max(0, min(n, cap - u)); used[key] = u + m
+                  return m
+              # M-375 caps END
+              capused = {}
               places_on = TYPES_FROM < TYPES_OFF
               # The VHP ruler: in an ON week a 6-hour race's 1st, 2nd and 3rd are the ruler card's (R file, this push's else
               # the published one); a race it hasn't scored must be in skipped; a race whose field is empty counts no pick.
@@ -2268,22 +2281,27 @@ jobs:
                   six.append(x)
               tr, terr = typed_ruled(typed)
               if terr: return terr
-              for r in six + tr:
+              for r in sorted(six + tr, key=lambda q: (q.get("start") if type(q) is dict and type(q.get("start")) is int else 0, q.get("type") if type(q) is dict and type(q.get("type")) is int else 0)):
                   # D-129: a Sunday race in a rhythm week counts on no week's board or prize.
                   if w >= RHYTHM_FROM and type(r) is dict and type(r.get("start")) is int and _dt.datetime.fromtimestamp(r["start"] / 1000, _dt.timezone.utc).weekday() == 6: continue
                   res = r.get("result") if type(r) is dict else None
                   if type(res) is not dict or res.get("final") is not True or type(res.get("picks")) is not list: continue
                   rw = (r["start"] // 1000 - GENESIS) // WEEK if type(r.get("start")) is int else w
                   legacy = (not places_on) or (PRIZES_FROM <= rw < TYPES_FROM)
-                  pw, p2, p3 = (PTS_OLD if legacy else PTS_NEW).get(r.get("type"), (0, 0, 0))
+                  v3 = not legacy and rw >= POINTS_V3_FROM
+                  pw, p2, p3 = (PTS_OLD if legacy else PTS_V3 if v3 else PTS_NEW).get(r.get("type"), (0, 0, 0))
+                  cap = CAPS_V3.get(r.get("type")) if v3 else None
                   sts = res.get("standings") if type(res.get("standings")) is list else []
                   for x in res["picks"]:
                       who, right, show = x[0], x[3] == 1, len(x) > 5 and x[5] == 1
                       third = len(sts) > 2 and type(sts[2]) is dict and sts[2].get("a") == x[1] and not (len(sts) > 1 and type(sts[1]) is dict and sts[1].get("a") == x[1])
+                      n = pw if right else (p3 if third else p2) if show else 0
+                      n = take_cap(capused, (who, r.get("type")), n, cap)
                       c = t.setdefault(who, [0, 0, 0, 0])
-                      c[2] += 1; c[0] += 1 if right else 0; c[1] += 1 if (not right and show) else 0; c[3] += pw if right else (p3 if third else p2) if show else 0
+                      # M-375: a place that scores 0, or a result over the cap, is no win or show (the pick still counts).
+                      c[2] += 1; c[0] += 1 if right and n > 0 else 0; c[1] += 1 if (not right and show and n > 0) else 0; c[3] += n
                       # D-152: when the wallet reached its score = its latest scoring pick (a win or a show).
-                      if (right or show) and (who not in reached or x[2] > reached[who]): reached[who] = x[2]
+                      if n > 0 and (who not in reached or x[2] > reached[who]): reached[who] = x[2]
               bp = os.path.join(d, "board.json")
               try: b = json.load(open(bp, encoding="utf-8")) if os.path.isfile(bp) else None
               except Exception: b = None

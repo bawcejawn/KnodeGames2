@@ -16,7 +16,7 @@ export function card(field, at = 0) {
 export const cards6 = (field, at) => Array.from({ length: 6 }, (_, l) => card(field, at + l * HOUR));
 export const pad3 = (w) => String(w).padStart(3, "0");
 
-export async function boot({ app, now, files = {}, vhp = {}, blocks = null, type = null }) {
+export async function boot({ app, now, files = {}, vhp = {}, blocks = null, type = null, wallet = null }) {
   const html = fs.readFileSync(`${app}web/race.html`, "utf8").replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
   const errors = [], vc = new VirtualConsole();
   vc.on("jsdomError", (e) => errors.push(String(e && (e.detail && e.detail.stack || e.stack || e.message) || e)));
@@ -41,6 +41,8 @@ export async function boot({ app, now, files = {}, vhp = {}, blocks = null, type
   const B = blocks || { ts: [T - 1000], sig: [0], signers: [A], from: 1, top: 1 };
   win.KBlocks = { ensure: async () => ({ B: typeof B === "function" ? B(T) : B }), isAddr: () => false };
   if (type != null) win.localStorage.setItem("pr-type", String(type));   // open on that race length's tab
+  // M-375: a connected guest wallet (read-only: it sends nothing), for the page's "counted N of 24" line.
+  if (wallet) win.KWallet = { address: wallet, kind: "guest", init() {}, connect() {}, label: () => "guest", batchReady: () => false };
   win.eval(fs.readFileSync(`${app}web/ruler-void.js`, "utf8"));
   win.eval(fs.readFileSync(`${app}web/race-math.js`, "utf8"));
   win.eval(fs.readFileSync(`${app}web/race.js`, "utf8"));

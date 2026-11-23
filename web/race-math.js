@@ -111,10 +111,40 @@
    *  week: the race's week; paidFrom: PRIZES_FROM_WEEK (null = none); typesFrom: the week the types start (null = off). */
   const placesOn = (typesFrom) => typesFrom !== null && typesFrom !== undefined;
   const legacyWeek = (week, paidFrom, typesFrom) => !placesOn(typesFrom) || (paidFrom !== null && paidFrom !== undefined && week >= paidFrom && week < typesFrom);
+  /** Owner, Mon 23 Nov (M-375): from vault week 6 (Week 3, Sun 29 Nov 7 PM ET; never earlier, Week 5 is never rescored)
+   *  so an hourly grinder can't own the board: 1-hour 1st only, 2 points, at most 24 wins a week counted (48 points);
+   *  2-hour 1st 2, 2nd 1, at most 60 points a week counted; 6-hour 3/2/1 (was 4/2/1); daily and weekly unchanged.
+   *  The caps are per wallet per week (Monday to Saturday; Sunday fun races count for no week and use no cap), applied
+   *  in race order (the earliest races count first). The publish job mirrors these (POINTS_V3_FROM, PTS_V3, CAPS_V3). */
+  const POINTS_V3_FROM_WEEK = 6;
+  const PLACES_V3 = Object.freeze([Object.freeze([3, 2, 1]), Object.freeze([2, 0, 0]), Object.freeze([2, 1, 0]), Object.freeze([6, 3, 2]), Object.freeze([12, 6, 4])]);
+  const CAPS_V3 = Object.freeze({ 1: 48, 2: 60 });
+  const v3Week = (week) => Number.isInteger(week) && week >= POINTS_V3_FROM_WEEK;
+  /** A type's 1st / 2nd / 3rd points for races in week `week` (once the types are on): the page's chips and rules. */
+  const placesFor = (type, week) => (v3Week(week) ? PLACES_V3[type] : TYPES[type].places);
+  /** A type's weekly cap in points for a wallet (null = no cap). Only from POINTS_V3_FROM_WEEK. */
+  const capOf = (type, week) => (v3Week(week) && CAPS_V3[type] ? CAPS_V3[type] : null);
   function pointsOf(type, week = 0, paidFrom = null, typesFrom = null) {
     const T = TYPES[type];
     if (legacyWeek(week, paidFrom, typesFrom)) return { win: T.win, second: T.show, third: T.show, show: T.show };
-    return { win: T.places[0], second: T.places[1], third: T.places[2], show: T.places[1] };
+    const pl = placesFor(type, week);
+    return { win: pl[0], second: pl[1], third: pl[2], show: pl[1] };
+  }
+  /** The weekly caps, applied in race order. counter() keeps, per wallet, week and type, the points already counted;
+   *  take(who, week, type, pts, capped) returns the points that count now (pts, or what is left under the cap). A race
+   *  that counts for no week (a Sunday fun race) is passed with capped = false and never uses the cap. */
+  function capCounter() {
+    const used = new Map();
+    return {
+      take(who, week, type, pts, capped = true) {
+        const cap = capped ? capOf(type, week) : null;
+        if (cap === null || !(pts > 0)) return pts;
+        const k = `${who}|${week}|${type}`, u = used.get(k) || 0, n = Math.max(0, Math.min(pts, cap - u));
+        used.set(k, u + n);
+        return n;
+      },
+      used: (who, week, type) => used.get(`${who}|${week}|${type}`) || 0,
+    };
   }
   /** What a show pick scored: its horse finished 2nd (second) or 3rd (third) in the race's stored standings. */
   /** For a page: a race's points for what a pick earned (label "1st", "2nd", "3rd" once the types are on; "Win" / "Show" before).
@@ -307,7 +337,7 @@
   root.KRaceMath = {
     HOUR, RACE, LEG, LEGS, DAY, WEEK, GENESIS, MIN_K, SEED, TRIALS,
     raceIndex, raceStart, raceId, parseRaceId, raceAt, legOf, legsOf, weekOf, weekStart, dayOf, RHYTHM_FROM_WEEK, restRace, playEnd,
-    TYPES, TYPES_FROM_WEEK, TYPES_READY, TYPES_ON_WEEK, placesOn, legacyWeek, showPoints, pagePick, WEEK_OFFSET, contractRace, typedIndex, typedStart, typedId, parseTypedId, typedRace, typedRacesIn, pointsOf, typeCard, ledgerStandings, ledgerLine,
+    TYPES, TYPES_FROM_WEEK, TYPES_READY, TYPES_ON_WEEK, POINTS_V3_FROM_WEEK, PLACES_V3, CAPS_V3, placesFor, capOf, capCounter, placesOn, legacyWeek, showPoints, pagePick, WEEK_OFFSET, contractRace, typedIndex, typedStart, typedId, parseTypedId, typedRace, typedRacesIn, pointsOf, typeCard, ledgerStandings, ledgerLine,
     rng, handicapOf, winChances, calibrate, makeCard, cardForLeg, finishLine, standings, winners, shows, POINTS, track, LIVE_MAX, lowerBound,
   };
 })(typeof window !== "undefined" ? window : globalThis);
