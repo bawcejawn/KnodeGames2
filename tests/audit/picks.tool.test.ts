@@ -76,8 +76,8 @@ test("the Block X game config: game 2 on mainnet is exactly the plan's settings;
   // Owner D-246, 18 Nov: Survivor (game 3) joins; its exact values are pinned in picks-survivor-game3.test.ts.
   // Owner D-290/D-302, 19 Nov: Over Under (game 16) and Knode Games VS (game 17) join; pinned in picks-overunder-vs-16-17.test.ts.
   // Last Node Standing (game 13) is pinned in picks-game13.test.ts.
-  assert.equal(mainnet.games.length, 10, "on mainnet the tool registers Who Signs Block X (game 2, hourly game 12), Producer Bracket (game 9), Fantasy (games 4 and 5), Combo Card (game 8), Survivor (game 3), Last Node Standing (game 13), Over Under (game 16) and Knode Games VS (game 17)");
-  assert.deepEqual(mainnet.games.map((g: any) => g.id), [2, 12, 9, 4, 5, 8, 3, 13, 16, 17], "no existing game is dropped or moved (Repo Lens #J-3, J3-1)");
+  assert.equal(mainnet.games.length, 12, "on mainnet the tool registers Who Signs Block X (game 2, hourly game 12), Producer Bracket (game 9), Fantasy (games 4 and 5), Combo Card (game 8), Survivor (game 3), Last Node Standing (game 13), Over Under (game 16), Knode Games VS (game 17), Within 5 blocks (game 18) and Within 10 blocks (game 19)");
+  assert.deepEqual(mainnet.games.map((g: any) => g.id), [2, 12, 9, 4, 5, 8, 3, 13, 16, 17, 18, 19], "no existing game is dropped or moved (Repo Lens #J-3, J3-1)");
   assert.deepEqual(buildGameConfig(mainnet.games[0]), c);
   assert.deepEqual(buildGameConfig(mainnet.games[1]), { id: 12, name: "Who Signs Block X (hourly)", kind: 1, list_size: 1, number_min: "0", number_max: "0", lock_mode: 1,
     round_size: "1200", round_offset: "0", lead: "100", ahead: "14500", max_picks_per_day: 48, max_changes: 1, enabled: true }, "R-BX-25: every 1,200 blocks, 48 picks a day; owner 14 Nov: 12 hours ahead (on chain by tighten 12 --ahead 14500)");

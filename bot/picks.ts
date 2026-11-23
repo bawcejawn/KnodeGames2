@@ -146,7 +146,14 @@ export const OVERUNDER_GAME = Object.freeze({ id: 16, name: "Over Under", kind: 
   lead: 5 * 60000, ahead: 2 * 3600000, numberMin: "1", numberMax: "2", picksPerDay: 50, maxChanges: 0 });
 export const VS_GAME = Object.freeze({ id: 17, name: "Knode Games VS", kind: 3, packed: true, lockMode: 2, round: DAY_MS, offset: 0,
   lead: 5 * 60000, ahead: 2 * DAY_MS, numberMin: "0", numberMax: U64_MAX, picksPerDay: 20, maxChanges: 0 });
-const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME, LASTNODE_GAME, OVERUNDER_GAME, VS_GAME];
+/** Block X "within N blocks" (owner D-251, D-292, D-298; Repo Lens 2 #R2-19 GO on the table): Picks game 18 = within 5 blocks, game 19 =
+ *  within 10 blocks. Written LIKE GAME 12 (X.MAINNET_HOURLY: no lockMode, so buildGameConfig sends them down the height-game path:
+ *  kind 1, list_size 1, no number range, lock_mode 1 = by blocks, round 1,200, offset 0, lead 100, ahead 14,500, 48 picks a day,
+ *  1 change). The SAME targets as game 12: target X = round x 1,200; the window is X to X+N-1. The SHAPE (id, kind, list_size,
+ *  number range, lock_mode, round_size, round_offset) never changes once applied. Never a vault game (free prizes OFF, D-292). */
+export const WITHIN5_GAME = Object.freeze({ ...X.MAINNET_HOURLY, id: 18, name: "Within 5 blocks" });
+export const WITHIN10_GAME = Object.freeze({ ...X.MAINNET_HOURLY, id: 19, name: "Within 10 blocks" });
+const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, { ...X.MAINNET_HOURLY, name: "Who Signs Block X (hourly)" }, BRACKET_GAME, FANTASY_TEAM_GAME, FANTASY_RIVAL_GAME, COMBO_GAME, SURVIVOR_GAME, LASTNODE_GAME, OVERUNDER_GAME, VS_GAME, WITHIN5_GAME, WITHIN10_GAME];
 /** The picks per wallet per day and changes per pick the Picks contract allows at most. */
 const MAX_PICKS_PER_DAY = 50, MAX_CHANGES = 50;
 
@@ -480,7 +487,7 @@ export function timeRounds(g: { round: number; offset: number; lead: number; ahe
 }
 function gameOf(net: Net, id: number) {
   const g = net.games.find((x) => x.id === id);
-  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8; Survivor game 3; Last Node Standing game 13; Over Under game 16; Knode Games VS game 17)"}.`);
+  if (!g) throw new Error(`Game ${id} is not one this tool registers on ${net.testnet ? "the testnet (testnet/blockx.json)" : "mainnet (Who Signs Block X is game 2, hourly game 12; Producer Bracket game 9; Fantasy games 4 and 5; Combo Card game 8; Survivor game 3; Last Node Standing game 13; Over Under game 16; Knode Games VS game 17; Within 5 blocks game 18; Within 10 blocks game 19)"}.`);
   return g;
 }
 async function sendCall(net: Net, p: Provider, chainId: string, signer: Signer, method: string, args: any, rcKoin = 2) {
