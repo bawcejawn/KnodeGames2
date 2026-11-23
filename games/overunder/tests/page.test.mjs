@@ -47,3 +47,7 @@ test("the owner's wording: Over Under (no slash), form (not rate), the open and 
 test("the page is not yet in games.json (the Hub lists it at launch)", () => {
   assert.ok(!read("games.json").includes("overunder.html"));
 });
+
+test("a game card gives the game's length in blocks and roughly in time (14,400 blocks at about 3 s a block)", () => {
+  assert.ok(js.includes('" in its next 14,400 blocks (about 12 hours)"'));
+});
