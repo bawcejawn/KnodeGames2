@@ -1,0 +1,50 @@
+/* Hub UI v2: the bolder look for the menus (owner approved the look, 22 Nov). Loaded after styles.css and board.css.
+   Only restyles the header, the top menu, the phone tab bar and the More sheet. No page text, links or scripts change.
+   Uses the tokens from styles.css (--hero-grad, --violet-2, --sky, --tile-*). Not loaded on race.html / golf.html yet (B2). */
+
+/* Header: a thin colour line under it, and a roomier logo. */
+.top { border-bottom: 0; box-shadow: 0 1px 0 var(--line); }
+.top::after { content: ""; display: block; height: 3px; background: linear-gradient(90deg, var(--violet), var(--violet-2) 45%, var(--sky)); }
+.brand-name { font-weight: 900; }
+
+/* Top menu (computers and tablets): pill tabs, the current one filled with the brand gradient. */
+.tabs a, .tabs .dd > summary { font-weight: 700; }
+.tabs a:hover, .tabs .dd > summary:hover, .tabs .dd[open] > summary { color: var(--ink); background: color-mix(in srgb, var(--violet) 10%, var(--surface)); }
+.tabs a[aria-current="page"], .tabs .dd.on > summary { color: #fff; background: linear-gradient(135deg, #1F5AE6, var(--violet-2)); box-shadow: 0 6px 16px -8px var(--violet); }
+.tabs .dd-menu { border-radius: 20px; border-color: color-mix(in srgb, var(--violet) 22%, var(--line)); box-shadow: 0 24px 48px -20px rgba(31, 90, 230, .45); }
+.tabs .dd-menu a:hover { background: color-mix(in srgb, var(--violet) 10%, var(--surface)); }
+.tabs .dd-menu a[aria-current="page"] { color: var(--violet); background: color-mix(in srgb, var(--violet) 12%, var(--surface)); }
+
+/* Play free: the bright mint button; Connect wallet stays dark. */
+.btn-play-free { background: #3CF2A5; color: #0B2A1E; font-weight: 800; box-shadow: 0 8px 18px -10px #3CF2A5; }
+.btn-play-free:hover { filter: brightness(1.04); transform: translateY(-1px); }
+
+/* One break point at 761 px, and no second row in between: the menu stays on one line from 761 px up. */
+@media (min-width: 761px) {
+  .top-row { flex-wrap: nowrap; gap: 10px; }
+  .tabs { order: 0; flex: 1 1 auto; justify-content: flex-end; width: auto; }
+  .btn-play-free { margin-left: 0; flex: none; white-space: nowrap; }
+  .top-row .btn-wallet { flex: none; white-space: nowrap; }
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .brand-name { font-size: 1.12rem; }
+  .tabs a, .tabs .dd > summary { padding: 9px 9px; font-size: 14.5px; }
+  .btn-play-free, .top-row .btn-wallet { padding-left: 12px; padding-right: 12px; font-size: .88rem; }
+}
+
+/* Phone tab bar: dark, rounded on top, the current tab a gradient pill. */
+@media (max-width: 760px) {
+  .top-row .btn-wallet { white-space: nowrap; padding-left: 12px; padding-right: 12px; font-size: .86rem; }
+  .top-row { gap: 8px; }
+  .brand-name { font-size: 1.08rem; }
+  .brand-mark { display: none; }
+  .top-row .btn-play-free, .top-row .btn-wallet { padding-left: 11px; padding-right: 11px; font-size: .84rem; }
+  .tabbar { background: #14161F; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px -12px rgba(20, 22, 31, .55); }
+  .tabbar a, .tabbar button { border-radius: 16px; font-weight: 700; }
+  .tabbar a[aria-current="page"], .tabbar .tb-more.on, .tabbar .tb-more[aria-expanded="true"] { color: #fff; background: linear-gradient(135deg, #1F5AE6, var(--violet-2)); }
+  .more-panel { border-radius: 26px 26px 0 0; }
+  .more-panel .ms-h { color: var(--violet); font-weight: 800; letter-spacing: .06em; }
+  .more-panel a { border-radius: 18px; }
+  .more-panel a[aria-current="page"] { background: color-mix(in srgb, var(--violet) 12%, var(--surface)); }
+}
+@media (prefers-reduced-motion: reduce) { .btn-play-free:hover { transform: none; } }

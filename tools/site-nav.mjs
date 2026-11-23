@@ -126,9 +126,16 @@ export function footBlock(file = "index.html") {
   return `<span class="foot-links">${links.join(" · ")}</span>`;
 }
 
+// race.html and golf.html keep their own menu look until their PRs merge (B2); they are left as they are for now.
+export const HOLD_UI = new Set(["race.html", "golf.html"]);
+const UI_LINK = '<link rel="stylesheet" href="hub-ui.css">';
+
 /** Replace the existing blocks in a page's HTML: the top menu, the footer's links, and the tab bar + More sheet. */
 export function withNav(file, html) {
   let out = html;
+  // The bolder menu look (hub-ui.css) loads last, on every page with the menus except the held ones.
+  if (!HOLD_UI.has(file) && /<nav class="tabs"|<nav class="tabbar"/.test(out) && !out.includes(UI_LINK) && out.includes("</head>"))
+    out = out.replace(/(\n)([ \t]*)<\/head>/, (m, nl, ind) => `${nl}${ind}  ${UI_LINK}${nl}${ind}</head>`);
   const t = out.indexOf('<nav class="tabs"');
   if (t >= 0) {
     // The top menu ends at its own closing </nav> (dropdowns use <details>, never a nested <nav>).
