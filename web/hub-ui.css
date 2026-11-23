@@ -22,7 +22,7 @@
 /* One break point at 761 px, and no second row in between: the menu stays on one line from 761 px up. */
 @media (min-width: 761px) {
   .top-row { flex-wrap: nowrap; gap: 10px; }
-  .tabs { flex: 1 1 auto; justify-content: flex-end; }
+  .tabs { order: 0; flex: 1 1 auto; justify-content: flex-end; width: auto; }
   .btn-play-free { margin-left: 0; flex: none; white-space: nowrap; }
   .top-row .btn-wallet { flex: none; white-space: nowrap; }
 }
@@ -34,6 +34,11 @@
 
 /* Phone tab bar: dark, rounded on top, the current tab a gradient pill. */
 @media (max-width: 760px) {
+  .top-row .btn-wallet { white-space: nowrap; padding-left: 12px; padding-right: 12px; font-size: .86rem; }
+  .top-row { gap: 8px; }
+  .brand-name { font-size: 1.08rem; }
+  .brand-mark { display: none; }
+  .top-row .btn-play-free, .top-row .btn-wallet { padding-left: 11px; padding-right: 11px; font-size: .84rem; }
   .tabbar { background: #14161F; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px -12px rgba(20, 22, 31, .55); }
   .tabbar a, .tabbar button { border-radius: 16px; font-weight: 700; }
   .tabbar a[aria-current="page"], .tabbar .tb-more.on, .tabbar .tb-more[aria-expanded="true"] { color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-2)); }
