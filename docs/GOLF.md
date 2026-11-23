@@ -8,6 +8,13 @@ Rules: `golf-math.js` (the page and the recorder both run it). Week names on the
 (D-063: vault week 4, from Mon 16 Nov, is "Week 1"; vault week 3, from Mon 9 Nov, is the "Test week" and pays nothing). Decisions: D-056 (rules), D-081 / D-082 (Free play board,
 prize switch), D-125 / D-129 (weekly rhythm), D-138 (launch order). Game file: `docs/games/BlockGolf.md`.
 
+## Free to play only (D-586, owner, Sat 21 Nov 2026)
+Block Golf scores every game, and there isn't enough Mana for everyone to play every game, so **Block Golf is free to play only**: no staking, not a vault game, no prizes.
+- **From vault week 5 (`FREE_FROM_WEEK` in `bot/games/golf.ts`) every week is free:** the practice rule (everyone who scored is in the field, one place per wallet, 3 make a hole), one board, nobody "staked", nobody kept off the free list, and **no vault file** (game 6 is stopped on chain; Vault, M-331: its files are never read). A week from 5 that was recorded as staked but isn't final is scored again as free. Final weeks never change.
+- **`GOLF_STAKED_FROM_WEEK` stays 5 as a label.** `index.json` keeps `"stakedFromWeek": 5` because the publish job refuses any change to it once set: **never change or delete the variable** (every Golf publish would be refused).
+- **Page:** no stake badge and nothing that invites staking. A wallet that still has stake in Block Golf sees the stake panel, which offers only Withdraw (game 6 stopped). `games.json`: Golf `kinds: ["free"]`.
+- The Clubhouse's `staked` feature (staking in any game) is a platform feature and stays.
+
 ## The pieces
 
 | Piece | File | What it does |
