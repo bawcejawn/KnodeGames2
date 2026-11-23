@@ -58,7 +58,7 @@
   function shareLines(stats, opts = {}) {
     const s = stats || {};
     const lines = [
-      { role: "kicker", text: `KNODE · WEEK ${s.week}` },
+      { role: "kicker", text: `KNODE GAMES · WEEK ${s.week}` },
       { role: "big", text: `${s.pts} ${s.pts === 1 ? "point" : "points"}` },
       { role: "place", text: s.free ? "Free play" : s.place ? `#${s.place} of ${s.of}` : "Climbing the board" },
     ];
