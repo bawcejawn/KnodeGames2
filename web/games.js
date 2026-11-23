@@ -107,7 +107,8 @@
   function week() {
     if (!M) return;
     const now = Date.now(), w = M.weekOf(now), end = M.weekStart(w + 1);
-    $("wk-num").textContent = String(w + 1);
+    // The tile shows the platform week number (the vault week, same as the labels everywhere else): week 5 starts Mon 23 Nov.
+    $("wk-num").textContent = window.KWeeks ? window.KWeeks.short(w) : String(w);
     $("wk-left").textContent = dur(end - now);
   }
 
