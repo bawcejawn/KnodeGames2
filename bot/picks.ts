@@ -83,8 +83,8 @@ const MAINNET_CHECK_RPC = () => E.RPC_CHECK && E.RPC_CHECK !== "off" ? E.RPC_CHE
 export const PICKS_ABI_SHA256 = "8efa3ad40d3d0bd9a3bfe22533fa2f9ca14445174095c66d3d34b1fc88e0a1ff";
 export const PICKS_V2_ABI_SHA256 = "cea9b0736ce989e9b995735bf1330d6891861c999109c8ad7afacb1ce0f96aed";
 const ABI_FILE = "contracts/picks/abi/picks.koilib.json";
-const MAINNET_WASM = "picks/build/release/contract.wasm";
-const TESTNET_WASM = "picks/build/testnet/contract.wasm", TESTNET_MANIFEST = "picks/build/testnet/manifest.json";
+const MAINNET_WASM = "contracts/picks/build/release/contract.wasm";
+const TESTNET_WASM = "contracts/picks/build/testnet/contract.wasm", TESTNET_MANIFEST = "contracts/picks/build/testnet/manifest.json";
 const MAINNET_STATE = path.join("picks-data", "deployment.json");
 const TESTNET_CONFIG = path.join("ops", "testnet", "config", "blockx.json");
 /** Mainnet games this tool may register: Who Signs Block X, exactly as in claude/builds/03-block-x-plan.md. */
@@ -151,7 +151,7 @@ const MAINNET_GAMES: any[] = [{ ...X.MAINNET_GAME, name: "Who Signs Block X" }, 
 const MAX_PICKS_PER_DAY = 50, MAX_CHANGES = 50;
 
 const loadAbi = () => {
-  if (!fs.existsSync(ABI_FILE)) throw new Error(`${ABI_FILE} not found: in the picks folder run npm ci --ignore-scripts, npm test`);
+  if (!fs.existsSync(ABI_FILE)) throw new Error(`${ABI_FILE} not found: in the contracts/picks folder run npm ci --ignore-scripts, npm test`);
   const raw = fs.readFileSync(ABI_FILE);
   if (![PICKS_ABI_SHA256, PICKS_V2_ABI_SHA256].includes(sha256hex(raw))) throw new Error(`${ABI_FILE} is not the audited Picks ABI (sha256 ${sha256hex(raw)}). Restore it: git checkout -- ${ABI_FILE}`);
   return JSON.parse(raw.toString("utf8"));
@@ -264,9 +264,9 @@ async function status() {
 /** The build to upload and why it is the right one. Exported for the tests. */
 export function uploadBuild(testnet: boolean, files = { mainnet: MAINNET_WASM, testnet: TESTNET_WASM, manifest: TESTNET_MANIFEST }) {
   if (!testnet) {
-    if (!fs.existsSync(files.mainnet)) throw new Error(`${files.mainnet} not found: in the picks folder run npm ci --ignore-scripts, npm test`);
+    if (!fs.existsSync(files.mainnet)) throw new Error(`${files.mainnet} not found: in the contracts/picks folder run npm ci --ignore-scripts, npm test`);
     const wasm = fs.readFileSync(files.mainnet), h = sha256hex(wasm);
-    if (!AUDITED_PICKS.includes(h)) throw new Error(`${files.mainnet} is not the audited Picks build (sha256 ${h}, expected ${AUDITED_PICKS.join(" or ")}). Rebuild: cd picks, npm ci --ignore-scripts, npm test (best in a clean copy with no .env).`);
+    if (!AUDITED_PICKS.includes(h)) throw new Error(`${files.mainnet} is not the audited Picks build (sha256 ${h}, expected ${AUDITED_PICKS.join(" or ")}). Rebuild: cd contracts/picks, npm ci --ignore-scripts, npm test (best in a clean copy with no .env).`);
     return { wasm, sha256: h, what: "the audited mainnet build" };
   }
   const man = readJson(files.manifest);
@@ -522,7 +522,7 @@ export const sameNode = (a: string, b: string) => a.trim().toLowerCase().replace
 export async function assertAuditedContract(net: { testnet: boolean; picks: string | null; cfg?: any; rpc?: string[] }, p: Provider, meta = contractMetadata, wantOne?: string, checkNodes?: Provider[]) {
   if (!net.picks) throw new Error("No Picks contract yet.");
   const one = wantOne ?? (net.testnet ? (readJson(TESTNET_MANIFEST)?.sha256 ?? net.cfg?.picksSha256) : null);
-  if (net.testnet && !one) throw new Error("No expected build for the testnet Picks contract (picks/build/testnet/manifest.json).");
+  if (net.testnet && !one) throw new Error("No expected build for the testnet Picks contract (contracts/picks/build/testnet/manifest.json).");
   // Fix-check FC-27: once picks-data/deployment.json records the v2 code (the upgrade step writes wasmSha256), only v2
   // is accepted on chain: v1 there would be a downgrade.
   const v2Live = !net.testnet && readJson(MAINNET_STATE)?.wasmSha256 === PICKS_V2_SHA256;
@@ -623,9 +623,9 @@ export const wasmHasAddress = (wasm: Uint8Array, a: string) => !!a && Buffer.fro
  *  owner and not the mainnet owner. Exported for the tests. */
 export function upgradeBuilds(testnet: boolean, files = { mainnet: MAINNET_WASM, v2dir: TESTNET_V2_DIR, v1manifest: TESTNET_MANIFEST }, cfg: any = null) {
   if (!testnet) {
-    if (!fs.existsSync(files.mainnet)) throw new Error(`${files.mainnet} not found: in the picks folder run npm ci --ignore-scripts, npm test`);
+    if (!fs.existsSync(files.mainnet)) throw new Error(`${files.mainnet} not found: in the contracts/picks folder run npm ci --ignore-scripts, npm test`);
     const wasm = fs.readFileSync(files.mainnet), h = sha256hex(wasm);
-    if (h !== PICKS_V2_SHA256) throw new Error(`${files.mainnet} is not the audited Picks v2 build (sha256 ${h}, expected ${PICKS_V2_SHA256}). Build it on the combo branch: cd picks, npm ci --ignore-scripts, npm test.`);
+    if (h !== PICKS_V2_SHA256) throw new Error(`${files.mainnet} is not the audited Picks v2 build (sha256 ${h}, expected ${PICKS_V2_SHA256}). Build it on the combo branch: cd contracts/picks, npm ci --ignore-scripts, npm test.`);
     return { from: PICKS_SHA256, to: { wasm, sha256: h, what: "the audited Picks v2 build" } };
   }
   const m = path.join(files.v2dir, "manifest.json"), w = path.join(files.v2dir, "contract.wasm");
@@ -636,7 +636,7 @@ export function upgradeBuilds(testnet: boolean, files = { mainnet: MAINNET_WASM,
   if (h === PICKS_V2_SHA256 || wasmHasAddress(wasm, MAINNET_OWNER)) throw new Error("The testnet v2 build holds the MAINNET owner. Build it again with the test owner.");
   if (!wasmHasAddress(wasm, man.owner)) throw new Error(`The testnet v2 build doesn't hold the owner ${man.owner} its manifest names. Build it again.`);
   const from = readJson(files.v1manifest)?.sha256 ?? cfg?.picksSha256;
-  if (!from) throw new Error("No testnet v1 build is known (picks/build/testnet/manifest.json or testnet/blockx.json picksSha256).");
+  if (!from) throw new Error("No testnet v1 build is known (contracts/picks/build/testnet/manifest.json or testnet/blockx.json picksSha256).");
   return { from, to: { wasm, sha256: h, what: `the testnet v2 build (audited v2 source, owner ${man.owner})` } };
 }
 /** A mainnet upgrade send needs --code with the first 8 characters of the code's sha256, typed on the command line, so

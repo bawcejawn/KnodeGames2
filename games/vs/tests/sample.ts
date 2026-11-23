@@ -34,10 +34,10 @@ function ledger(extraBlocks: number): any {
 }
 
 export const S = "1SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS", F = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-const WEEK = 6, BLOCK = 3000, T_FROM = at(WEEK) - 17 * DAY;      // block FROM's time
+const WEEK = 6, BLOCK = 3000, T_FROM = at(WEEK) - 19 * DAY;      // block FROM's time
 const blockOf = (t: number) => FROM + Math.floor((t - T_FROM) / BLOCK);
-const EXTRA = 10 * 28800;                                           // ledger: 15 + 8 days from FROM, to a day after the week
-const LAST = FROM + 15 * 28800 + EXTRA - 1;   // the list card (a paying card) needs 14 d 6 h of data before its moment (week start - 2 d), so the chain starts 17 days before the week
+const EXTRA = 12 * 28800;                                           // ledger: 15 + 12 days from FROM, to a day after the week
+const LAST = FROM + 15 * 28800 + EXTRA - 1;   // the list card (a paying card) needs 14 d 6 h of data before its moment (about 3 d 6 h before the week: its scored range is the day before week start - 2 d), so the chain starts 19 days before the week
 const SAT_END = at(WEEK) + 7 * DAY;
 
 export function sampleWorld(t: number, decided: boolean): World {

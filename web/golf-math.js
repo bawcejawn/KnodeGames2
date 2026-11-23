@@ -73,6 +73,9 @@
     "producer": "Ran a producer that signed a block",
     "all-games": "Played every game on the course in one week",
     "blockx-3-days": "Made Block X picks on 3 or more days of a week",
+    "burn": "Burned KOIN for VHP (Get VHP)",
+    "move-stake": "Moved stake between games",
+    "producer-key": "Registered a producer key",
   });
   const isFeature = (f) => typeof f === "string" && /^[a-z0-9-]{1,32}$/.test(f);
   /** A feature's name for the page: the list above, or "Played <game name>" for play-<game>. */

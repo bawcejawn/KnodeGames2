@@ -58,3 +58,21 @@ test("roster list stand-in vs the Ruler's listAt on the kit's fixture chain: the
   // games ctx.vhp.list (listAt), the TEST roster can be shorter than the Ruler's list.
   assert.ok(list.length >= entry.length);
 });
+
+test("VS-9: the roster card's scored range is one day (28,800 blocks) in the past, so producers pass the entry gate (the week-5 roster came out empty)", async () => {
+  const { rulerLedger, FROM, P } = await import("../../../kit/testing/ruler-fixture.ts");
+  const { vhpFor } = await import("../../../kit/recorder/sources/vhp-ruler.ts");
+  const { listFor } = await import("../recorder.ts");
+  const L = rulerLedger(8 * 28800), T0 = 1_800_000_000_000, H0 = FROM + 17 * 28800;   // block H0 is at T0 (3 s a block); 14 d 6 h of data before the card
+  const blockAt = async (t: number) => H0 + Math.floor((t - T0) / 3000);
+  const asked: any[] = [];
+  const vhp = vhpFor(L, new Map());
+  const ctx = { vhp: { ...vhp, card: (s: any) => { asked.push(s); return vhp.card(s); } }, blockAt };
+  const list = await listFor({ start: T0 + 2 * 86400000 }, ctx);
+  const w = asked[0].window;
+  assert.equal(w.S1 - w.S0 + 1, 28800, "a day's range");
+  assert.equal(w.S1, (await blockAt(T0)) - 1, "it ends just before the moment the roster is made from");
+  assert.ok(w.W0 <= w.W1 && w.W1 === w.L && w.L === w.S0 - 1);
+  assert.ok(list.length >= 4, `the big producers are on the roster (got ${list.length})`);
+  for (const a of list) assert.ok(P.includes(a));
+});

@@ -14,6 +14,7 @@ import { fakeNode, world } from "../testing/fake-nodes.ts";
 import { at, DAY, HOUR as H } from "../testing/fake-clock.ts";
 import { partsViews, useKitParts, MAX_FILE_BYTES, MAX_PARTS_WEEK_BYTES } from "../publish/check.inline.mjs";
 import { MAX_WRITE_BYTES, MAX_PARTS_WEEK_WRITE_BYTES } from "../recorder/store.ts";
+import { partsWeekLevel } from "../recorder/runtime.ts";
 import * as KP from "../parts/parts.inline.mjs";
 useKitParts(KP);
 
@@ -66,4 +67,13 @@ test("B2 (1): in a parts game, a real incoming file over 2 MB is still held (onl
   assert.ok(!fs.existsSync(path.join(v.inDir, "W009.json")), "not passed on to the week check");
   assert.ok(fs.existsSync(path.join(v.inDir, "W010.json")), "a small file is passed on as before");
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("B2 (1), #R5-10-1: the parts-week levels: a warning over 60%, an owner alert over 85%, a stop over 95%", () => {
+  const M = MAX_PARTS_WEEK_BYTES, w = Math.floor(0.6 * M), a = Math.floor(0.85 * M), s = MAX_PARTS_WEEK_WRITE_BYTES;
+  assert.equal(s, Math.floor(0.95 * M));
+  assert.equal(partsWeekLevel(0), "ok");
+  assert.equal(partsWeekLevel(w), "ok"); assert.equal(partsWeekLevel(w + 1), "warn");
+  assert.equal(partsWeekLevel(a), "warn"); assert.equal(partsWeekLevel(a + 1), "alert");
+  assert.equal(partsWeekLevel(s), "alert"); assert.equal(partsWeekLevel(s + 1), "stop");
 });

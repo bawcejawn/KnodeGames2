@@ -88,9 +88,12 @@ test("weekOfStart: the week a game STARTS in; Mon 00:00 UTC is a new week, Sun 2
   assert.throws(() => py(`V.week_of_start(${(G - 1n).toString()})`, {}), /week 0/);
 });
 
-test("forecastExpected: k scaled by form (never up), at most the luck cap; medianLineHalves: the Poisson median half-line; isUnreliable at the 80% gate; JS = Python", () => {
-  const fc = [[700n * M, 900000n, 630n * M], [700n * M, 1200000n, 700n * M], [700n * M, M, 700n * M], [2000n * M, M, 1000n * M], [700n * M, 0n, 0n], [10n * M, 970000n, 9700000n], [0n, M, 0n]];
+test("forecastExpected (D-588): k times form, the form capped at 104%, NO cap on the blocks; medianLineHalves: the Poisson median half-line; isUnreliable at the 80% gate; JS = Python", () => {
+  // form below 104%: k x form; form above 104% counts as 104% (1,040,000 exactly, and one above); no cap on the blocks (a big producer's line passes 1,000)
+  const fc = [[700n * M, 900000n, 630n * M], [700n * M, 1030000n, 721n * M], [700n * M, M, 700n * M], [700n * M, 1040000n, 728n * M], [700n * M, 1040001n, 728n * M], [700n * M, 1200000n, 728n * M],
+    [2000n * M, M, 2000n * M], [2000n * M, 1033000n, 2066n * M], [2500n * M, 2000000n, 2600n * M], [700n * M, 0n, 0n], [10n * M, 970000n, 9700000n], [0n, M, 0n]];
   for (const [k, form, want] of fc) assert.equal(R.forecastExpected({ k, form }), want);
+  assert.equal(R.FORECAST_FORM_MAX, 1040000n);
   assert.throws(() => R.forecastExpected({ k: -1n, form: M }), /negative/);
   const md = [[0n, 1n], [149999n, 1n], [150000n, 1n], [1149999n, 1n], [1150000n, 3n], [10n * M, 19n], [300n * M, 599n], [1000n * M, 1999n]];
   for (const [e, h] of md) assert.equal(R.medianLineHalves(e), h);
@@ -127,5 +130,18 @@ test("listAt boundaries (J33-1): exactly 9 blocks out, exactly 10 in, 11 in; las
   assert.notDeepEqual(atLeast(9, H), want, ">= 9 would list the 9-block producer"); assert.notDeepEqual(atLeast(11, H), want, ">= 11 would drop the 10-block producer");
   assert.notDeepEqual(atLeast(10, H + 1), want, "active(H + 1) would drop the producer whose last block is H - 7200");
   assert.notDeepEqual(atLeast(10, H - 1), want, "active(H - 1) would add the producer whose last block is H - 7201");
+  assert.deepEqual(JSON.parse(py(`L = V.Ledger(j["tl"]); print(json.dumps(V.list_at(L, j["H"])))`, { tl, H })), want, "JS = Python");
+});
+
+test("listAt window start (H - AVG): a 10th block exactly at H - 28800 is in, at H - 28801 is out; a start moved to H - AVG + 1 or H - AVG - 1 fails; JS = Python", () => {
+  const H = win.L, recent = (n, off) => Array.from({ length: n }, (_, i) => H - off - 100 * i);   // blocks inside the last 6 hours
+  const rows = [null, new Set([...recent(9, 1), H - 28800]), new Set([...recent(9, 2), H - 28801]), new Set([...recent(10, 3)])];   // ps[1]: 10th block at H-AVG; ps[2]: 10th block at H-AVG-1 (only 9 inside); ps[3]: 10 recent
+  const { tl, ps } = chain({ np: 4, signerOf: (k, ps) => { for (let j = 1; j < 4; j++) if (rows[j].has(FROM + k)) return ps[j]; return ps[0]; } }), L = R.ledger(tl);
+  const want = [ps[0], ps[1], ps[3]].sort();   // ps[0] signs the rest (always listed); ps[2] has 9 blocks in the 24 hours
+  assert.deepEqual([...R.listAt(L, H)], want);
+  assert.equal(L.signedIn(ps[1], H - 28800, H - 1), 10); assert.equal(L.signedIn(ps[2], H - 28800, H - 1), 9); assert.equal(L.signedIn(ps[2], H - 28801, H - 1), 10);
+  const from = (start) => [...L.active(H)].filter((a) => L.signedIn(a, start, H - 1) >= 10).sort();
+  assert.notDeepEqual(from(H - 28800 + 1), want, "a start at H - AVG + 1 would drop the producer whose 10th block is at H - AVG");
+  assert.notDeepEqual(from(H - 28800 - 1), want, "a start at H - AVG - 1 would add the producer whose 10th block is at H - AVG - 1");
   assert.deepEqual(JSON.parse(py(`L = V.Ledger(j["tl"]); print(json.dumps(V.list_at(L, j["H"])))`, { tl, H })), want, "JS = Python");
 });

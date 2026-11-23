@@ -31,7 +31,7 @@ test("render: every committed kit workflow is exactly what the kit renders (run 
 // this compared games.yml with origin/main, which failed any PR that changes a hand-written job on purpose, such as
 // the Ruler's vhp_ruler.py in #33, whenever origin/main existed; a shallow CI checkout skipped it.)
 test("render: kit games live in kit-games.yml; games.yml holds no kit block and rendering leaves its hand-written lines as they are (D-160)", () => {
-  assert.deepEqual(kitGames(ROOT).flatMap((x: any) => x.games.map((g: any) => `${x.file}:${g.slug}`)), ["games.yml:fantasy", "games.yml:survivor", "games.yml:vs"], "the kit games are exactly the games with a GameModule");
+  assert.deepEqual(kitGames(ROOT).flatMap((x: any) => x.games.map((g: any) => `${x.file}:${g.slug}`)), ["games.yml:fantasy", "games.yml:overunder", "games.yml:survivor", "games.yml:vs"], "the kit games are exactly the games with a GameModule");
   const now = fs.readFileSync(path.join(ROOT, ".github/workflows/games.yml"), "utf8");
   assert.ok(!now.includes(BEGIN) && !now.includes(END), "no kit block in the host");
   const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
@@ -51,10 +51,10 @@ test("render: kit-games.yml runs twice an hour (:27 and :57) and never beside th
   assert.deepEqual(kit.concurrency, host.concurrency, "the same concurrency group as the host");
   assert.equal(kit.concurrency["cancel-in-progress"], false);
   assert.deepEqual(kit.permissions, { contents: "read" });
-  assert.deepEqual(Object.keys(kit.jobs).sort(), ["kit-alerts", "publish-kit", "record-fantasy", "record-survivor", "record-vs"]);
-  for (const j of ["kit-alerts", "publish-kit", "record-fantasy", "record-survivor", "record-vs"]) assert.ok(!(j in host.jobs), `${j} is not in games.yml`);
+  assert.deepEqual(Object.keys(kit.jobs).sort(), ["kit-alerts", "publish-kit", "record-fantasy", "record-overunder", "record-survivor", "record-vs"]);
+  for (const j of ["kit-alerts", "publish-kit", "record-fantasy", "record-overunder", "record-survivor", "record-vs"]) assert.ok(!(j in host.jobs), `${j} is not in games.yml`);
 
-  assert.deepEqual(kit.jobs["publish-kit"].needs, ["record-fantasy", "record-survivor", "record-vs"], "it no longer waits on a job in another file");
+  assert.deepEqual(kit.jobs["publish-kit"].needs, ["record-fantasy", "record-overunder", "record-survivor", "record-vs"], "it no longer waits on a job in another file");
   // The publish check's freshness window (NK-11) still covers the kit's own record job: it now starts after the host ends.
   assert.ok(RECORD_TIMEOUT_MIN <= LEGACY_WAIT_MAX_MIN);
   assert.equal(kitFileName("games.yml"), "kit-games.yml");
@@ -214,4 +214,17 @@ test("render: the run blocks are valid bash", { skip: NO_BASH }, () => {
   blocks.push(...all.slice(1));
   assert.ok(blocks.length >= 8);
   for (const b of blocks) { const r = spawnSync("bash", ["-n"], { input: b.replace(/\$\{\{[^}]*\}\}/g, "X"), encoding: "utf8" }); assert.equal(r.status, 0, r.stderr + "\n" + b.slice(0, 300)); }
+});
+
+// #R5-10-2 (B2 (2), L5): the publish job's push rule takes <slug>/live.json and nothing else named live.
+test("render: the publish push rule accepts <slug>/live.json and rejects other live.json paths (B2, #R5-10-2)", () => {
+  const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
+  const line = kit.split("\n").find((l) => l.includes('[[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|live|alltime|'));
+  assert.ok(line, "kit-games.yml has the push rule with live");
+  const m = line!.match(/=~ (\^.*\$) \]\]/);
+  assert.ok(m, "the rule's pattern is readable");
+  const re = new RegExp(m![1]);   // the rendered bash ERE is also a valid JS pattern here
+  assert.ok(re.test("fantasy/live.json"), "fantasy/live.json is pushed");
+  for (const bad of ["fantasy/W005/live.json", "fantasy/vault/live.json", "fantasy/lives.json", "live.json", "fantasy/live.json.x"]) assert.ok(!re.test(bad), `${bad} is refused`);
+  assert.ok(re.test("fantasy/board.json") && re.test("fantasy/W005.json"), "the old names still pass");
 });

@@ -500,7 +500,9 @@ const publishSh = (() => {
 })();
 function publish(incoming, bare, now = CHECK_NOW, extra = {}) {
   // RACE_PRIZES_FROM 0: the made-up week 2 pays here (as picksRun's default prizesFrom); the workflow never sets it.
-  const env = { ...process.env, IN: incoming, GH_TOKEN: "t", GITHUB_REPOSITORY: "o/r", RUNNER_TEMP: tmp(), RACE_CHECK_NOW: now, RACE_PRIZES_FROM: "0",
+  // CHECK_NOW_MS too: the publish job's "a new week only around now" check (BX-119) reads it, else the real clock,
+  // which made this test fail once the real date passed the made-up weeks (Week 5, Sun 22 Nov 2026).
+  const env = { ...process.env, IN: incoming, GH_TOKEN: "t", GITHUB_REPOSITORY: "o/r", RUNNER_TEMP: tmp(), RACE_CHECK_NOW: now, CHECK_NOW_MS: String(Math.round(Number(now) * 1000)), RACE_PRIZES_FROM: "0",
     GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: `url.${bare}.insteadOf`, GIT_CONFIG_VALUE_0: "https://x-access-token:t@github.com/o/r.git", ...extra };
   try { return { ok: true, out: execFileSync("bash", ["-c", publishSh], { cwd: tmp(), env, stdio: "pipe" }).toString() }; }
   catch (e) { return { ok: false, out: String(e.stdout) + String(e.stderr) }; }

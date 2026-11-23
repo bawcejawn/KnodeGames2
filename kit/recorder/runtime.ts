@@ -110,6 +110,14 @@ export const MAX_HEAD_GAP_MS = 5 * MIN;        // the two nodes' chain times (KC
 export { MAX_BEHIND_MS };                        // the chain time vs the runner's clock (KC-7; the check's FRESH_MS uses it, NK-11)
 export const WARN_BYTES = Math.floor(MAX_FILE_BYTES * 0.6);     // a warning from 60% of the 2 MB cap…
 export const ALERT_BYTES = Math.floor(MAX_FILE_BYTES * 0.85);   // …and an owner alert from 85%, well before the 1.9 MB stop (NK-3)
+/** B2 (1), #R5-10-1: a parts game's whole week against the parts-week limit: a warning over 60%, an owner alert over 85%,
+ *  a stop over 95% (MAX_PARTS_WEEK_WRITE_BYTES). Pure, so the edges are tested. */
+export function partsWeekLevel(n: number): "ok" | "warn" | "alert" | "stop" {
+  if (n > MAX_PARTS_WEEK_WRITE_BYTES) return "stop";
+  if (n > Math.floor(0.85 * MAX_PARTS_WEEK_BYTES)) return "alert";
+  if (n > Math.floor(0.6 * MAX_PARTS_WEEK_BYTES)) return "warn";
+  return "ok";
+}
 /** The variable names the owner sets for a game (hyphens → _, KC-19). */
 export const varName = (slug: string, what: "RELEASE" | "HOLD_WEEKS") => `${slug.toUpperCase().replace(/-/g, "_")}_${what}`;
 
@@ -727,8 +735,9 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   // the parts-week limit instead: a warning from 60%, an owner alert from 85%, a stop at 95%.
   const partsWeekAlert = (n: number) => {
     const mb = (x: number) => (x / 1048576).toFixed(1);
-    if (n > Math.floor(0.85 * MAX_PARTS_WEEK_BYTES)) alerts.errors.push(`week ${w}'s whole week is ${mb(n)} MB, over 85% of the ${mb(MAX_PARTS_WEEK_BYTES)} MB parts-week limit: it stops at ${mb(MAX_PARTS_WEEK_WRITE_BYTES)} MB (B2)`);
-    else if (n > Math.floor(0.6 * MAX_PARTS_WEEK_BYTES)) alerts.warnings.push(`week ${w}'s whole week is ${mb(n)} MB, over 60% of the parts-week limit (B2)`);
+    const lv = partsWeekLevel(n);
+    if (lv === "alert") alerts.errors.push(`week ${w}'s whole week is ${mb(n)} MB, over 85% of the ${mb(MAX_PARTS_WEEK_BYTES)} MB parts-week limit: it stops at ${mb(MAX_PARTS_WEEK_WRITE_BYTES)} MB (B2)`);
+    else if (lv === "warn") alerts.warnings.push(`week ${w}'s whole week is ${mb(n)} MB, over 60% of the parts-week limit (B2)`);
   };
   // board.json is trimmed to its byte budget (boardOf); if its kept rows alone are still too big, the week's other files
   // are written anyway and the board waits, with an owner alert (NK-4: the cap never leaves a week with no files).
@@ -787,7 +796,7 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   const size = Buffer.byteLength(JSON.stringify(body));
   if (cfg.parts) {
     // B2 (1): a parts week is written as parts (each capped by kit/parts), so the one-file limit doesn't apply to it.
-    if (size > MAX_PARTS_WEEK_WRITE_BYTES) throw new Error(`week ${w} would be ${Math.round(size / 1024)} KB in all, over the ${Math.round(MAX_PARTS_WEEK_WRITE_BYTES / 1024)} KB a parts week may hold (B2): stopping`);
+    if (partsWeekLevel(size) === "stop") throw new Error(`week ${w} would be ${Math.round(size / 1024)} KB in all, over the ${Math.round(MAX_PARTS_WEEK_WRITE_BYTES / 1024)} KB a parts week may hold (B2): stopping`);
     partsWeekAlert(size);
   } else {
     if (size > MAX_WRITE_BYTES) throw new Error(`week ${w}'s file would be ${Math.round(size / 1024)} KB, over the ${Math.round(MAX_WRITE_BYTES / 1024)} KB the kit writes: this game has outgrown one week file (GAME_KIT.md §6: split it before this happens)`);
