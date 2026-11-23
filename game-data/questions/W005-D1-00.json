@@ -1,0 +1,254 @@
+{
+  "date": "W005-D1-00",
+  "week": 5,
+  "day": 1,
+  "tier": "Easy",
+  "released": "2026-11-23T00:01:34.190Z",
+  "questions": [
+    {
+      "id": "W005-D1-00-1",
+      "date": "W005-D1-00",
+      "week": 5,
+      "day": 1,
+      "tier": "Easy",
+      "template": "E2s",
+      "releaseHeight": 41305832,
+      "lockHeight": 41321338,
+      "lockTime": 1795435200000,
+      "title": "Head-to-head with spread",
+      "text": "Producer 1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU's blocks minus producer 18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m's blocks, between block 41,321,339 and block 41,331,338: will the difference be more than 209?",
+      "subjects": [
+        "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU",
+        "18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m"
+      ],
+      "unit": "count",
+      "windowStart": 41321339,
+      "windowEnd": 41331338,
+      "thresholds": [
+        209
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "No — 209 or less",
+          "min": null,
+          "max": 209
+        },
+        {
+          "index": 1,
+          "label": "Yes — 210 or more",
+          "min": 210,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.5,
+        0.5
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU": 0.07399305555555556,
+          "18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m": 0.053211805555555554
+        },
+        "window": 10000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU": "87547296939030",
+          "18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m": "70762351603030"
+        },
+        "vhpHeight": 41305911,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "39a687a826efb5bb7c0263cf1ee65d3276f4535a884a69d50368a5a2bfe44089",
+      "chainId": 158
+    },
+    {
+      "id": "W005-D1-00-2",
+      "date": "W005-D1-00",
+      "week": 5,
+      "day": 1,
+      "tier": "Easy",
+      "template": "E3",
+      "releaseHeight": 41305832,
+      "lockHeight": 41321338,
+      "lockTime": 1795435200000,
+      "title": "Smaller producer over/under",
+      "text": "Will producer 14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb sign more than 719 blocks between block 41,321,339 and block 41,341,338 (about 17 hours)?",
+      "subjects": [
+        "14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb"
+      ],
+      "unit": "count",
+      "windowStart": 41321339,
+      "windowEnd": 41341338,
+      "thresholds": [
+        719
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "No — 719 or fewer",
+          "min": null,
+          "max": 719
+        },
+        {
+          "index": 1,
+          "label": "Yes — 720 or more",
+          "min": 720,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.4978902953586498,
+        0.5021097046413502
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb": 0.035486111111111114
+        },
+        "forecast": {
+          "14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb": 0.035729166666666666
+        },
+        "window": 20000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb": "55192072929899"
+        },
+        "vhpHeight": 41305911,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "0f9c74801844e61a0d252c7e2e0e93ef398c9f03aa78522a727ea65db31ebb5e",
+      "chainId": 159
+    },
+    {
+      "id": "W005-D1-00-3",
+      "date": "W005-D1-00",
+      "week": 5,
+      "day": 1,
+      "tier": "Easy",
+      "template": "E1s",
+      "releaseHeight": 41305832,
+      "lockHeight": 41321338,
+      "lockTime": 1795435200000,
+      "title": "Core producer over/under",
+      "text": "Will producer 1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW sign more than 1,651 blocks between block 41,321,339 and block 41,331,338 (about 8 hours)?",
+      "subjects": [
+        "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW"
+      ],
+      "unit": "count",
+      "windowStart": 41321339,
+      "windowEnd": 41331338,
+      "thresholds": [
+        1651
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "No — 1,651 or fewer",
+          "min": null,
+          "max": 1651
+        },
+        {
+          "index": 1,
+          "label": "Yes — 1,652 or more",
+          "min": 1652,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.5038845726970034,
+        0.4961154273029967
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": 0.17274305555555555
+        },
+        "forecast": {
+          "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": 0.16486111111111112
+        },
+        "window": 10000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": "215919095767191"
+        },
+        "vhpHeight": 41305911,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "3769e8886b32d73bed44b0cf05793b4764ef9b67ed1909cef0ef98b879a7c34a",
+      "chainId": 160
+    },
+    {
+      "id": "W005-D1-00-4",
+      "date": "W005-D1-00",
+      "week": 5,
+      "day": 1,
+      "tier": "Easy",
+      "template": "E2s",
+      "releaseHeight": 41305832,
+      "lockHeight": 41321338,
+      "lockTime": 1795435200000,
+      "title": "Head-to-head with spread",
+      "text": "Producer 1UG4UUn7Da9JqE4PKbYUWgjbNwE5F9531's blocks minus producer 15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ's blocks, between block 41,321,339 and block 41,331,338: will the difference be more than 510?",
+      "subjects": [
+        "1UG4UUn7Da9JqE4PKbYUWgjbNwE5F9531",
+        "15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ"
+      ],
+      "unit": "count",
+      "windowStart": 41321339,
+      "windowEnd": 41331338,
+      "thresholds": [
+        510
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "No — 510 or less",
+          "min": null,
+          "max": 510
+        },
+        {
+          "index": 1,
+          "label": "Yes — 511 or more",
+          "min": 511,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.5,
+        0.5
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "1UG4UUn7Da9JqE4PKbYUWgjbNwE5F9531": 0.18536458333333333,
+          "15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ": 0.13767361111111112
+        },
+        "window": 10000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "1UG4UUn7Da9JqE4PKbYUWgjbNwE5F9531": "226303013012910",
+          "15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ": "163848589807160"
+        },
+        "vhpHeight": 41305911,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "ecaabbaa8e2931461813107601c451fde7a061fd9629006af13eb5a76ed371dd",
+      "chainId": 161
+    }
+  ],
+  "daySeal": "fa03b48143a4cc2697868f11ff6d9a5010689d9572a7fa8fa91092d8df87ea73"
+}
