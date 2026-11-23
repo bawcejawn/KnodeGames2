@@ -71,7 +71,7 @@ Stores Block X picks (and, later, other pick games). Does not hold the pot.
 | Owner | Announce a game, pause a game, schedule an upgrade, propose a new owner. | A game and an upgrade wait 48 hours. A handover kills pending announcements, so do not hand over in the middle of one. |
 | Player | Pick. | — |
 
-Live build to expect: `92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d` (Picks v2; upload tx and time are in picks-data/deployment.json once Vault gives them; v1 was `700c296a1064b904299c156061d6caf8fcabd0b1765968903f29d89d2426c594`).
+Live build to expect: `92d555d0680157854452e35162c1b1c5c100904996194b8c1c848df50e5e1c3d` (Picks v2, uploaded about 2026-11-22 23:30 UTC; upload tx in picks-data/deployment.json; v1 was `700c296a1064b904299c156061d6caf8fcabd0b1765968903f29d89d2426c594`).
 
 **Handover.** The owner commands are `npm run picks -- owner-propose`, then `owner-accept` after 48 hours, or `owner-cancel`. Read `npm run picks -- status` first.
 
