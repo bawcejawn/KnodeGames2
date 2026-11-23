@@ -1363,7 +1363,6 @@
     $("#stat-ends").nextElementSibling.textContent = now < S.genesis ? "until the first week starts" : "until the week ends";
     // Last week and this week, kept apart. Until last week closes, everything earned still belongs to it.
     const P = S.prev;
-    const prevOpen = !!(P && !P.closed);
     $("#stat-players").textContent = S.boardWeek === S.week && S.board[S.week] ? String(S.board[S.week].scored.length) : "…";
     renderBand(now);
 
@@ -1424,10 +1423,7 @@
         el("dl", { class: "facts", style: "margin-top:14px" },
           el("dt", {}, "Points this week"), el("dd", {}, pts ? String(pts.pts) : "0"),
           ...(nowMs() >= S.genesis && pts && pts.counted > 0 ? [
-            el("dt", {}, "Live place"), el("dd", {}, pts.eligible ? `#${S.board[S.week].scored.filter((x) => x.eligible).indexOf(pts) + 1} of ${S.board[S.week].scored.filter((x) => x.eligible).length}` : "free play (no place)"),
-            ...(sharedWeek(S.week) ? [] : [
-              el("dt", { title: "An estimate from what the pool has made so far this week; the final split is set when the week closes." }, "If the week ended now"),
-              el("dd", {}, isTestWeek(S.week) ? "nothing: a test week (practice points only)" : prevOpen ? `counts after week ${P.week + 1} closes` : pts.winner && pts.reward !== undefined ? `~${amount(pts.reward)} VHP` : !pts.eligible ? "needs 1 VHP + 2 answers" : "not in the top 30% yet")])] : []),
+            el("dt", {}, "Live place"), el("dd", {}, pts.eligible ? `#${S.board[S.week].scored.filter((x) => x.eligible).indexOf(pts) + 1} of ${S.board[S.week].scored.filter((x) => x.eligible).length}` : "free play (no place)"),] : []),
           el("dt", {}, "Answers given"), el("dd", {}, String((S.entry?.answers || []).length)),
           el("dt", {}, "Wallet"), el("dd", { class: "addr" }, short(S.account))),
         S.entry?.voided ? el("p", { class: "warn" }, "You withdrew this week, so this week's answers don't count.") : null,
@@ -1492,12 +1488,12 @@
       el("td", {}, el("span", { class: "addr" }, s.address === S.account ? youLabel() : walletName(s.address)), i === lastWinnerIdx ? el("span", { class: "cut-label" }, "winners' line") : null),
       el("td", { class: "num" }, String(s.pts)),
       el("td", { class: "num" }, s.stake < UNIT ? el("span", { class: "badge badge-free" }, "Free play") : `${amount(s.stake, 0)} VHP`),
-      el("td", { class: "num" }, freePrizeRow(s) ? (rows.indexOf(s) === 0 ? "🥇 Prize" : "🥈 Prize") : !practice && s.winner && s.reward !== undefined && !b.estimate ? `${b.estimate ? "~" : ""}${amount(s.reward)} VHP` : "–"))));
+      el("td", { class: "num" }, freePrizeRow(s) ? (rows.indexOf(s) === 0 ? "🥇 Prize" : "🥈 Prize") : !practice && s.winner && s.reward !== undefined && !b.estimate ? `${amount(s.reward)} VHP` : "–"))));
     // Phones: the same standings as cards, your own card pinned on top. Ties: players on the same points as a neighbour.
     if (cards && cards.replaceChildren) {
       const elig = rows.filter((s) => s.eligible);
       const tied = (s) => s.eligible && elig.some((o) => o !== s && o.pts === s.pts);
-      const rewardOf = (s) => (freePrizeRow(s) ? "weekly free-play prize" : !practice && s.winner && s.reward !== undefined && !b.estimate ? `${b.estimate ? "~" : ""}${amount(s.reward)} VHP` : null);
+      const rewardOf = (s) => (freePrizeRow(s) ? "weekly free-play prize" : !practice && s.winner && s.reward !== undefined && !b.estimate ? `${amount(s.reward)} VHP` : null);
       const card = (s, i, pinned) => el("div", { class: ["lbc", s.address === S.account ? "me" : "", s.winner ? "win" : "", pinned ? "pinned" : ""].join(" ").trim() },
         el("span", { class: `lbc-place${s.winner ? " lbc-win" : ""}` }, placeOf.get(s) ? `#${placeOf.get(s)}` : "–"),
         el("div", { class: "lbc-who" },
@@ -1515,7 +1511,7 @@
       : kind === "free"
       ? `Free play: wallets with no stake. 1st and 2nd at the end of the week collect the free-play prize. Only the top ${FREE_SHOW} are shown; everyone else stays private.`
       : week === S.week
-      ? "Live standings: points count as soon as each question's blocks are final. The top 30% of staked players win (ties too). Rewards shown with ~ are estimates if the week ended now."
+      ? "Live standings: points count as soon as each question's blocks are final. The top 30% of staked players win (ties too). Rewards are set when the week closes."
       : b.final ? `Final: ${num(b.final.winners)} winner(s) at ${num(b.final.cutoff)}+ points shared ${amount(b.final.pot)} VHP.` : "Final standings.";
     if (week === S.week) $("#stat-players").textContent = String(b.scored.length);
   }
