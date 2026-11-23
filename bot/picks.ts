@@ -774,6 +774,9 @@ async function upgradeUpload(send: boolean) {
   }
 }
 
+/** The arguments that clear an announced upgrade: an empty hash (the contract clears on a missing, empty or all-zero hash).
+ *  Sun 22 Nov: "0x" was refused by koilib before signing ("Invalid hex"); "" encodes to an empty message. Exported (tests). */
+export const CLEAR_UPGRADE_ARGS = Object.freeze({ hash: "" });
 /** upgrade-clear: once v2 runs, the owner clears the announced hash, so the same code can't be uploaded again (step 4). */
 async function upgradeClear(send: boolean) {
   const net = network();
@@ -790,7 +793,7 @@ async function upgradeClear(send: boolean) {
   log(`Clear the announced code ${w.hash} on the Picks contract ${net.picks} (${net.testnet ? "testnet" : "MAINNET"}), signed by the owner ${s.getAddress()} (about 0.1 Mana).`);
   log("  After this, no code can be uploaded until a new announcement and its 48-hour wait.");
   if (!send) { log(`\nDry run only. Nothing was sent. To send: add --send${net.testnet ? "" : ` --mainnet --code ${b.to.sha256.slice(0, 8)}`}`); return; }
-  const r = await sendCall(net, p, chainId, s, "schedule_upgrade", { hash: "0x" });
+  const r = await sendCall(net, p, chainId, s, "schedule_upgrade", CLEAR_UPGRADE_ARGS);
   if (!r.ok) { log(`✖ ${r.error}`); process.exitCode = 1; return; }
   const after = await readEverywhere(net, p);
   if (upgradeWindow(after.cfg, b.to.sha256, after.now).state !== "none") { log("⚠ sent, but the nodes still show an announced code. Run npm run picks -- status in a minute."); process.exitCode = 1; return; }
