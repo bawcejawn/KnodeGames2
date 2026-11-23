@@ -37,6 +37,7 @@ const I = {
   combo: '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path>',
   vs: '<path d="M4 7h12l-3-3"></path><path d="M20 17H8l3 3"></path>',
   overunder: '<path d="M12 4v16"></path><path d="M7 9l5-5 5 5"></path><path d="M7 15l5 5 5-5"></path>',
+  survivor: '<path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path><path d="M9 12l2 2 4-4"></path>',
   lastnode: '<path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path>',
   ruler: '<path d="M3 15.5l12.5-12.5 5.5 5.5L8.5 21z"></path><path d="M7.5 11l2.5 2.5M10.5 8l2 2M13.5 5l2.5 2.5"></path>',
   trust: '<path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path>',
@@ -51,7 +52,7 @@ const I = {
 export const TABS = [["Games", "games.html", "games"], ["Stake", "stake.html", "stake"], ["Leaders", "#leaderboard", "leaders"]];
 // The More sheet, in groups (each group a heading, then its links).
 export const MORE_GROUPS = [
-  ["Play", [["Daily Questions", "#play", "play"], ["Producer Race", "race.html", "race"], ["Who Signs Block X", "blockx.html", "blockx"], ["Producer Bracket", "bracket.html", "bracket"], ["Block Golf", "golf.html", "golf"], ["Fantasy Producers", "fantasy.html", "fantasy"], ["Last Node Standing", "lastnode.html", "lastnode"], ["Knode Games VS", "vs.html", "vs"], ["Over Under", "overunder.html", "overunder"], ["Combo Card · Preview", "combo.html", "combo"], ["Results", "#results", "results"], ["Rules", "#how", "rules"]]],
+  ["Play", [["Daily Questions", "#play", "play"], ["Producer Race", "race.html", "race"], ["Who Signs Block X", "blockx.html", "blockx"], ["Producer Bracket", "bracket.html", "bracket"], ["Block Golf", "golf.html", "golf"], ["Fantasy Producers", "fantasy.html", "fantasy"], ["Last Node Standing", "lastnode.html", "lastnode"], ["Survivor", "survivor.html", "survivor"], ["Knode Games VS", "vs.html", "vs"], ["Over Under", "overunder.html", "overunder"], ["Combo Card · Preview", "combo.html", "combo"], ["Results", "#results", "results"], ["Rules", "#how", "rules"]]],
   ["Tools", [["Get VHP", "get.html", "get"], ["Get an @name", "names.html", "name"], ["Swap VHP → KOIN", "swap.html", "swap"], ["Burn KOIN", "burn.html", "burn"], ["Mana levels", "mana.html", "mana"], ["Producer lookup", "node.html", "lookup"], ["Run a node", "run-node.html", "server"], ["Network pulse", "pulse.html", "pulse"]]],
   ["Learn", [["New to Koinos?", "start.html", "welcome"], ["Ecosystem", "ecosystem.html", "eco"], ["New here? Quick tour", "#welcome", "welcome"], ["Ruler", "ruler.html", "ruler"]]],
   ["About", [["Install app", "install.html", "install"], ["Trust", "trust.html", "trust"], ["Fairness", "fairness.html", "trust"], ["Terms &amp; risks", "terms.html", "terms"]]],
@@ -60,7 +61,7 @@ export const MORE = MORE_GROUPS.flatMap(([, links]) => links);
 // The top menu: a link, or a dropdown { label, items }. Add a new live game to the Games dropdown when it ships.
 const TOOLS_ITEMS = [["Get VHP", "get.html"], ["Get an @name", "names.html"], ["Swap VHP → KOIN", "swap.html"], ["Burn KOIN", "burn.html"], ["Mana levels", "mana.html"], ["Producer lookup", "node.html"], ["Run a node", "run-node.html"], ["Network pulse", "pulse.html"]];
 export const TOP = [
-  { label: "Games", items: [["All games", "games.html"], ["Daily Questions", "#play"], ["Producer Race", "race.html"], ["Who Signs Block X", "blockx.html"], ["Producer Bracket", "bracket.html"], ["Block Golf", "golf.html"], ["Fantasy Producers", "fantasy.html"], ["Last Node Standing", "lastnode.html"], ["Knode Games VS", "vs.html"], ["Over Under", "overunder.html"], ["Combo Card · Preview", "combo.html"]] },
+  { label: "Games", items: [["All games", "games.html"], ["Daily Questions", "#play"], ["Producer Race", "race.html"], ["Who Signs Block X", "blockx.html"], ["Producer Bracket", "bracket.html"], ["Block Golf", "golf.html"], ["Fantasy Producers", "fantasy.html"], ["Last Node Standing", "lastnode.html"], ["Survivor", "survivor.html"], ["Knode Games VS", "vs.html"], ["Over Under", "overunder.html"], ["Combo Card · Preview", "combo.html"]] },
   { label: "Leaderboards", link: "#leaderboard" },
   { label: "Stake", link: "stake.html" },
   { label: "More", items: [["Results", "#results"], ["Rules", "#how"], ["Ruler", "ruler.html"], ["New to Koinos?", "start.html"], ["Ecosystem", "ecosystem.html"], ...TOOLS_ITEMS] },

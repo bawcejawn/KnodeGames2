@@ -20,7 +20,22 @@ test("games.json: known kinds and statuses, plain text, live games link to this 
     assert.doesNotMatch(g.name + g.line, /[<>]/, `${g.id}: plain text`);
     if ((g.status === "live" || g.status === "preview") && g.href.includes(".html")) assert.ok(fs.existsSync(`${APP}/web/${g.href.split("#")[0]}`), `${g.id}: page exists`);
   }
-  assert.deepEqual(games.filter((g) => g.status === "live").map((g) => g.id).sort(), ["blockx", "bracket", "fantasy", "golf", "lastnode", "overunder", "questions", "race", "vs"]);
+  assert.deepEqual(games.filter((g) => g.status === "live").map((g) => g.id).sort(), ["blockx", "bracket", "fantasy", "golf", "lastnode", "overunder", "questions", "race", "survivor", "vs"]);
+});
+
+test("every live or preview game is in the games list rules, the Games menu, the Play menu and on the home page (the Over Under gap, 23 Nov)", async () => {
+  const nav = await import(new URL(`file://${process.cwd()}/${APP}/tools/site-nav.mjs`.replace(/\/\.\//, "/")).href);
+  const home = fs.readFileSync(`${APP}/web/index.html`, "utf8");
+  const games_menu = nav.TOP.find((t) => t.label === "Games").items.map((i) => i[1]);
+  const play = nav.MORE_GROUPS.find((g) => g[0] === "Play")[1].map((i) => i[1]);
+  for (const g of games.filter((x) => x.status === "live" || x.status === "preview")) {
+    assert.ok(/^[a-z0-9-]+\.html$/.test(g.href) || g.href === "#play" || g.id === "questions", `${g.id}: href the list accepts`);
+    const h = g.id === "questions" ? "#play" : g.href;
+    assert.ok(games_menu.includes(h), `${g.id}: in the Games drop-down`);
+    assert.ok(play.includes(h), `${g.id}: in the Play list of the More sheet`);
+    if (g.id !== "questions") assert.ok(home.includes(`href="${g.href}"`), `${g.id}: on the home page`);
+  }
+  assert.ok(games.length <= 40, "games.js shows at most 40 games");
 });
 
 test("games.js only reads and draws: no sending, no storage, no HTML from data; it checks games.json itself", () => {
