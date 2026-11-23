@@ -40,7 +40,7 @@ const LEGS = { WIN: 1, SHOW: 2, HALF: 3, BLOCK: 4 };
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
 const ABI_FILE = path.join(REPO, "contracts/picks/abi/picks.koilib.json");
-const V2_DIR = path.join(REPO, "picks/build/testnet-v2");
+const V2_DIR = path.join(REPO, "contracts/picks/build/testnet-v2");
 // Producers for test legs: any valid addresses (the contract checks the address, not who produces on the testnet).
 const PRODUCERS = ["15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ", "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW", "1UG4UUn7Da9JqE4PKbYUWgjbNwE5F9531", "1GGxRhLN7Ek54xycG5XaZBE4bCgwV2xtvk",
   "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu", "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU", "18UYKhWVCbTpFs8oYC54xoiCQQthhEkX7m", "14MHW6TF8gw8EuMRLCJc2PQHLzZLKuwGqb",
