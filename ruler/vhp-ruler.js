@@ -841,12 +841,13 @@
     if (t < GENESIS_MS) throw new Error("a game's start must be a whole number of milliseconds from week 0");
     return Number((t - GENESIS_MS) / WEEK_MS);
   }
-  /** The blocks a producer is forecast to sign in a game, millionths: its card's k (VHP share) scaled down by its form (never up), never above the luck cap (D-383). */
+  /** The form that scales a forecast is capped here (104%): a steady producer signs a little more than its k, but not as much as a high 14-day form says (D-588). */
+  const FORECAST_FORM_MAX = 1040000n;
+  /** The blocks a producer is forecast to sign in a game, millionths: its card's k (VHP share) times its form, the form capped at FORECAST_FORM_MAX. No cap on the blocks (D-588: the 1,000-block cap made Over win for big producers). */
   function forecastExpected(row) {
     const k = big(row.k), form = big(row.form);
     if (k < 0n || form < 0n) throw new Error("k and form can't be negative");
-    const e = (k * (form < M ? form : M)) / M;
-    return e < LUCK_CAP ? e : LUCK_CAP;
+    return (k * (form < FORECAST_FORM_MAX ? form : FORECAST_FORM_MAX)) / M;
   }
   /** The Over/Under line in half-blocks (1 = half a block): the Poisson median half-line for `expected` (millionths). */
   function medianLineHalves(expected) {
@@ -857,6 +858,6 @@
   function listAt(L, H) { return L.active(H).filter((a) => L.signedIn(a, H - AVG, H - 1) >= 10).sort(); }
   /** The 'Unreliable' label: form below the 80% gate. */
   function isUnreliable(row) { return big(row.form) < BigInt(FORM_GATE); }
-  root.KRuler = { VHP_CONTRACT, DELAY, ACTIVE, HIGH, AVG, FORM, HISTORY, SEED_AFTER, M, MIN_K, FORM_GATE, RULE_VERSION, RULE_VERSIONS, OWN_RULES, POOL_RULES, STEADY_BAND, CORE_LINE, BAND_SD, LUCK_CAP, voidBand, MODES, MODE_CAP, LIFT_SKIP, LIFT_SPAN, STRETCHES, LIFT_SD, liftForm, checkInclude, versionSchedule, versionAt, versionChange, modeSchedule, modeAt, modeChange, effectiveSchedule, cardMode, cardVersion, weekSummary, SWITCH_MAX, switchFrom, rulerMode, switchChange, GENESIS_MS, WEEK_MS, weekOfStart, forecastExpected, medianLineHalves, listAt, isUnreliable,
+  root.KRuler = { VHP_CONTRACT, DELAY, ACTIVE, HIGH, AVG, FORM, HISTORY, SEED_AFTER, M, MIN_K, FORM_GATE, RULE_VERSION, RULE_VERSIONS, OWN_RULES, POOL_RULES, STEADY_BAND, CORE_LINE, BAND_SD, LUCK_CAP, voidBand, MODES, MODE_CAP, LIFT_SKIP, LIFT_SPAN, STRETCHES, LIFT_SD, liftForm, checkInclude, versionSchedule, versionAt, versionChange, modeSchedule, modeAt, modeChange, effectiveSchedule, cardMode, cardVersion, weekSummary, SWITCH_MAX, switchFrom, rulerMode, switchChange, GENESIS_MS, WEEK_MS, weekOfStart, FORECAST_FORM_MAX, forecastExpected, medianLineHalves, listAt, isUnreliable,
     sha256, hex, dec, cardTime, isqrt, trim, pct, fpct, rateOf, creditOf, kOf, vhpDeltas, ledger, own, avg, total, formOf, newcomer, makeCard, scoreCard, cardJson, cardDigest, checkSettings, recompute };
 })(typeof window !== "undefined" ? window : globalThis);

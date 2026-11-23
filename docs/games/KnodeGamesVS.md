@@ -11,6 +11,9 @@ unticked producer counts as "the pool node beats it". Number 0 is "Knode Games v
 before the round and lock 5 minutes before it.
 
 **The roster** is up to 64 producers sorted by address, never the pool node, published once (write-once) before picks open.
+It is the producers with the VHP Ruler's entry on one roster card per week (its scored range is the day of blocks ending
+48 hours before the week starts). Week 5 (Mon 23 Nov) has an empty roster (VS-9, fixed in #59): picks can be sent, nothing
+scores. Matchups start in week 6 (Mon 30 Nov).
 More than 64 stops the recorder loudly; nothing is cut. Lines and multipliers stay hidden until picks lock; names only before.
 
 **Standings of the pool node** (W-L-T): monthly, all-time and per producer, from final day files only, append-only.

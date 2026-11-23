@@ -54,7 +54,7 @@ const E = process.env;
 const log = (...a: any[]) => console.log(...a);
 const DIR = "desk-data";
 const DEPLOYMENT = path.join(DIR, "deployment.json");
-const WASM = "desk/build/release/contract.wasm";
+const WASM = "contracts/desk/build/release/contract.wasm";
 const ABI_FILE = "contracts/desk/abi/desk.koilib.json";
 const DESK_NODE_KEY_FILE = E.DESK_NODE_KEY_FILE ?? "C:\\kpred-desk-node\\basedir\\block_producer\\private.key";
 const FEE_BPS = 300;                     // 3% at launch
@@ -64,16 +64,16 @@ const sha256hex = (b: Uint8Array) => crypto.createHash("sha256").update(b).diges
 const readJson = (f: string, d: any = null) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : d);
 const writeJson = (f: string, v: any) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, JSON.stringify(v, null, 2) + "\n"); };
 const loadAbi = () => {
-  if (!fs.existsSync(ABI_FILE)) throw new Error(`${ABI_FILE} not found — in the desk folder run: npm install, npm test, npm run check`);
+  if (!fs.existsSync(ABI_FILE)) throw new Error(`${ABI_FILE} not found — in the contracts/desk folder run: npm install, npm test, npm run check`);
   return JSON.parse(fs.readFileSync(ABI_FILE, "utf8"));
 };
 const need = (k: string) => { if (!E[k]) throw new Error(`${k} is missing from .env`); return E[k]!; };
 const pct = (bps: number | string) => `${Number(bps) / 100}%`;
 
 function readBuild(): Buffer {
-  if (!fs.existsSync(WASM)) throw new Error(`${WASM} not found — in the desk folder run: npm test && npm run check`);
+  if (!fs.existsSync(WASM)) throw new Error(`${WASM} not found — in the contracts/desk folder run: npm test && npm run check`);
   const wasm = fs.readFileSync(WASM);
-  if (wasm.indexOf(Buffer.from("TEST LEDGER", "utf16le")) !== -1) throw new Error("This is the TEST build (simulated token ledger). Run `npm run build` in the desk folder.");
+  if (wasm.indexOf(Buffer.from("TEST LEDGER", "utf16le")) !== -1) throw new Error("This is the TEST build (simulated token ledger). Run `npm run build` in the contracts/desk folder.");
   return wasm;
 }
 

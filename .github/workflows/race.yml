@@ -1253,14 +1253,16 @@ jobs:
               return (start_ms - GENESIS_MS) // WEEK_MS
 
 
+          FORECAST_FORM_MAX = 1040000   # the form that scales a forecast is capped at 104% (D-588), as in vhp-ruler.js
+
+
           def forecast_expected(row):
-              """The blocks a producer is forecast to sign in a game, millionths: its card's k (VHP share), scaled down by its form
-              (never up: form above 100% adds nothing), and never above the luck cap. D-383."""
+              """The blocks a producer is forecast to sign in a game, millionths: its card's k (VHP share) times its form, the form capped
+              at FORECAST_FORM_MAX (104%). No cap on the blocks (D-588: the 1,000-block cap made Over win for big producers)."""
               k, form = _int(row["k"]), _int(row["form"])
               if k < 0 or form < 0:
                   raise ValueError("k and form can't be negative")
-              e = k * (form if form < M else M) // M
-              return e if e < LUCK_CAP else LUCK_CAP
+              return k * (form if form < FORECAST_FORM_MAX else FORECAST_FORM_MAX) // M
 
 
           def median_line_halves(expected):
