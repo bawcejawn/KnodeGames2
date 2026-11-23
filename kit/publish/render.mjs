@@ -301,6 +301,7 @@ ${fetchStep(branch, g.slug)}${(g.published ?? []).map((o) => "\n" + fetchStep(br
         env:
           RPC: \${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: \${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: \${{ vars.RPC_SPARE }}
           KIT_PREV: \${{ runner.temp }}/prev
           KIT_OUT: \${{ runner.temp }}/out
 ${(g.published ?? []).map((o) => `          KIT_PUBLISHED_${up(o)}: \${{ runner.temp }}/published-${o}\n`).join("")}${g.cfg.vhpData ? "          KIT_VHP_DATA: \${{ runner.temp }}/vhp-data\n" : ""}          # The owner's holds (GAME_KIT.md §3): weeks kept pending, and the one-off release of a held week ("<week>:<code>").

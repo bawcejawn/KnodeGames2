@@ -32,6 +32,6 @@ test("apply window for game 6", () => {
   assert.equal(fromWeek(Date.parse("2026-11-16T00:00:00Z")), 5, "Sun 15 Nov 7:00 PM ET: from week 5");
   assert.equal(fromWeek(Date.parse("2026-11-21T20:15:00Z")), 5);
   assert.equal(fromWeek(Date.parse("2026-11-21T20:16:00Z")), null, "expired");
-  assert.equal(W.label(5), "Week 2"); assert.equal(W.label(4), "Week 1"); assert.equal(W.label(3), "Test week");
+  assert.equal(W.label(5), "Week 5"); assert.equal(W.label(4), "Week 4"); assert.equal(W.label(3), "Test week");
   assert.equal(new Date(W.GENESIS_MS + 5 * W.WEEK_MS + 57 * 60000).toISOString(), "2026-11-23T00:57:00.000Z"); // Sun 22 Nov 7:57 PM EST
 });

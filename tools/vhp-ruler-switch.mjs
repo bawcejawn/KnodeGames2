@@ -20,7 +20,7 @@ if (args.includes("--help") || args.length === 0) {
 const now = opt("--week") !== undefined ? Number(opt("--week")) : Math.floor((Date.now() / 1000 - GENESIS) / WEEK);
 const prev = R.switchFrom(opt("--prev") ?? ""), next = R.switchFrom(nextText);
 const monday = (w) => new Date((GENESIS + w * WEEK) * 1000).toUTCString().slice(0, 16);
-console.log(`Now: vault week ${now} (from ${monday(now)} 00:00 UTC; ${now >= 4 ? `players' Week ${now - 3}` : "before players' Week 1"}).`);
+console.log(`Now: vault week ${now} (from ${monday(now)} 00:00 UTC; ${now >= 4 ? `players' Week ${now}` : "before players' Week 4"}).`);
 console.log(`Switch: ${prev === null ? "unset" : prev} -> ${next === null ? "unset" : next}`);
 const lo = Math.max(0, Math.min(now, (next ?? now) - 2)), hi = Math.max(now + 2, (next ?? now) + 1);
 for (let w = lo; w <= hi; w++) {

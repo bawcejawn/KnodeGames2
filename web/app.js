@@ -3,9 +3,10 @@
    With no deployment yet (or ?demo in the address), it runs a preview on sample data. */
 (() => {
   "use strict";
-  // What players call a week (weeks.js, D-063): the week of Mon 16 Nov is "Week 1", the week of Mon 9 Nov the "Test week"; earlier weeks show their date.
+  // What players call a week (weeks.js, D-063): the week of Mon 16 Nov is "Week 4", the week of Mon 9 Nov the "Test week"; earlier weeks show their date.
   const WL = (w) => (window.KWeeks ? window.KWeeks.label(w) : `Week ${Number(w) + 1}`);
   const WS = (w) => (window.KWeeks ? window.KWeeks.short(w) : String(Number(w) + 1));
+  const fileWeek = (w) => WS(w).replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
 
   const DAY = 28800;              // blocks per day
   const UNIT = 100000000n;        // 1 KOIN / 1 VHP = 10^8 units
@@ -825,7 +826,7 @@
     await opOf(writer(), "answer", { player: S.account, question_id: q.chainId, option }),
   ]);
 
-  const claim = (week) => send(`collect week ${week + 1} reward`, async () => [
+  const claim = (week) => send(`collect ${WL(week)} reward`, async () => [
     await opOf(writer(), "claim", { player: S.account, week: String(week) }),
   ], { ownMana: (S.claims.find((c) => c.week === week) || {}).free || claimNeedsOwnMana(S.claims.find((c) => c.week === week)) });
 
@@ -953,7 +954,7 @@
   }
   const displayQuestionNumber = (q) => QNO.get(Number(q.chainId))?.n ?? Number(q.chainId) + 1;
   const qTag = (q) => `Q${displayQuestionNumber(q)}`;
-  /** "Week 2 · Monday · Q1" */
+  /** "Week 5 · Monday · Q1" */
   const qWhere = (q, withQ = true) => {
     const w = QNO.get(Number(q.chainId))?.week ?? num(q.week);
     const d = num(q.day);
@@ -1242,7 +1243,7 @@
     const elig = B ? B.scored.filter((x) => x.eligible) : [];
     const qs = S.questions.filter((q) => weekOfQ(q) === week && isFinal(q) && outcomeOf(q) !== 1000 && pickOf(q) !== null);
     return {
-      week: week + 1, pts: me ? me.pts : 0,
+      week: WS(week), pts: me ? me.pts : 0,
       place: me && me.eligible && me.counted > 0 ? elig.indexOf(me) + 1 : 0, of: elig.length,
       right: qs.filter((q) => pickOf(q) + 1 === outcomeOf(q)).length, decided: qs.length,
       free: !me || !me.eligible, address: S.account,
@@ -1272,10 +1273,10 @@
     if (dlg.showModal) dlg.showModal();
     await drawShareNow();
   }
-  const shareText = () => { const st = weekStats(SH.week); return `I scored ${st.pts} ${st.pts === 1 ? "point" : "points"} on Knode Games in week ${st.week}${st.place ? ` (#${st.place} of ${st.of})` : ""}. Call the next blocks on Koinos: ${installUrl()}`; };
+  const shareText = () => { const st = weekStats(SH.week); return `I scored ${st.pts} ${st.pts === 1 ? "point" : "points"} on Knode Games in ${WL(SH.week)}${st.place ? ` (#${st.place} of ${st.of})` : ""}. Call the next blocks on Koinos: ${installUrl()}`; };
   const shareBlob = () => new Promise((res) => { const c = $("#share-canvas"); if (!c || !c.toBlob) res(null); else c.toBlob((b) => res(b), "image/png"); });
   async function shareGo() {
-    const blob = await shareBlob(), text = shareText(), name = `knode-week-${SH.week + 1}.png`;
+    const blob = await shareBlob(), text = shareText(), name = `knode-week-${fileWeek(SH.week)}.png`;
     try {
       const file = blob && typeof File === "function" ? new File([blob], name, { type: "image/png" }) : null;
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, title: "Knode Games" }); return; }
@@ -1285,7 +1286,7 @@
   }
   async function shareSave() {
     const blob = await shareBlob();
-    if (blob) saveBlob(blob, `knode-week-${SH.week + 1}.png`);
+    if (blob) saveBlob(blob, `knode-week-${fileWeek(SH.week)}.png`);
     try { await navigator.clipboard.writeText(shareText()); toast("Picture saved, and the text is copied: paste it with the picture."); }
     catch { toast("Picture saved."); }
   }
@@ -1363,7 +1364,6 @@
     $("#stat-ends").nextElementSibling.textContent = now < S.genesis ? "until the first week starts" : "until the week ends";
     // Last week and this week, kept apart. Until last week closes, everything earned still belongs to it.
     const P = S.prev;
-    const prevOpen = !!(P && !P.closed);
     $("#stat-players").textContent = S.boardWeek === S.week && S.board[S.week] ? String(S.board[S.week].scored.length) : "…";
     renderBand(now);
 
@@ -1424,10 +1424,7 @@
         el("dl", { class: "facts", style: "margin-top:14px" },
           el("dt", {}, "Points this week"), el("dd", {}, pts ? String(pts.pts) : "0"),
           ...(nowMs() >= S.genesis && pts && pts.counted > 0 ? [
-            el("dt", {}, "Live place"), el("dd", {}, pts.eligible ? `#${S.board[S.week].scored.filter((x) => x.eligible).indexOf(pts) + 1} of ${S.board[S.week].scored.filter((x) => x.eligible).length}` : "free play (no place)"),
-            ...(sharedWeek(S.week) ? [] : [
-              el("dt", { title: "An estimate from what the pool has made so far this week; the final split is set when the week closes." }, "If the week ended now"),
-              el("dd", {}, isTestWeek(S.week) ? "nothing: a test week (practice points only)" : prevOpen ? `counts after week ${P.week + 1} closes` : pts.winner && pts.reward !== undefined ? `~${amount(pts.reward)} VHP` : !pts.eligible ? "needs 1 VHP + 2 answers" : "not in the top 30% yet")])] : []),
+            el("dt", {}, "Live place"), el("dd", {}, pts.eligible ? `#${S.board[S.week].scored.filter((x) => x.eligible).indexOf(pts) + 1} of ${S.board[S.week].scored.filter((x) => x.eligible).length}` : "free play (no place)"),] : []),
           el("dt", {}, "Answers given"), el("dd", {}, String((S.entry?.answers || []).length)),
           el("dt", {}, "Wallet"), el("dd", { class: "addr" }, short(S.account))),
         S.entry?.voided ? el("p", { class: "warn" }, "You withdrew this week, so this week's answers don't count.") : null,
@@ -1492,12 +1489,12 @@
       el("td", {}, el("span", { class: "addr" }, s.address === S.account ? youLabel() : walletName(s.address)), i === lastWinnerIdx ? el("span", { class: "cut-label" }, "winners' line") : null),
       el("td", { class: "num" }, String(s.pts)),
       el("td", { class: "num" }, s.stake < UNIT ? el("span", { class: "badge badge-free" }, "Free play") : `${amount(s.stake, 0)} VHP`),
-      el("td", { class: "num" }, freePrizeRow(s) ? (rows.indexOf(s) === 0 ? "🥇 Prize" : "🥈 Prize") : !practice && s.winner && s.reward !== undefined && !(b.estimate && s.reward === 0n) ? `${b.estimate ? "~" : ""}${amount(s.reward)} VHP` : "–"))));
+      el("td", { class: "num" }, freePrizeRow(s) ? (rows.indexOf(s) === 0 ? "🥇 Prize" : "🥈 Prize") : !practice && s.winner && s.reward !== undefined && !b.estimate ? `${amount(s.reward)} VHP` : "–"))));
     // Phones: the same standings as cards, your own card pinned on top. Ties: players on the same points as a neighbour.
     if (cards && cards.replaceChildren) {
       const elig = rows.filter((s) => s.eligible);
       const tied = (s) => s.eligible && elig.some((o) => o !== s && o.pts === s.pts);
-      const rewardOf = (s) => (freePrizeRow(s) ? "weekly free-play prize" : !practice && s.winner && s.reward !== undefined && !(b.estimate && s.reward === 0n) ? `${b.estimate ? "~" : ""}${amount(s.reward)} VHP` : null);
+      const rewardOf = (s) => (freePrizeRow(s) ? "weekly free-play prize" : !practice && s.winner && s.reward !== undefined && !b.estimate ? `${amount(s.reward)} VHP` : null);
       const card = (s, i, pinned) => el("div", { class: ["lbc", s.address === S.account ? "me" : "", s.winner ? "win" : "", pinned ? "pinned" : ""].join(" ").trim() },
         el("span", { class: `lbc-place${s.winner ? " lbc-win" : ""}` }, placeOf.get(s) ? `#${placeOf.get(s)}` : "–"),
         el("div", { class: "lbc-who" },
@@ -1511,11 +1508,11 @@
       cards.replaceChildren(...list);
     }
     $("#lb-note").textContent = practice
-      ? "Test week: practice standings. Points count as usual, but there are no rewards or prizes this week; they roll into Week 1's pool (Week 1 starts Monday 16 November)."
+      ? "Test week: practice standings. Points count as usual, but there are no rewards or prizes this week; they roll into Week 4's pool (Week 4 starts Monday 16 November)."
       : kind === "free"
       ? `Free play: wallets with no stake. 1st and 2nd at the end of the week collect the free-play prize. Only the top ${FREE_SHOW} are shown; everyone else stays private.`
       : week === S.week
-      ? "Live standings: points count as soon as each question's blocks are final. The top 30% of staked players win (ties too). Rewards shown with ~ are estimates if the week ended now."
+      ? "Live standings: points count as soon as each question's blocks are final. The top 30% of staked players win (ties too). Rewards are set when the week closes."
       : b.final ? `Final: ${num(b.final.winners)} winner(s) at ${num(b.final.cutoff)}+ points shared ${amount(b.final.pot)} VHP.` : "Final standings.";
     if (week === S.week) $("#stat-players").textContent = String(b.scored.length);
   }

@@ -500,7 +500,9 @@ const publishSh = (() => {
 })();
 function publish(incoming, bare, now = CHECK_NOW, extra = {}) {
   // RACE_PRIZES_FROM 0: the made-up week 2 pays here (as picksRun's default prizesFrom); the workflow never sets it.
-  const env = { ...process.env, IN: incoming, GH_TOKEN: "t", GITHUB_REPOSITORY: "o/r", RUNNER_TEMP: tmp(), RACE_CHECK_NOW: now, RACE_PRIZES_FROM: "0",
+  // CHECK_NOW_MS too: the publish job's "a new week only around now" check (BX-119) reads it, else the real clock,
+  // which made this test fail once the real date passed the made-up weeks (Week 5, Sun 22 Nov 2026).
+  const env = { ...process.env, IN: incoming, GH_TOKEN: "t", GITHUB_REPOSITORY: "o/r", RUNNER_TEMP: tmp(), RACE_CHECK_NOW: now, CHECK_NOW_MS: String(Math.round(Number(now) * 1000)), RACE_PRIZES_FROM: "0",
     GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: `url.${bare}.insteadOf`, GIT_CONFIG_VALUE_0: "https://x-access-token:t@github.com/o/r.git", ...extra };
   try { return { ok: true, out: execFileSync("bash", ["-c", publishSh], { cwd: tmp(), env, stdio: "pipe" }).toString() }; }
   catch (e) { return { ok: false, out: String(e.stdout) + String(e.stderr) }; }
@@ -1124,12 +1126,14 @@ test("held alert, workflow: the alert job fails the run after publishing; the pu
 /** One synthetic paid week (vault week 2), checked by the publish job exactly as a 12:37 Monday run would be: the week
  *  file and the pending file are already published, this push carries the final file and the board. `mutate` changes
  *  the final file (and its pending copy, so only the recompute can catch it). Returns the publish check's output. */
-async function recomputeRun(players, { mutate = null, mutateBoard = null, prizesFrom = "0", skipSunday = false, rhythmFrom = undefined, typed = null, typesFrom = undefined, mutateTypes = null } = {}) {
+async function recomputeRun(players, { mutate = null, mutateBoard = null, prizesFrom = "0", skipSunday = false, rhythmFrom = undefined, typed = null, typesFrom = undefined, mutateTypes = null, pointsV3From = undefined } = {}) {
   const R = await import(path.resolve(APP, "bot/race.ts"));
   const start = M.weekStart(2), races = [];
   const t = new Map(), firstAt = new Map();
   const tfw = typesFrom !== undefined ? Number(typesFrom) : typed ? 2 : null;   // D-173: per-place points once the types are on
-  const PP = (ty) => M.pointsOf(ty, 2, Number(prizesFrom), tfw);
+  // M-375: pointsV3From moves the publish job's switch (RACE_POINTS_V3_FROM) onto the made-up week 2; the expected
+  // points then use the new table (M.PLACES_V3), as the recorder does from vault week 6.
+  const PP = (ty) => (pointsV3From !== undefined && 2 >= Number(pointsV3From) ? { win: M.PLACES_V3[ty][0], second: M.PLACES_V3[ty][1], third: M.PLACES_V3[ty][2] } : M.pointsOf(ty, 2, Number(prizesFrom), tfw));
   for (let i = 0; i < 28; i++) races.push({ id: M.raceId(M.raceIndex(start + i * 6 * H)), start: start + i * 6 * H, end: start + (i + 1) * 6 * H, cards: [], result: { final: true, picks: [] } });
   for (const p of players) for (const [ri, right, show, at] of p.picks) {
     races[ri].result.picks.push([p.a, P[0], at, right, 0, show]);
@@ -1174,7 +1178,7 @@ async function recomputeRun(players, { mutate = null, mutateBoard = null, prizes
   const inc = tmp(); fs.mkdirSync(path.join(inc, "vault"));
   fs.writeFileSync(path.join(inc, "vault", "W2.json"), JSON.stringify(file) + "\n");
   fs.writeFileSync(path.join(inc, "board.json"), JSON.stringify(board) + "\n");
-  const env = { ...process.env, IN: inc, GH_TOKEN: "t", GITHUB_REPOSITORY: "o/r", RUNNER_TEMP: tmp(), RACE_CHECK_NOW: String(U("2026-11-09T12:38Z") / 1000), RACE_PRIZES_FROM: prizesFrom, ...(rhythmFrom !== undefined ? { RACE_RHYTHM_FROM: rhythmFrom } : {}), ...(typesFrom !== undefined ? { RACE_TYPES_FROM: typesFrom } : typed ? { RACE_TYPES_FROM: "2" } : {}),
+  const env = { ...process.env, IN: inc, GH_TOKEN: "t", GITHUB_REPOSITORY: "o/r", RUNNER_TEMP: tmp(), RACE_CHECK_NOW: String(U("2026-11-09T12:38Z") / 1000), RACE_PRIZES_FROM: prizesFrom, ...(rhythmFrom !== undefined ? { RACE_RHYTHM_FROM: rhythmFrom } : {}), ...(typesFrom !== undefined ? { RACE_TYPES_FROM: typesFrom } : typed ? { RACE_TYPES_FROM: "2" } : {}), ...(pointsV3From !== undefined ? { RACE_POINTS_V3_FROM: pointsV3From } : {}),
     GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: `url.${bare}.insteadOf`, GIT_CONFIG_VALUE_0: "https://x-access-token:t@github.com/o/r.git" };
   let out;
   try { out = execFileSync("bash", ["-c", publishSh], { cwd: tmp(), env, stdio: "pipe" }).toString(); } catch (e) { out = "FAILED " + String(e.stdout) + String(e.stderr); }
@@ -2013,7 +2017,9 @@ test("D-173: points per place: the table, the old win / show before the types, a
   // The types on from week 7: a week paid under the old table (4 <= w < 7) keeps it; practice weeks and from week 7 use the new one.
   assert.deepEqual(M.pointsOf(0, 5, 4, 7), { win: 3, second: 1, third: 1, show: 1 }, "paid week 5 keeps 3 / 1");
   assert.deepEqual(M.pointsOf(0, 3, 4, 7), { win: 4, second: 2, third: 1, show: 2 }, "practice week 3 is re-scored");
-  assert.deepEqual(M.pointsOf(0, 7, 4, 7), { win: 4, second: 2, third: 1, show: 2 }, "from week 7");
+  // M-375 (owner, 23 Nov): from vault week 6 the 6-hour race scores 3 / 2 / 1 (tests/audit/race-points-v3.test.mjs).
+  assert.deepEqual(M.pointsOf(0, 7, 4, 7), { win: 3, second: 2, third: 1, show: 2 }, "from week 7 (week 6 on: 3 / 2 / 1)");
+  assert.deepEqual(M.pointsOf(0, 5, 4, 5), { win: 4, second: 2, third: 1, show: 2 }, "week 5 keeps D-173's 4 / 2 / 1");
   assert.deepEqual(M.pointsOf(4, 9, 4, 7), { win: 12, second: 6, third: 4, show: 6 });
   // A show pick's place comes from the race's own standings: 2nd or 3rd.
   const st = [{ a: "W" }, { a: "S" }, { a: "T" }], P = M.pointsOf(0, 9, 4, 7);
@@ -2145,4 +2151,18 @@ test("G53-1: a T file past 60% (and any Race file past 85%) also emails the owne
   assert.match(f, /if \(n && \(bytes > ALERT_BYTES \|\| \/\^T\\d\{3\}\\\.json\$\/\.test\(name\)\) && ownerAlertRun\(now\)\)/);
   assert.match(f, /heldAlerts\.push\(m\)/, "an owner alert: the alert job fails the run, so GitHub emails");
   assert.equal((src.match(/problems, "the (?:week's 6-hour races; Block X, Combo and Golf read it|race types' file would be held|ruler's cards would be held)", now\)/g) || []).length, 4, "every file passes the run's time");
+});
+
+test("M-375, publish job: from POINTS_V3_FROM the 6-hour race scores 3 / 2 / 1 (was 4 / 2 / 1); a board on the old table is held", async () => {
+  // A: two 6-hour wins (3 + 3 = 6). B: one 6-hour 2nd (2). C: a win and a 2nd (3 + 2 = 5).
+  const pl = [{ a: addrN(1), staked: true, picks: [[0, 1, 0, 10], [1, 1, 0, 11]] }, { a: addrN(2), staked: true, picks: [[2, 0, 1, 12]] },
+    { a: addrN(3), staked: false, picks: [[3, 1, 0, 13], [4, 0, 1, 14]] }];
+  const ok = await recomputeRun(pl, { typed: {}, typesFrom: "2", pointsV3From: "2" });
+  assert.ok(ok.final, ok.out);
+  // The same week scored with D-173's 4 / 2 / 1 (A at 8, C at 6) no longer matches the picks: held.
+  const old = await recomputeRun(pl, { typed: {}, typesFrom: "2", pointsV3From: "2", mutateBoard: (b) => { for (const x of b.lastWeek.rows) if (x.a === addrN(1)) x.pts = 8; } });
+  assert.equal(old.final, false); assert.match(old.out, /board's last week doesn't match the week's picks/);
+  // Without the switch (week 2 < 6, the workflow's own value) the old table stands, as before.
+  const before = await recomputeRun(pl, { typed: {}, typesFrom: "2" });
+  assert.ok(before.final, before.out);
 });

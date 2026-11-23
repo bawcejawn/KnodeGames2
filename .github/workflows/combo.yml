@@ -88,6 +88,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           COMBO_PREV: ${{ runner.temp }}/prev/combo
           COMBO_OUT: ${{ runner.temp }}/games-data/combo
           RACE_DATA: ${{ runner.temp }}/race
@@ -165,6 +166,7 @@ jobs:
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
+          RPC_SPARE: ${{ vars.RPC_SPARE }}   # optional spare node for failing reads (bot/node.ts)
           COMBO_RULER_FROM_WEEK: ${{ vars.COMBO_RULER_FROM_WEEK }}
           RACE_RULER_FROM_WEEK: ${{ vars.RACE_RULER_FROM_WEEK }}
         run: |

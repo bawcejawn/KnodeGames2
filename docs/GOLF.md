@@ -8,6 +8,13 @@ Rules: `golf-math.js` (the page and the recorder both run it). Week names on the
 (D-063: vault week 4, from Mon 16 Nov, is "Week 1"; vault week 3, from Mon 9 Nov, is the "Test week" and pays nothing). Decisions: D-056 (rules), D-081 / D-082 (Free play board,
 prize switch), D-125 / D-129 (weekly rhythm), D-138 (launch order). Game file: `docs/games/BlockGolf.md`.
 
+## Free to play only (D-586, owner, Sat 21 Nov 2026)
+Block Golf scores every game, and there isn't enough Mana for everyone to play every game, so **Block Golf is free to play only**: no staking, not a vault game, no prizes.
+- **From vault week 5 (`FREE_FROM_WEEK` in `bot/games/golf.ts`) every week is free:** the practice rule (everyone who scored is in the field, one place per wallet, 3 make a hole), one board, nobody "staked", nobody kept off the free list, and **no vault file** (game 6 is stopped on chain; Vault, M-331: its files are never read). A week from 5 that was recorded as staked but isn't final is scored again as free. Final weeks never change.
+- **`GOLF_STAKED_FROM_WEEK` stays 5 as a label.** `index.json` keeps `"stakedFromWeek": 5` because the publish job refuses any change to it once set: **never change or delete the variable** (every Golf publish would be refused).
+- **Page:** no stake badge and nothing that invites staking. A wallet that still has stake in Block Golf sees the stake panel, which offers only Withdraw (game 6 stopped). `games.json`: Golf `kinds: ["free"]`.
+- The Clubhouse's `staked` feature (staking in any game) is a platform feature and stays.
+
 ## The pieces
 
 | Piece | File | What it does |
@@ -78,7 +85,16 @@ The Clubhouse is one more hole, the same weight as a game hole. It's scored by h
 
 - **A feature that can't be read** in a run is said aloud in the run's problems and tried again the next run. It never removes anything already earned, and never holds a week.
 - **Joins** at vault week 6 at the earliest (`JOIN_FROM.clubhouse`), like a new game: the Monday after it's first seen.
-- **Still to add**, in a follow-up PR: moved stake (the vault's `move_stake`), burned KOIN for VHP (PoB `159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv` `burn`, entry `0x859facc5`), and registered a producer key (PoB `register_public_key`). These come from a wallet's own transactions: `api.koinos.io` serves `account_history.get_account_history` (owner's check, 15 Nov), and only transaction entries count, never block entries. Get VHP is the same feature as the burn: its page does nothing on chain and links to the Burn page (Swap desk chat, 15 Nov). Two more need a field from the Race chat: played on 5+ days, and a second race type. Each one adds a line to `CLUB_FEATURES`, a reader and a test.
+- **From a wallet's own transactions** (`account_history.get_account_history`, served by `api.koinos.io`, owner's check, 15 Nov), read on two nodes that must agree: `api.koinos.io` and the main node (`GOLF_HISTORY_RPC` / `GOLF_HISTORY_RPC_CHECK` override; `GOLF_HISTORY_RPC=off` turns these off). Only transaction entries count, never block entries, and never a reverted one; the operation must act for this wallet.
+
+  | Feature | The operation |
+  |---|---|
+  | `burn` (burned KOIN for VHP; Get VHP is the same, Swap desk chat 15 Nov) | PoB `159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv` `burn` (entry `0x859facc5`) with `burn_address` = the wallet, for 1 VHP or more (D-244) |
+  | `producer-key` (registered a producer key) | PoB `register_public_key` (entry `0x53192be1`) with `producer` = the wallet. Counted in the first run where the wallet also has `producer` (signed a block; kept or seen that run; D-244). A registration read earlier is kept in `clubhouse.json` `keys` (sorted wallets, can only grow), so it still counts when the first block comes (Repo Lens #K-3 K3-1) |
+  | `move-stake` (moved stake between games) | the vault's `move_stake` (entry `2082901609`) with `player` = the wallet |
+
+  Up to 10 players a run (those still missing one of the three), each read forward from where the last run stopped (`clubhouse.json` `hist`: the next history number per wallet, which can only grow), at most 3 pages of 100 a run.
+- **Still to add:** played on 5+ days, and a second race type (they need a field from the Race chat). Each one adds a line to `CLUB_FEATURES`, a reader and a test.
 
 ## The week (D-125, D-129; the one home for timing is `.ai/standards/WEEK_CYCLE.md`)
 

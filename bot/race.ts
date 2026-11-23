@@ -30,6 +30,7 @@
  *   npm run race            (or: npx tsx bot/race.ts)
  */
 import { Provider } from "koilib";
+import { nodeProvider } from "./node.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -1069,28 +1070,46 @@ export function rank(rows: Row[]): Row[] {
 /** D-129 (owner, 4 Nov): Sunday races on the rhythm are played and scored for fun: they count on the Today and All
  *  time boards (a wallet's career), never on a week's board, its medals, prizes or vault file. */
 const forWeek = (r: Race) => !M.restRace(r.start, rhythmFromWeek);
-function tally(weeks: Map<number, WeekFile>, from: number, to: number, weekly = false) {
+/**
+ * The points of final races in [from, to), per wallet: { pts, correct, shows, picks, reached }. Exported (tests).
+ * inWeek: when set (weekly boards), only races it accepts count. countsForWeek: which races use the weekly caps (not a
+ * Sunday fun race). Owner, 23 Nov (M-375): from vault week 6 the 1-hour and 2-hour races have weekly caps per wallet,
+ * applied in race order over the whole week whatever window this board covers (so Today, This week and All time
+ * agree). A result over the cap counts nothing: no points, no win, no show (its pick still counts as a pick placed).
+ */
+export function scoreRaces(races: { start: number; result: any; type: number }[], from: number, to: number,
+  inWeek: ((r: { start: number }) => boolean) | null, paidFrom: number | null, typesFrom: number | null,
+  countsForWeek: (r: { start: number }) => boolean) {
   const t = new Map<string, { pts: number; correct: number; shows: number; picks: number; reached?: number }>();
+  const sorted = [...races].sort((x, y) => x.start - y.start || x.type - y.type);
+  const caps = M.capCounter();
+  for (const r of sorted) {
+    if (!r.result?.final || !Array.isArray(r.result.picks)) continue;
+    const wk = M.weekOf(r.start), inWindow = r.start >= from && r.start < to && !(inWeek && !inWeek(r));
+    // D-173: points per place once the types are on (the old win / show before, and for weeks already paid under it).
+    const P = M.pointsOf(r.type, wk, paidFrom, typesFrom);
+    for (const [who, horse, at, right, , show] of r.result.picks) {
+      const raw = right ? P.win : show ? M.showPoints(P, r.result.standings, horse) : 0;
+      const n = caps.take(who, wk, r.type, raw, countsForWeek(r));   // a Sunday fun race uses no cap
+      if (!inWindow) continue;
+      const x = t.get(who) || { pts: 0, correct: 0, shows: 0, picks: 0 };
+      // From week 6 a place that scores 0 (a 1-hour 2nd or 3rd, a 2-hour 3rd) or a result over the cap is no win or show.
+      x.picks++; x.correct += right && n > 0 ? 1 : 0; x.shows += !right && show && n > 0 ? 1 : 0; x.pts += n;
+      // D-152: when the wallet reached its score = its latest scoring pick (a win or a show).
+      if (n > 0 && (x.reached === undefined || Number(at) > x.reached)) x.reached = Number(at);
+      t.set(who, x);
+    }
+  }
+  return t;
+}
+function tally(weeks: Map<number, WeekFile>, from: number, to: number, weekly = false) {
   // D-166: the 6-hour races, then the race types (their own points), all on the one board.
   const races: { start: number; result: any; type: number }[] = [];
   // The VHP ruler: in an ON week, a 6-hour race's 1st, 2nd and 3rd are the ruler's (null = not scored yet: not counted).
   for (const wf of weeks.values()) for (const r of wf.races) races.push({ start: r.start, result: rulerOn(wf.week) ? RR.ruledResult(r.result, rulerEntry(wf.week, r.id)) : r.result, type: 0 });
   // Option A: a typed race counts with the ruler's 1st / 2nd / 3rd, in an ON week only (null: not counted).
   for (const tf of typesAll.values()) for (const r of tf.races) races.push({ start: r.start, result: typedRuled(tf.week, r), type: r.type });
-  for (const r of races) {
-    if (r.start < from || r.start >= to || !r.result?.final || !Array.isArray(r.result.picks)) continue;
-    if (weekly && !forWeek(r)) continue;
-    // D-173: points per place once the types are on (the old win / show before, and for weeks already paid under it).
-    const P = M.pointsOf(r.type, M.weekOf(r.start), prizesFromWeek === NO_PRIZES ? null : prizesFromWeek, typesFromWeek);
-    for (const [who, horse, at, right, , show] of r.result.picks) {
-      const x = t.get(who) || { pts: 0, correct: 0, shows: 0, picks: 0 };
-      x.picks++; x.correct += right ? 1 : 0; x.shows += !right && show ? 1 : 0; x.pts += right ? P.win : show ? M.showPoints(P, r.result.standings, horse) : 0;
-      // D-152: when the wallet reached its score = its latest scoring pick (a win or a show).
-      if ((right || show) && (x.reached === undefined || Number(at) > x.reached)) x.reached = Number(at);
-      t.set(who, x);
-    }
-  }
-  return t;
+  return scoreRaces(races, from, to, weekly ? forWeek : null, prizesFromWeek === NO_PRIZES ? null : prizesFromWeek, typesFromWeek, forWeek);
 }
 type StakedOf = (who: string, week: number) => Promise<boolean | Stand>;
 const standOf = (v: boolean | Stand): Stand => (typeof v === "boolean" ? { staked: v, earning: v } : { staked: !!v?.staked, earning: !!v?.earning });
@@ -1514,12 +1533,11 @@ let heldAlerts: string[] = [];
  *  On a week's last day that is still ~7 h before the results deadline (Thursday 00:00 UTC on the rhythm). */
 export const OWNER_HOLD_ALERT_HOUR = 16;
 export const ownerAlertRun = (now: number) => new Date(now).getUTCHours() === OWNER_HOLD_ALERT_HOUR;
-/** "Week 1" for the site's numbering (weeks.js, D-063: vault week 3 = Week 1). */
-/** The week as players see it (owner, 10 Nov): vault week 4 (Mon 16 Nov 2026) is Week 1, the first paid week; vault week 3
- *  (Mon 9 Nov) is the practice week. Always with the calendar date. */
+/** The week as players see it (owner, D-517): the platform (vault) week number, so vault week 4 (Mon 16 Nov 2026) is
+ *  Week 4, the first paid week; vault week 3 (Mon 9 Nov) is the practice week. Always with the calendar date (as weeks.js). */
 export const siteWeek = (w: number) => {
   const d = new Date(M.weekStart(w)).toISOString().slice(0, 10);
-  return w >= 4 ? `Week ${w - 3}, the week of ${d}` : w === 3 ? `the practice week of ${d}` : `the week of ${d}`;
+  return w >= 4 ? `Week ${w}, the week of ${d}` : w === 3 ? `the practice week of ${d}` : `the week of ${d}`;
 };
 /** One alert line: the game and week, why, the deadline, and what the owner can do, with the exact commands. */
 export function heldMessage(w: number, weekEnd: number, now: number, why: string, first?: string): string {
@@ -1632,7 +1650,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // Audit BX-59: never quietly down to one node. One node only with ALLOW_ONE_NODE=yes (said so on every run).
   if (!RPC_CHECK && E.ALLOW_ONE_NODE !== "yes") { console.error(`error: no second node (RPC_CHECK is off, missing or the same as RPC): the race needs two. Set RPC_CHECK, or ALLOW_ONE_NODE=yes to run on one node.`); process.exit(1); }
   if (!RPC_CHECK) console.log("::warning::running on ONE node (ALLOW_ONE_NODE=yes): cards and results are not cross-checked");
-  const nodes = { p: new Provider([RPC]), check: RPC_CHECK ? new Provider([RPC_CHECK]) : null };
+  const nodes = { p: nodeProvider(RPC), check: RPC_CHECK ? nodeProvider(RPC_CHECK) : null };
   // Repo Lens RV-1 (round 12): exit once the work is done. withRetry stops waiting for a node that never answers, but its
   // request stays open and would keep this process alive until the job's 30-minute limit, so that hour's files would
   // never be uploaded.

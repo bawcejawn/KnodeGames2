@@ -28,6 +28,19 @@
   --r-lg: 20px;
   --r-md: 14px;
   --r-sm: 10px;
+  --r-xl: 26px;
+  /* Hub UI tokens (M-336): spacing scale, hero and tile gradients, shared state colours. New pages use these, not new hex values. */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --violet-2: #7B4DFF;
+  --sky: #4CC9FF;
+  --hero-grad: radial-gradient(circle at 85% 15%, #8b5cff 0, transparent 45%), radial-gradient(circle at 10% 100%, #1f5ae6 0, transparent 50%), linear-gradient(160deg, #241a7a, #14161f);
+  --tile-blue: linear-gradient(140deg, #1F5AE6, #4CC9FF);
+  --tile-violet: linear-gradient(140deg, #7B4DFF, #C06BFF);
+  --tile-mint: linear-gradient(140deg, #0e9f6e, #3CF2A5);
+  --tile-sun: linear-gradient(140deg, #F2B33D, #FF8A4C);
+  --tile-hot: linear-gradient(120deg, #FF8A4C, #FF5C8A);
+  --skel-a: #E7E9F0;
+  --skel-b: #F3F4F8;
   --display: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --num: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -38,7 +51,7 @@
     --paper: #111216; --surface: #1B1C22; --ink: #F4F5F8; --muted: #C6C9D2; --line: #2D2F38; --contour: #2D2F38;
     --violet: #86A8FF; --violet-ink: #0F1115; --violet-soft: #1E2A4D; --sun: #F2B33D; --sun-soft: #3A2F14;
     --mint: #5CCB9A; --mint-soft: #173528; --rose: #F08B74; --rose-soft: #3B201A;
-    --navy: #0A0B0F; --navy-2: #1E2130;
+    --navy: #0A0B0F; --navy-2: #1E2130; --skel-a: #23252E; --skel-b: #2D2F3A;
     --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 30px -14px rgba(0, 0, 0, 0.7);
     color-scheme: dark;
   }
@@ -47,7 +60,7 @@
   --paper: #111216; --surface: #1B1C22; --ink: #F4F5F8; --muted: #C6C9D2; --line: #2D2F38; --contour: #2D2F38;
   --violet: #86A8FF; --violet-ink: #0F1115; --violet-soft: #1E2A4D; --sun: #F2B33D; --sun-soft: #3A2F14;
   --mint: #5CCB9A; --mint-soft: #173528; --rose: #F08B74; --rose-soft: #3B201A;
-  --navy: #0A0B0F; --navy-2: #1E2130;
+  --navy: #0A0B0F; --navy-2: #1E2130; --skel-a: #23252E; --skel-b: #2D2F3A;
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 30px -14px rgba(0, 0, 0, 0.7);
   color-scheme: dark;
 }
@@ -974,3 +987,17 @@ body.play-wait #view-play > .play-loading { display: block; }
 .pk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--violet, #6b5bb5); border-radius: 12px; background: var(--violet-soft, #f1eefb); }
 .pk-bar[hidden] { display: none; }
 .pk-bar span { flex: 1 1 180px; font-weight: 600; }
+
+/* ───── shared loading, empty and disabled states (Hub UI, M-336). Used by the new home and nav; game pages adopt them later. ───── */
+/* Loading: a grey block that shimmers, in place of a blank space. Give it a size, e.g. <div class="skel" style="height:64px"></div>. */
+.skel { display: block; border-radius: var(--r-md); background: linear-gradient(90deg, var(--skel-a) 0%, var(--skel-b) 50%, var(--skel-a) 100%); background-size: 200% 100%; animation: skel-shimmer 1.4s linear infinite; min-height: 16px; }
+@keyframes skel-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+/* Empty: one friendly line and, if there is one, a next step. <div class="state-empty"><b>Nothing open right now</b><p>Next one opens at…</p></div> */
+.state-empty { display: grid; gap: var(--sp-2); justify-items: center; padding: var(--sp-5) var(--sp-4); border-radius: var(--r-lg); background: var(--surface); border: 1px dashed var(--contour); text-align: center; color: var(--muted); }
+.state-empty b { color: var(--ink); font-size: 1.05rem; }
+.state-empty p { max-width: 34ch; }
+/* Disabled: say why, right under the button. <button class="btn" disabled>…</button><p class="why">Connect or play as a guest first.</p> */
+.why { margin: var(--sp-2) 0 0; font-size: .88rem; line-height: 1.4; color: var(--muted); }
+.btn[disabled] + .why, .btn[aria-disabled="true"] + .why { color: var(--ink); }
+.btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }

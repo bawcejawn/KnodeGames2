@@ -978,15 +978,17 @@ test("npm run golf -- status: plain lines from the published files, read-only", 
   assert.match(lines, /Test week \(vault week 3\), staked: waiting for its second matching run/);
   assert.match(lines, /hole race: final/);
   assert.match(lines, /GOLF_HOLD_WEEKS = <week>/);
-  // Week names come from weeks.js (D-063): vault week 3 = "Test week", 4 = "Week 1", 5 = "Week 2", earlier = a date.
+  // Week names come from weeks.js (D-063): vault week 3 = "Test week", 4 = "Week 4", 5 = "Week 5", earlier = a date.
   const wk = (w) => ({ v: 1, end: 0, holes: [], cards: [], practice: true });
   const named = statusLines({ v: 1, updated: "x", course: { race: 4 }, weeks: [2, 3, 4, 5], stakedFromWeek: 5 }, new Map([2, 3, 4, 5].map((w) => [w, { ...wk(w), end: END }])), END).join("\n");
-  assert.match(named, /race \(from Week 1\)/);
-  assert.match(named, /Staked play from vault week 5 \(Week 2\)/);
+  assert.match(named, /race \(from Week 4\)/);
+  assert.match(named, /Block Golf is free to play from vault week 5 \(Week 5, D-586\).*GOLF_STAKED_FROM_WEEK = 5 stays as a label/);   // D-586
+  assert.doesNotMatch(named, /Staked play from/);
+  assert.match(named, /Week 5 \(vault week 5\), free:/);
   assert.match(named, /Week of 2 Nov \(vault week 2\)/);
   assert.match(named, /Test week \(vault week 3\)/);
-  assert.match(named, /Week 1 \(vault week 4\)/);
-  assert.match(named, /Week 2 \(vault week 5\)/);
+  assert.match(named, /Week 4 \(vault week 4\)/);
+  assert.match(named, /Week 5 \(vault week 5\)/);
   const src = fs.readFileSync(path.join(APP, "bot/games/golf.ts"), "utf8");
   const body = src.slice(src.indexOf("async function status()"), src.indexOf("const isMain"));
   assert.ok(body.length > 200 && body.length < 2000, "the status function, and only it");

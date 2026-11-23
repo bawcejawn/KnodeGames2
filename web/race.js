@@ -116,6 +116,21 @@
   let sortBy = "vhp";
   try { const v = localStorage.getItem("pr-sort"); if (SORTS.some(([k]) => k === v)) sortBy = v; } catch { /* default */ }
   const R6_WINDOWS = [3600000, 3 * 3600000];
+  /** Owner 22 Nov: the SAME View and Sort buttons on every race length (6-hour, 1-hour, 2-hour, daily, weekly). One
+   *  shared choice (pr-view / pr-sort), so switching tabs keeps it; `redraw` repaints the board that was clicked. */
+  function viewButtons(bar, redraw, finish) {
+    bar.replaceChildren(el("span", { class: "rt-wl", text: "View:" }),
+      ...[["Pack", true, "Zoomed in on the pack: easier to see who is ahead"], ["Whole race", false, `From the start line to the ${finish} finish`]].map(([t, v, tip]) => el("button", { type: "button", title: tip, "aria-pressed": String(packView === v), onclick: () => { packView = v; try { localStorage.setItem("pr-view", v ? "pack" : "whole"); } catch { /* fine */ } redraw(); } }, t)));
+  }
+  function sortButtons(bar, redraw) {
+    bar.replaceChildren(el("span", { class: "rt-wl", text: "Sort:" }),
+      ...SORTS.map(([k, t]) => el("button", { type: "button", "aria-pressed": String(sortBy === k), onclick: () => { sortBy = k; try { localStorage.setItem("pr-sort", k); } catch { /* fine */ } redraw(); } }, t)));
+  }
+  /** Pack view's scale: last place near the left, the leader near the right (the same for every race length). */
+  function packScale(rows) {
+    const xs = rows.map((r) => r.x).filter(Number.isFinite), lo = Math.min(...xs), hi = Math.max(...xs);
+    return (x) => (xs.length && hi - lo > 1e-9 ? 0.04 + 0.92 * ((x - lo) / (hi - lo)) : 0.5);
+  }
   function render() {
     if (!B) return;                                     // the blocks aren't loaded yet (the picks panel can be first)
     const cur = M.raceAt(Date.now());
@@ -182,14 +197,11 @@
       winBar.hidden = !hasWin;
       let viewBar = $("r6-view");
       if (!viewBar) { viewBar = el("div", { id: "r6-view", class: "rt-win pr-viewbar" }); track.parentNode.insertBefore(viewBar, track); }
-      viewBar.replaceChildren(el("span", { class: "rt-wl", text: "View:" }),
-        ...[["Pack", true, "Zoomed in on the pack: easier to see who is ahead"], ["Whole race", false, "From the start line to the 6-hour finish"]].map(([t, v, tip]) => el("button", { type: "button", title: tip, "aria-pressed": String(packView === v), onclick: () => { packView = v; try { localStorage.setItem("pr-view", v ? "pack" : "whole"); } catch { /* fine */ } render(); } }, t)));
+      viewButtons(viewBar, render, "6-hour");
       let sortBar = $("r6-sort");
       if (!sortBar) { sortBar = el("div", { id: "r6-sort", class: "rt-win pr-viewbar" }); track.parentNode.insertBefore(sortBar, track); }
-      sortBar.replaceChildren(el("span", { class: "rt-wl", text: "Sort:" }),
-        ...SORTS.map(([k, t]) => el("button", { type: "button", "aria-pressed": String(sortBy === k), onclick: () => { sortBy = k; try { localStorage.setItem("pr-sort", k); } catch { /* fine */ } render(); } }, t)));
-      const xs = rows.map((r) => r.x).filter(Number.isFinite), lo = Math.min(...xs), hi = Math.max(...xs);
-      const PACK = (x) => (hi - lo > 1e-9 ? 0.04 + 0.92 * ((x - lo) / (hi - lo)) : 0.5);   // last place ~left, leader ~right
+      sortButtons(sortBar, render);
+      const PACK = packScale(rows);   // last place ~left, leader ~right
       if (hasWin) winBar.replaceChildren(el("span", { class: "rt-wl", text: "Places gained / lost over:" }),
         ...R6_WINDOWS.map((ms, i) => el("button", { type: "button", "aria-pressed": String(r6Win === i), onclick: () => { r6Win = i; render(); } }, `${ms / 3600000} h`)),
         el("button", { type: "button", "aria-pressed": String(r6Win === -1), onclick: () => { r6Win = -1; render(); } }, "Since last race"));
@@ -588,7 +600,7 @@
     name: nameOf, link: (a) => EXPLORER + a,
     me: (r, place) => `${place ? `You: #${place} with` : "Your score (only you see this):"} ${fmt(r.pts ?? 0)} points (${fmt(r.correct)} wins, ${fmt(r.shows ?? 0)} shows) from ${fmt(r.picks)} picks.`,
     unranked: "To play on the Staked board, stake at least 1 VHP in the Producer Race.",
-    free: { show: 6, prize: "1st and 2nd at the end of the week win 2 and 1 VHP, from Week 1 (the week of Mon 16 Nov). Weeks before that are practice: no prizes." },
+    free: { show: 6, prize: "1st and 2nd at the end of the week win 2 and 1 VHP, from Week 4 (the week of Mon 16 Nov). Weeks before that are practice: no prizes." },
   }) : null;
   async function loadBoard() {
     try { const b = await fetchJson(DATA + "board.json"); if (b && b.v === 1 && lb) { board = b; $("board-box").hidden = false; renderBoard(); } } catch { /* none yet */ }
@@ -691,7 +703,12 @@
   // Shown only from M.TYPES_FROM_WEEK (the week the Race contract v2 is live). The 6-hour race above is unchanged.
   const typesLive = () => M.TYPES_ON_WEEK !== null && M.weekOf(Date.now()) >= M.TYPES_ON_WEEK;   // #C-12 C12-1: needs TYPES_READY
   // D-173: points per place come WITH the types (never before): the rules note is reworded then.
-  if (typesLive() && $("pts-note")) $("pts-note").textContent = "Points are per place, by race: 1st / 2nd / 3rd score 3 / 2 / 1 in a 1-hour or 2-hour race, 4 / 2 / 1 in a 6-hour race, 6 / 3 / 2 in a daily race and 12 / 6 / 4 in the weekly race. A 2nd or 3rd place scores only if that producer signed at least one block.";
+  // Owner, 23 Nov (M-375): new points and weekly caps from vault week 6 (Sun 29 Nov 2026, 7 PM ET); before then, the
+  // current table and a notice of the change.
+  const V3_TEXT = "Points are per place, by race. 1-hour race: only 1st scores, 2 points, and at most 24 wins a week count (48 points). 2-hour race: 1st 2, 2nd 1, and at most 60 points a week count. 6-hour race: 1st 3, 2nd 2, 3rd 1. Daily race: 6 / 3 / 2. Weekly race: 12 / 6 / 4. The caps are per wallet, Monday to Saturday, and the earliest races count first; a result over a cap scores nothing. A 2nd or 3rd place scores only if that producer signed at least one block.";
+  if (typesLive() && $("pts-note")) $("pts-note").textContent = M.weekOf(Date.now()) >= M.POINTS_V3_FROM_WEEK ? V3_TEXT
+    : "Points are per place, by race: 1st / 2nd / 3rd score 3 / 2 / 1 in a 1-hour or 2-hour race, 4 / 2 / 1 in a 6-hour race, 6 / 3 / 2 in a daily race and 12 / 6 / 4 in the weekly race. A 2nd or 3rd place scores only if that producer signed at least one block. "
+      + `New from ${new Date(M.weekStart(M.POINTS_V3_FROM_WEEK)).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}: ${V3_TEXT}`;
   const ORDER = [1, 2, 0, 3, 4];
   const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
   let rtype = 0, tweeks = new Map(), rtPicks = new Map(), rtKey = "";
@@ -772,12 +789,20 @@
       const t0 = wms == null ? cur.start + 1000 : Math.max(cur.start + 1000, now - wms);
       if (t0 < now - 5000) { const old = liveStandings(cur, t0); if (old && old.length) before = new Map(old.map((x, i) => [x.a, i + 1])); }
     }
+    // Owner 22 Nov: the same View and Sort buttons as the 6-hour race.
+    viewButtons($("rt-view"), () => rtRender(true), `${T.name.toLowerCase()}`);
+    sortButtons($("rt-sort"), () => rtRender(true));
+    const PACK = packScale(rows);
+    const placeOf = (a) => rank.get(a) || Infinity;
+    const shown = sortBy === "place" ? [...order].sort((p, q) => placeOf(p) - placeOf(q) || order.indexOf(p) - order.indexOf(q))
+      : sortBy === "name" ? [...order].sort((p, q) => nameOf(p).localeCompare(nameOf(q), undefined, { sensitivity: "base" }) || (p < q ? -1 : 1))
+      : order;
     const upc = upcoming(rtype).slice(0, 3);
     const grid = `grid-template-columns:minmax(0,230px) minmax(120px,1fr) 104px repeat(${upc.length},62px)`;
-    const head = el("div", { class: "pr-lane rt-lane rt-head", style: grid }, el("div", { text: "Producer" }), rulerEl(cur.end - cur.start, { 1: 15 * 60000, 2: 30 * 60000, 3: 6 * HOURMS, 4: DAYMS }[rtype] || HOURMS), el("div", { class: "pr-gap", text: "Standing" }),
+    const head = el("div", { class: "pr-lane rt-lane rt-head", style: grid }, el("div", { text: "Producer" }), packView ? el("div", { class: "pr-packlbl", text: "← further back · leading →" }) : rulerEl(cur.end - cur.start, { 1: 15 * 60000, 2: 30 * 60000, 3: 6 * HOURMS, 4: DAYMS }[rtype] || HOURMS), el("div", { class: "pr-gap", text: "Standing" }),
       ...upc.map((r) => el("div", { class: "rt-pc", title: `Race starting ${dayTime(r.start)}` }, el("b", { text: rtype >= 3 ? dayTime(r.start).replace(/ UTC$/, "") : clock(r.start) }), el("span", { text: `locks ${dur(r.start - now)}` }))));
-    const lanes = order.map((a) => {
-      const r = trk.get(a), x = r ? r.x * 100 : 0, h = hm.get(a), sh = vhp.get(a) && total ? vhp.get(a) / total : 0, rk = rank.get(a);
+    const lanes = shown.map((a) => {
+      const r = trk.get(a), x = r ? (packView ? PACK(r.x) : r.x) * 100 : 0, h = hm.get(a), sh = vhp.get(a) && total ? vhp.get(a) / total : 0, rk = rank.get(a);
       let pill = null;
       if (rk && before && before.has(a) && before.get(a) !== rk) { const d = before.get(a) - rk; pill = el("span", { class: `rt-pill ${d > 0 ? "up" : d < 0 ? "down" : ""}`, text: d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : "–", title: d === 0 ? "Same place" : `${d > 0 ? "Gained" : "Lost"} ${Math.abs(d)} place${Math.abs(d) === 1 ? "" : "s"}` }); }
       const cells = upc.map((u) => {
@@ -794,7 +819,7 @@
         el("div", { class: "pr-who" }, el("span", { class: "pr-rank", text: ((q) => q > 0 ? ord(q) : "–")(ended && ROt ? (ROt.pending ? 0 : ROt.placings.indexOf(a) + 1) : rk || 0) }), el("span", { class: "pr-dot", style: `background:${colour(a)}` }),
           el("a", { class: "pr-name", href: EXPLORER + a, target: "_blank", rel: "noopener noreferrer", text: nameOf(a) }), pill || "",
           el("span", { class: "pr-meta", text: `${h ? `×${h.toFixed(2)} per block` : "no handicap this hour"} · ${fmt(r ? r.blocks : 0)} blocks${sh ? ` · ${fmt(sh * 100, sh < 0.01 ? 2 : 1)}% VHP` : ""}` })),
-        el("div", { class: `pr-run${ended ? " over" : ""}` }, el("div", { class: "pr-shade", style: `width:${frac > 0 ? POS(frac) : "0"}` }), el("div", { class: "pr-trail", style: `width:${POS(x / 100)};background:${colour(a)}` }),
+        el("div", { class: `pr-run${ended ? " over" : ""}${packView ? " pack" : ""}` }, el("div", { class: "pr-shade", style: `width:${frac > 0 ? POS(frac) : "0"}` }), el("div", { class: "pr-trail", style: `width:${POS(x / 100)};background:${colour(a)}` }),
           el("img", { class: "pr-horse rt-animal", alt: "", "aria-hidden": "true", src: `media/animals/${ANIMAL[rtype]}.png`, width: "40", height: "40", style: `left:calc(${POS(x / 100)} - 20px)` }), el("div", { class: "pr-nowline", style: `left:${POS(frac)}` })),
         el("div", { class: "pr-gap" }, r ? ((() => { const L = ended ? endLabel(ROt, a, rk - 1) : { text: rk === 1 ? "Leading" : null }; return L.text ? el("b", { text: L.text }) : `${fmt(r.behind, 1)} behind`; })()) : "–", el("br"), el("span", { class: "ago", text: `${fmt(r ? r.steps : 0, 1)} steps` })),
         ...cells);
@@ -818,7 +843,30 @@
     }
     nav.hidden = false; nav.classList.remove("soon");
     nav.replaceChildren(...ORDER.map((t) => el("button", { type: "button", "aria-pressed": String(t === rtype), onclick: () => rtSelect(t) },
-      M.TYPES[t].name, el("small", { text: `1st ${M.TYPES[t].places[0]} · 2nd ${M.TYPES[t].places[1]} · 3rd ${M.TYPES[t].places[2]}` }))));
+      M.TYPES[t].name, el("small", { text: chipText(t) }))));
+  }
+  /** A type's points chip for this week (M-375: "1st 2 · max 24 wins a week" for the 1-hour race from week 6). */
+  function chipText(t) {
+    const w = M.weekOf(Date.now()), pl = M.placesFor(t, w), cap = M.capOf(t, w);
+    const parts = [`1st ${pl[0]}`, ...(pl[1] ? [`2nd ${pl[1]}`] : []), ...(pl[2] ? [`3rd ${pl[2]}`] : [])];
+    if (cap) parts.push(t === 1 ? `max ${cap / pl[0]} wins a week` : `max ${cap} pts a week`);
+    return parts.join(" · ");
+  }
+  /** M-375: what the connected wallet has counted this week against a type's cap, from the week's T file and the
+   *  Ruler's places (the same order and rule as the recorder: earliest races first; Sunday fun races use no cap).
+   *  Display only: the board's numbers are the recorder's. null when there's no cap or nothing to count. */
+  function capUsed(who, type, week) {
+    const cap = M.capOf(type, week), tf = tweeks.get(week);
+    if (!who || !cap || !tf) return null;
+    const pl = M.placesFor(type, week), c = M.capCounter();
+    const races = tf.races.filter((r) => r && r.type === type && !M.restRace(r.start) && r.result && r.result.final === true && Array.isArray(r.result.picks)).sort((a, b) => a.start - b.start);
+    for (const r of races) {
+      const pick = r.result.picks.find((p) => p[0] === who), o = pick ? ruledFor(r, type) : null;
+      if (!o || o.pending || !Array.isArray(o.placings)) continue;
+      const i = o.placings.indexOf(pick[1]), ok = i === 0 || (i > 0 && i < 3 && o.shows.includes(pick[1]));
+      if (ok) c.take(who, week, type, pl[i]);
+    }
+    return { used: c.used(who, week, type), cap };
   }
   function rtSelect(t) {
     rtype = t;
@@ -851,7 +899,16 @@
     $("rt-title").textContent = `${T.name} race · ${dayTime(cur.start)} – ${rtype >= 3 ? dayTime(cur.end) : clock(cur.end)}${rtype === 3 ? " (the UTC day)" : rtype === 4 ? " (Monday to Saturday, UTC)" : ""}`;
     $("rt-tag").textContent = `${dur(cur.end - Date.now())} left`;
     const card = cardAt(rtype, Math.floor(Date.now() / M.HOUR) * M.HOUR);
-    const notes = [`1st scores ${T.places[0]} points, 2nd ${T.places[1]} and 3rd ${T.places[2]}, on the one Producer Race board.`];
+    const wNow = M.weekOf(cur.start), PL = M.placesFor(rtype, wNow), CAP = M.capOf(rtype, wNow);
+    const notes = [!PL[1] ? `Only 1st scores: ${PL[0]} points, on the one Producer Race board.`
+      : !PL[2] ? `1st scores ${PL[0]} points and 2nd ${PL[1]}, on the one Producer Race board.`
+      : `1st scores ${PL[0]} points, 2nd ${PL[1]} and 3rd ${PL[2]}, on the one Producer Race board.`];
+    if (CAP) {
+      notes.push(rtype === 1 ? `At most ${CAP / PL[0]} wins a week count (Monday to Saturday, earliest first).` : `At most ${CAP} points a week count (Monday to Saturday, earliest first).`);
+      const u = capUsed(who, rtype, wNow);
+      if (u) notes.push(rtype === 1 ? `Your 1-hour wins counted this week: ${u.used / PL[0]} of ${u.cap / PL[0]}${u.used >= u.cap ? " (cap reached: more 1-hour wins this week score nothing)" : ""}.`
+        : `Your 2-hour points counted this week: ${u.used} of ${u.cap}${u.used >= u.cap ? " (cap reached)" : ""}.`);
+    }
     if (fun) notes.push("Sunday fun race: it counts on Today and All time, not the week.");
     if (card && !card.field.some((x) => x.a === POOL)) {
       const tot = card.field.concat(card.paddock || []).reduce((t, x) => t + x.vhp, 0), need = card.blocksPerRace > 0 ? Math.ceil(M.MIN_K * tot / card.blocksPerRace) : 0;

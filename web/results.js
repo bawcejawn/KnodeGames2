@@ -10,7 +10,7 @@
    Read-only: no transaction, no storage, everything built with textContent. */
 (() => {
   "use strict";
-  // What players call a week (weeks.js, D-063): the week of Mon 16 Nov is "Week 1", the week of Mon 9 Nov the "Test week"; earlier weeks show their date.
+  // What players call a week (weeks.js, D-063): the week of Mon 16 Nov is "Week 4", the week of Mon 9 Nov the "Test week"; earlier weeks show their date.
   const WL = (w) => (window.KWeeks ? window.KWeeks.label(w) : `Week ${Number(w) + 1}`);
   const WS = (w) => (window.KWeeks ? window.KWeeks.short(w) : String(Number(w) + 1));
   const host = document.getElementById("res-games");
@@ -21,18 +21,23 @@
   // never hard-coded to a date, and never before it.
   const typesOnFor = (w) => M.TYPES_ON_WEEK !== null && w >= M.TYPES_ON_WEEK;
   const typesLive = () => typesOnFor(M.weekOf(Date.now()));
-  const PTS_TEXT = "Points are per place, by race: 1st / 2nd / 3rd score 3 / 2 / 1 in a 1-hour or 2-hour race, 4 / 2 / 1 in a 6-hour race, 6 / 3 / 2 in a daily race and 12 / 6 / 4 in the weekly race. A 2nd or 3rd place scores only if that producer signed at least one block.";
+  // Owner, 23 Nov (M-375): new points and weekly caps from M.POINTS_V3_FROM_WEEK (vault week 6, Sun 29 Nov 2026 7 PM ET).
+  const v3 = () => M.weekOf(Date.now()) >= M.POINTS_V3_FROM_WEEK;
+  const PTS_TEXT_D173 = "Points are per place, by race: 1st / 2nd / 3rd score 3 / 2 / 1 in a 1-hour or 2-hour race, 4 / 2 / 1 in a 6-hour race, 6 / 3 / 2 in a daily race and 12 / 6 / 4 in the weekly race. A 2nd or 3rd place scores only if that producer signed at least one block.";
+  const PTS_TEXT_V3 = "Points are per place, by race: a 1-hour race scores 2 for 1st only (at most 24 wins a week count), a 2-hour race 2 / 1 for 1st / 2nd (at most 60 points a week count), a 6-hour race 3 / 2 / 1, a daily race 6 / 3 / 2 and the weekly race 12 / 6 / 4. A 2nd or 3rd place scores only if that producer signed at least one block.";
   /** The how-to-play text on the home page: the old words until week 5, the new ones from it. */
   function rulesText() {
     if (!typesLive()) return;
     const set = (id, t) => { const n = document.getElementById(id); if (n) n.textContent = t; };
-    set("rt-free-pts", "Points are per place: 1st, 2nd and 3rd score (12 / 6 / 4 in the weekly race, 6 / 3 / 2 daily, 4 / 2 / 1 in the 6-hour race, 3 / 2 / 1 in a 1-hour or 2-hour race).");
+    set("rt-free-pts", v3() ? "Points are per place: 12 / 6 / 4 in the weekly race, 6 / 3 / 2 daily, 3 / 2 / 1 in the 6-hour race, 2 / 1 in a 2-hour race (at most 60 a week) and 2 for a 1-hour win (at most 24 wins a week)."
+      : "Points are per place: 1st, 2nd and 3rd score (12 / 6 / 4 in the weekly race, 6 / 3 / 2 daily, 4 / 2 / 1 in the 6-hour race, 3 / 2 / 1 in a 1-hour or 2-hour race).");
     set("rt-open", "Races of five lengths run side by side: 1-hour, 2-hour, 6-hour (00:00, 06:00, 12:00 and 18:00 UTC), daily and weekly (Sunday's races are for fun: they count on All time, not the week)");
-    set("rt-watch-pts", PTS_TEXT);
-    set("rt-short-pts", "Pick the producer you think finishes 1st, 2nd or 3rd: each place scores, and the points depend on the race length.");
+    set("rt-watch-pts", v3() ? PTS_TEXT_V3 : PTS_TEXT_D173);
+    set("rt-short-pts", v3() ? "Pick the producer you think finishes 1st: a win scores in every race, 2nd and 3rd score in the longer races, and the points depend on the race length."
+      : "Pick the producer you think finishes 1st, 2nd or 3rd: each place scores, and the points depend on the race length.");
     set("rt-step2", "A race lasts 1 hour, 2 hours, 6 hours, a day or a week; the Ruler places the producers 1st, 2nd and 3rd.");
     set("rt-soon-h", "More races: live now");
-    const p = document.getElementById("rt-soon-2"); if (p) p.textContent = PTS_TEXT;
+    const p = document.getElementById("rt-soon-2"); if (p) p.textContent = v3() ? PTS_TEXT_V3 : PTS_TEXT_D173;
     const one = document.getElementById("rt-soon-1"); if (one) one.textContent = "Five race lengths, one board. 1-hour, 2-hour, 6-hour, daily and weekly races run side by side, and points from every length add up on the same Producer Race board. Pick any length within your daily Mana.";
     const three = document.getElementById("rt-soon-3"); if (three) three.hidden = true;
     document.querySelectorAll("#race-types-soon").forEach((n) => n.classList.remove("rules-soon"));
@@ -196,7 +201,7 @@
       this.list = el("div", { class: "results rr-list" });
       this.all = all; this.dayOf = dayOf;
       box.replaceChildren(band, tools, f ? this.list : el("div", { class: "empty", text: "Couldn't load this week's races. Try again in a moment." }),
-        typesOnFor(this.week) ? el("p", { class: "muted res-foot", text: PTS_TEXT }) : null,
+        typesOnFor(this.week) ? el("p", { class: "muted res-foot", text: this.week >= M.POINTS_V3_FROM_WEEK ? PTS_TEXT_V3 : PTS_TEXT_D173 }) : null,
         el("p", { class: "muted res-foot" }, "Results become final once their blocks are irreversible and two nodes agree. ", el("a", { href: "race.html", text: "Watch the live race" }), " · ", el("a", { href: "index.html#leaderboard/race", text: "Race leaderboard" }), ...(typesOnFor(this.week) ? [" · ", el("a", { href: "ruler.html", text: "How the Ruler works" })] : [])));
       if (f) this.drawList();
     },
