@@ -55,11 +55,10 @@
   linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px) 0 0 / 28px 28px, var(--hero-grad); border-radius: var(--r-xl); }
 .home-hero.stage .btn-primary { background: #3CF2A5; color: #0B2A1E; font-weight: 800; box-shadow: 0 12px 24px -12px #3CF2A5; }
 
-.today-card { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); margin: var(--sp-4) 0 var(--sp-5); padding: var(--sp-4) var(--sp-5); border-radius: var(--r-xl); background: var(--tile-hot); color: #fff; box-shadow: 0 18px 34px -20px #FF5C8A; }
-.today-card .today-k { font: 800 .78rem/1 var(--body); letter-spacing: .08em; text-transform: uppercase; opacity: .9; }
+.today-card { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); margin: var(--sp-4) 0 var(--sp-5); padding: var(--sp-4) var(--sp-5); border-radius: var(--r-xl); background: var(--tile-hot); color: #14161F; box-shadow: 0 18px 34px -20px #FF5C8A; }
+.today-card .today-k { font: 800 .78rem/1 var(--body); letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
 .today-card .today-body { flex: 1 1 220px; min-width: 0; }
 .today-card b { display: block; margin-top: var(--sp-1); font: 800 1.25rem/1.25 var(--display); }
-.today-card p { margin: var(--sp-1) 0 0; font-size: .95rem; opacity: .95; }
 .today-card .btn { background: #14161F; color: #fff; font-weight: 800; white-space: nowrap; }
 
 .welcome-also .gtile > span { color: #fff; box-shadow: 0 10px 18px -12px rgba(20, 22, 31, .6); }

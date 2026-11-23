@@ -1,11 +1,12 @@
-/* Start sheet (Hub UI C). Tapping "Play free" on the home page opens a small sheet: play as a guest (the Producer Race's picks),
+/* Start sheet (Hub UI C). Tapping "Play free" on the home page (the big button or the one in the top banner) opens a small sheet: play as a guest (the Producer Race's picks),
    or connect a wallet. Free play is never gated: the guest button is a plain link, and if this script does not run, the home
    "Play free" button is still a plain link to the same place. It touches no wallet code: "Connect a wallet" only presses the
    page's own Connect button. Plain: no network, no storage. Esc, the backdrop and Close shut it; focus goes back to the button. */
 (function () {
   "use strict";
-  var trigger = document.getElementById("welcome-go");
-  if (!trigger) return;
+  // The big "Play free" on the home page and the "Play free" button in the top banner open the same sheet.
+  var triggers = [document.getElementById("welcome-go"), document.querySelector(".top .btn-play-free")].filter(Boolean);
+  if (!triggers.length) return;
   var back = null, last = null;
 
   function el(tag, cls, text) {
@@ -65,9 +66,11 @@
     document.addEventListener("keydown", onKey, true);
     go.focus();
   }
-  trigger.addEventListener("click", function (e) {
-    if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    open();
+  triggers.forEach(function (t) {
+    t.addEventListener("click", function (e) {
+      if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      open();
+    });
   });
 })();
