@@ -6,6 +6,7 @@
   // What players call a week (weeks.js, D-063): the week of Mon 16 Nov is "Week 4", the week of Mon 9 Nov the "Test week"; earlier weeks show their date.
   const WL = (w) => (window.KWeeks ? window.KWeeks.label(w) : `Week ${Number(w) + 1}`);
   const WS = (w) => (window.KWeeks ? window.KWeeks.short(w) : String(Number(w) + 1));
+  const fileWeek = (w) => WS(w).replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
 
   const DAY = 28800;              // blocks per day
   const UNIT = 100000000n;        // 1 KOIN / 1 VHP = 10^8 units
@@ -825,7 +826,7 @@
     await opOf(writer(), "answer", { player: S.account, question_id: q.chainId, option }),
   ]);
 
-  const claim = (week) => send(`collect week ${week + 1} reward`, async () => [
+  const claim = (week) => send(`collect ${WL(week)} reward`, async () => [
     await opOf(writer(), "claim", { player: S.account, week: String(week) }),
   ], { ownMana: (S.claims.find((c) => c.week === week) || {}).free || claimNeedsOwnMana(S.claims.find((c) => c.week === week)) });
 
@@ -1242,7 +1243,7 @@
     const elig = B ? B.scored.filter((x) => x.eligible) : [];
     const qs = S.questions.filter((q) => weekOfQ(q) === week && isFinal(q) && outcomeOf(q) !== 1000 && pickOf(q) !== null);
     return {
-      week: week + 1, pts: me ? me.pts : 0,
+      week: WS(week), pts: me ? me.pts : 0,
       place: me && me.eligible && me.counted > 0 ? elig.indexOf(me) + 1 : 0, of: elig.length,
       right: qs.filter((q) => pickOf(q) + 1 === outcomeOf(q)).length, decided: qs.length,
       free: !me || !me.eligible, address: S.account,
@@ -1272,10 +1273,10 @@
     if (dlg.showModal) dlg.showModal();
     await drawShareNow();
   }
-  const shareText = () => { const st = weekStats(SH.week); return `I scored ${st.pts} ${st.pts === 1 ? "point" : "points"} on Knode Games in week ${st.week}${st.place ? ` (#${st.place} of ${st.of})` : ""}. Call the next blocks on Koinos: ${installUrl()}`; };
+  const shareText = () => { const st = weekStats(SH.week); return `I scored ${st.pts} ${st.pts === 1 ? "point" : "points"} on Knode Games in ${WL(SH.week)}${st.place ? ` (#${st.place} of ${st.of})` : ""}. Call the next blocks on Koinos: ${installUrl()}`; };
   const shareBlob = () => new Promise((res) => { const c = $("#share-canvas"); if (!c || !c.toBlob) res(null); else c.toBlob((b) => res(b), "image/png"); });
   async function shareGo() {
-    const blob = await shareBlob(), text = shareText(), name = `knode-week-${SH.week + 1}.png`;
+    const blob = await shareBlob(), text = shareText(), name = `knode-week-${fileWeek(SH.week)}.png`;
     try {
       const file = blob && typeof File === "function" ? new File([blob], name, { type: "image/png" }) : null;
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, title: "Knode Games" }); return; }
@@ -1285,7 +1286,7 @@
   }
   async function shareSave() {
     const blob = await shareBlob();
-    if (blob) saveBlob(blob, `knode-week-${SH.week + 1}.png`);
+    if (blob) saveBlob(blob, `knode-week-${fileWeek(SH.week)}.png`);
     try { await navigator.clipboard.writeText(shareText()); toast("Picture saved, and the text is copied: paste it with the picture."); }
     catch { toast("Picture saved."); }
   }

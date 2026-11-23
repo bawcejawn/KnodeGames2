@@ -681,7 +681,7 @@
     renderYou();
     const lw = board.lastWeek, prizes = lw && lw.final && Array.isArray(lw.prizes) ? lw.prizes : [];
     $("prize-line").textContent = prizes.length
-      ? `${TESTNET ? "Test prizes" : "Prizes"} for week ${lw.week + 1}: ${prizes.map((p) => `${nameOf(p.player)} ${fmt(p.vhp, p.vhp % 1 ? 2 : 0)} VHP`).join(", ")}.${TESTNET ? " Nothing is paid on the testnet." : ""}`
+      ? `${TESTNET ? "Test prizes" : "Prizes"} for week ${window.KWeeks ? window.KWeeks.short(lw.week) : lw.week + 1}: ${prizes.map((p) => `${nameOf(p.player)} ${fmt(p.vhp, p.vhp % 1 ? 2 : 0)} VHP`).join(", ")}.${TESTNET ? " Nothing is paid on the testnet." : ""}`
       : NET.prize;
   }
   function onWallet() { renderWallet(); loadMine(); renderBoard(); renderResults(); readMana(); readStake(); }
