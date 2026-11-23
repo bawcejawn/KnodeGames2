@@ -116,6 +116,21 @@
   let sortBy = "vhp";
   try { const v = localStorage.getItem("pr-sort"); if (SORTS.some(([k]) => k === v)) sortBy = v; } catch { /* default */ }
   const R6_WINDOWS = [3600000, 3 * 3600000];
+  /** Owner 22 Nov: the SAME View and Sort buttons on every race length (6-hour, 1-hour, 2-hour, daily, weekly). One
+   *  shared choice (pr-view / pr-sort), so switching tabs keeps it; `redraw` repaints the board that was clicked. */
+  function viewButtons(bar, redraw, finish) {
+    bar.replaceChildren(el("span", { class: "rt-wl", text: "View:" }),
+      ...[["Pack", true, "Zoomed in on the pack: easier to see who is ahead"], ["Whole race", false, `From the start line to the ${finish} finish`]].map(([t, v, tip]) => el("button", { type: "button", title: tip, "aria-pressed": String(packView === v), onclick: () => { packView = v; try { localStorage.setItem("pr-view", v ? "pack" : "whole"); } catch { /* fine */ } redraw(); } }, t)));
+  }
+  function sortButtons(bar, redraw) {
+    bar.replaceChildren(el("span", { class: "rt-wl", text: "Sort:" }),
+      ...SORTS.map(([k, t]) => el("button", { type: "button", "aria-pressed": String(sortBy === k), onclick: () => { sortBy = k; try { localStorage.setItem("pr-sort", k); } catch { /* fine */ } redraw(); } }, t)));
+  }
+  /** Pack view's scale: last place near the left, the leader near the right (the same for every race length). */
+  function packScale(rows) {
+    const xs = rows.map((r) => r.x).filter(Number.isFinite), lo = Math.min(...xs), hi = Math.max(...xs);
+    return (x) => (xs.length && hi - lo > 1e-9 ? 0.04 + 0.92 * ((x - lo) / (hi - lo)) : 0.5);
+  }
   function render() {
     if (!B) return;                                     // the blocks aren't loaded yet (the picks panel can be first)
     const cur = M.raceAt(Date.now());
@@ -182,14 +197,11 @@
       winBar.hidden = !hasWin;
       let viewBar = $("r6-view");
       if (!viewBar) { viewBar = el("div", { id: "r6-view", class: "rt-win pr-viewbar" }); track.parentNode.insertBefore(viewBar, track); }
-      viewBar.replaceChildren(el("span", { class: "rt-wl", text: "View:" }),
-        ...[["Pack", true, "Zoomed in on the pack: easier to see who is ahead"], ["Whole race", false, "From the start line to the 6-hour finish"]].map(([t, v, tip]) => el("button", { type: "button", title: tip, "aria-pressed": String(packView === v), onclick: () => { packView = v; try { localStorage.setItem("pr-view", v ? "pack" : "whole"); } catch { /* fine */ } render(); } }, t)));
+      viewButtons(viewBar, render, "6-hour");
       let sortBar = $("r6-sort");
       if (!sortBar) { sortBar = el("div", { id: "r6-sort", class: "rt-win pr-viewbar" }); track.parentNode.insertBefore(sortBar, track); }
-      sortBar.replaceChildren(el("span", { class: "rt-wl", text: "Sort:" }),
-        ...SORTS.map(([k, t]) => el("button", { type: "button", "aria-pressed": String(sortBy === k), onclick: () => { sortBy = k; try { localStorage.setItem("pr-sort", k); } catch { /* fine */ } render(); } }, t)));
-      const xs = rows.map((r) => r.x).filter(Number.isFinite), lo = Math.min(...xs), hi = Math.max(...xs);
-      const PACK = (x) => (hi - lo > 1e-9 ? 0.04 + 0.92 * ((x - lo) / (hi - lo)) : 0.5);   // last place ~left, leader ~right
+      sortButtons(sortBar, render);
+      const PACK = packScale(rows);   // last place ~left, leader ~right
       if (hasWin) winBar.replaceChildren(el("span", { class: "rt-wl", text: "Places gained / lost over:" }),
         ...R6_WINDOWS.map((ms, i) => el("button", { type: "button", "aria-pressed": String(r6Win === i), onclick: () => { r6Win = i; render(); } }, `${ms / 3600000} h`)),
         el("button", { type: "button", "aria-pressed": String(r6Win === -1), onclick: () => { r6Win = -1; render(); } }, "Since last race"));
@@ -772,12 +784,20 @@
       const t0 = wms == null ? cur.start + 1000 : Math.max(cur.start + 1000, now - wms);
       if (t0 < now - 5000) { const old = liveStandings(cur, t0); if (old && old.length) before = new Map(old.map((x, i) => [x.a, i + 1])); }
     }
+    // Owner 22 Nov: the same View and Sort buttons as the 6-hour race.
+    viewButtons($("rt-view"), () => rtRender(true), `${T.name.toLowerCase()}`);
+    sortButtons($("rt-sort"), () => rtRender(true));
+    const PACK = packScale(rows);
+    const placeOf = (a) => rank.get(a) || Infinity;
+    const shown = sortBy === "place" ? [...order].sort((p, q) => placeOf(p) - placeOf(q) || order.indexOf(p) - order.indexOf(q))
+      : sortBy === "name" ? [...order].sort((p, q) => nameOf(p).localeCompare(nameOf(q), undefined, { sensitivity: "base" }) || (p < q ? -1 : 1))
+      : order;
     const upc = upcoming(rtype).slice(0, 3);
     const grid = `grid-template-columns:minmax(0,230px) minmax(120px,1fr) 104px repeat(${upc.length},62px)`;
-    const head = el("div", { class: "pr-lane rt-lane rt-head", style: grid }, el("div", { text: "Producer" }), rulerEl(cur.end - cur.start, { 1: 15 * 60000, 2: 30 * 60000, 3: 6 * HOURMS, 4: DAYMS }[rtype] || HOURMS), el("div", { class: "pr-gap", text: "Standing" }),
+    const head = el("div", { class: "pr-lane rt-lane rt-head", style: grid }, el("div", { text: "Producer" }), packView ? el("div", { class: "pr-packlbl", text: "← further back · leading →" }) : rulerEl(cur.end - cur.start, { 1: 15 * 60000, 2: 30 * 60000, 3: 6 * HOURMS, 4: DAYMS }[rtype] || HOURMS), el("div", { class: "pr-gap", text: "Standing" }),
       ...upc.map((r) => el("div", { class: "rt-pc", title: `Race starting ${dayTime(r.start)}` }, el("b", { text: rtype >= 3 ? dayTime(r.start).replace(/ UTC$/, "") : clock(r.start) }), el("span", { text: `locks ${dur(r.start - now)}` }))));
-    const lanes = order.map((a) => {
-      const r = trk.get(a), x = r ? r.x * 100 : 0, h = hm.get(a), sh = vhp.get(a) && total ? vhp.get(a) / total : 0, rk = rank.get(a);
+    const lanes = shown.map((a) => {
+      const r = trk.get(a), x = r ? (packView ? PACK(r.x) : r.x) * 100 : 0, h = hm.get(a), sh = vhp.get(a) && total ? vhp.get(a) / total : 0, rk = rank.get(a);
       let pill = null;
       if (rk && before && before.has(a) && before.get(a) !== rk) { const d = before.get(a) - rk; pill = el("span", { class: `rt-pill ${d > 0 ? "up" : d < 0 ? "down" : ""}`, text: d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : "–", title: d === 0 ? "Same place" : `${d > 0 ? "Gained" : "Lost"} ${Math.abs(d)} place${Math.abs(d) === 1 ? "" : "s"}` }); }
       const cells = upc.map((u) => {
@@ -794,7 +814,7 @@
         el("div", { class: "pr-who" }, el("span", { class: "pr-rank", text: ((q) => q > 0 ? ord(q) : "–")(ended && ROt ? (ROt.pending ? 0 : ROt.placings.indexOf(a) + 1) : rk || 0) }), el("span", { class: "pr-dot", style: `background:${colour(a)}` }),
           el("a", { class: "pr-name", href: EXPLORER + a, target: "_blank", rel: "noopener noreferrer", text: nameOf(a) }), pill || "",
           el("span", { class: "pr-meta", text: `${h ? `×${h.toFixed(2)} per block` : "no handicap this hour"} · ${fmt(r ? r.blocks : 0)} blocks${sh ? ` · ${fmt(sh * 100, sh < 0.01 ? 2 : 1)}% VHP` : ""}` })),
-        el("div", { class: `pr-run${ended ? " over" : ""}` }, el("div", { class: "pr-shade", style: `width:${frac > 0 ? POS(frac) : "0"}` }), el("div", { class: "pr-trail", style: `width:${POS(x / 100)};background:${colour(a)}` }),
+        el("div", { class: `pr-run${ended ? " over" : ""}${packView ? " pack" : ""}` }, el("div", { class: "pr-shade", style: `width:${frac > 0 ? POS(frac) : "0"}` }), el("div", { class: "pr-trail", style: `width:${POS(x / 100)};background:${colour(a)}` }),
           el("img", { class: "pr-horse rt-animal", alt: "", "aria-hidden": "true", src: `media/animals/${ANIMAL[rtype]}.png`, width: "40", height: "40", style: `left:calc(${POS(x / 100)} - 20px)` }), el("div", { class: "pr-nowline", style: `left:${POS(frac)}` })),
         el("div", { class: "pr-gap" }, r ? ((() => { const L = ended ? endLabel(ROt, a, rk - 1) : { text: rk === 1 ? "Leading" : null }; return L.text ? el("b", { text: L.text }) : `${fmt(r.behind, 1)} behind`; })()) : "–", el("br"), el("span", { class: "ago", text: `${fmt(r ? r.steps : 0, 1)} steps` })),
         ...cells);
