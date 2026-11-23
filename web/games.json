@@ -42,6 +42,8 @@
                     { "key": "jumps", "label": "Jumps", "wide": true }, { "key": "events", "label": "Events", "wide": true }] } },
     { "id": "vs", "name": "Knode Games VS", "kinds": ["free"], "status": "live", "href": "vs.html",
       "line": "Pick which producers beat our node. One call a day." },
+    { "id": "overunder", "name": "Over Under", "kinds": ["free"], "status": "live", "href": "overunder.html",
+      "line": "Over or under the line on a producer's blocks. A new game every 30 minutes; one point for each right call." },
     { "id": "combo", "name": "Combo Card", "kinds": ["free", "staked"], "status": "preview", "href": "combo.html", "opens": "Opens Mon 7 Dec",
       "line": "Build a card of 2 to 10 calls from the races and Block X. Every leg must hit; harder legs pay more. Preview: build and share cards now; sending opens Mon 7 Dec." }
   ]
