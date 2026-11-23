@@ -25,6 +25,7 @@
     fantasy: ["M12 5a3 3 0 1 1 0 6a3 3 0 1 1 0-6z", "M5 20c1-4 4-6 7-6s6 2 7 6"],
     golf: ["M7 21V4l9 4-9 4", "M4 21h8"],
     bracket: ["M4 5h5v4H4z", "M4 15h5v4H4z", "M15 10h5v4h-5z", "M9 7h3v10H9", "M12 12h3"],
+    overunder: ["M12 4v16", "M7 9l5-5 5 5", "M7 15l5 5 5-5"],
     combo: ["M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z", "M14 5v14"],
   };
   const KINDS = { free: "Free play", staked: "Staked" };
