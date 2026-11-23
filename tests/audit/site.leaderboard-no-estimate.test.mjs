@@ -81,3 +81,23 @@ test("a final week shows the reward as 'X VHP'", async () => {
 test("the Your-week panel has no 'If the week ended now' line", () => {
   assert.doesNotMatch(src, /If the week ended now/);
 });
+
+// Repo Lens 4 #R4-13: the phone cards (#board-cards) and the live note follow the same rule.
+async function cardsAndNote(estimate) {
+  const { T, els } = harness();
+  T.S.st = { totals: { weeks_finalized: "0" }, config: {} }; T.S.week = 5; T.S.boardWeek = 5; T.S.lbKind = "main"; T.S.account = null;
+  T.S.board = { 5: board(estimate) };
+  await T.renderBoard(5);
+  return { cards: textOf(els.get("#board-cards")), all: [...els.values()].map(textOf).join(" ") };
+}
+test("R4-13: the phone cards show no reward while the week is open, and 'X VHP' once final", async () => {
+  const live = await cardsAndNote(true), fin = await cardsAndNote(false);
+  assert.ok(live.cards.length > 0, "the cards were drawn");
+  assert.doesNotMatch(live.cards, /VHP ·|~|\d VHP(?! stake)/);
+  assert.match(fin.cards, /12 VHP/);
+});
+test("R4-13: the live note no longer talks about ~ estimates", async () => {
+  const live = await cardsAndNote(true);
+  assert.doesNotMatch(live.all, /Rewards shown with ~|estimates if the week ended now/);
+  assert.match(live.all, /Rewards are set when the week closes\./);
+});
