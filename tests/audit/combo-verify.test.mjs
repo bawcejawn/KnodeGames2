@@ -237,3 +237,18 @@ test("verify (Repo Lens #G-16 Q1): nothing published for over 3 hours is an aler
   assert.ok(i > 0 && j > i && /exit 1/.test(yml.slice(j, j + 300)), "the alert step comes after the outputs are written and fails the job");
   assert.match(fs.readFileSync(path.join(process.env.APP, "tools/combo-verify.mjs"), "utf8"), /writeFileSync\(`\$\{outFile\}\.alerts`/);
 });
+
+// Tue 24 Nov (Last Node #104): the public nodes refuse read_contract args whose "=" padding was cut. Node's
+// toString("base64url") cuts it, so combo-verify sends base64url WITH padding (as koilib does).
+test("combo-verify: read_contract args keep their base64 padding (length a multiple of 4)", async () => {
+  for (const [round, after, limit] of [[62298, ALICE, 100], [1, null, 100], [62298, null, 7], [123456, ALICE, 1]]) {
+    const a = V.encodeListPicks(8, round, after, limit);
+    assert.equal(a.length % 4, 0, `${a} is padded`);
+    assert.ok(/^[A-Za-z0-9_-]+={0,2}$/.test(a), "url-safe alphabet");
+    assert.equal(Buffer.from(a, "base64url").toString("base64").replace(/\+/g, "-").replace(/\//g, "_"), a, "round-trips");
+  }
+  assert.equal(V.b64urlPadded([1]), "AQ==");
+  assert.equal(V.b64urlPadded([0xfb, 0xff]), "-_8=");
+  const src = fs.readFileSync(path.resolve("tools/combo-verify.mjs"), "utf8");
+  assert.ok(!src.includes('toString("base64url")'), "no unpadded encoder left");
+});
