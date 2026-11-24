@@ -689,7 +689,7 @@
     const hist = document.getElementById("history");
     rulerHidesHistory = cur.mode === "on" && rows.length > 0;
     if (hist) hist.hidden = rulerHidesHistory || rtype !== 0;   // G28-2: and stays hidden on the other tabs (rtSelect)
-    for (const id of ["rt-results", "rt-results-h"]) { const n = $(id); if (n) n.hidden = cur.mode === "on"; }   // M-448: no second list on the typed tabs
+    for (const id of ["rt-results", "rt-results-h"]) { const n = $(id); if (n) n.hidden = rulerHidesHistory; }   // M-448: no second list on the typed tabs (R3-16: only when this tab's list has rows, like the 6-hour tab)
   }
   async function loadRuler() {
     const w = M.weekOf(Date.now()), files = [];
