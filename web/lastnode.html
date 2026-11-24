@@ -7,14 +7,14 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/game-data/ https://koinos.armana.io https://api.koinosblocks.com https://api.koinos.io https://raw.githubusercontent.com/bawcejawn/KnodeGames2/blocks-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/ https://raw.githubusercontent.com/bawcejawn/KnodeGames2/names-data/ https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Last Node Standing · Ride the last Koinos producer standing</title>
+  <title>Last Node Standing · Every hour one node is knocked out</title>
   <!-- seo:start (written by tools/site-seo.mjs; edit there) -->
-  <meta name="description" content="Pick a Koinos block producer. Every hour the slowest node is knocked out; if yours goes, jump once to a node still standing. Ride the last node to win.">
+  <meta name="description" content="Pick a Koinos block producer. Every hour the unluckiest node is knocked out; if yours goes, jump once to a node still standing. Ride the last node to win.">
   <link rel="canonical" href="https://knodegames.com/lastnode.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Knode Games">
   <meta property="og:title" content="Last Node Standing">
-  <meta property="og:description" content="Pick a Koinos block producer. Every hour the slowest node is knocked out; if yours goes, jump once to a node still standing. Ride the last node to win.">
+  <meta property="og:description" content="Pick a Koinos block producer. Every hour the unluckiest node is knocked out; if yours goes, jump once to a node still standing. Ride the last node to win.">
   <meta property="og:url" content="https://knodegames.com/lastnode.html">
   <meta property="og:image" content="https://knodegames.com/media/og-knode.png">
   <meta property="og:image:width" content="1200">
@@ -22,7 +22,7 @@
   <meta property="og:image:alt" content="Last Node Standing">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Last Node Standing">
-  <meta name="twitter:description" content="Pick a Koinos block producer. Every hour the slowest node is knocked out; if yours goes, jump once to a node still standing. Ride the last node to win.">
+  <meta name="twitter:description" content="Pick a Koinos block producer. Every hour the unluckiest node is knocked out; if yours goes, jump once to a node still standing. Ride the last node to win.">
   <meta name="twitter:image" content="https://knodegames.com/media/og-knode.png">
   <!-- seo:end -->
   <link rel="icon" href="media/icon.svg" type="image/svg+xml">
@@ -94,13 +94,14 @@
     <div id="stake-badge" hidden></div>
     <p class="status" id="status" role="status">Reading the chain…</p>
     <section class="ln-hero" id="event-box">
-      <h1>Last node <span>standing</span></h1>
+      <h1>Last Node <span>Standing</span></h1>
       <div class="ln-clock" id="ev-clockbox"><b id="ev-clock">–</b><span id="ev-clock-label"></span></div>
+      <p class="ln-tagline">Every hour one node is knocked out. Be on the last one.</p>
       <p class="ln-event"><span class="ln-tag wait" id="ev-tag">–</span><b id="ev-title">–</b><span id="ev-sub"></span></p>
     </section>
 
     <section class="ln-arena-box" id="arena" aria-label="The race">
-      <div class="ln-arena-head"><b>The arena</b><span id="arena-sub">Each bar is a node's lead over the slowest one. At each cut, the slowest is knocked out.</span></div>
+      <div class="ln-arena-head"><b>The arena</b><span id="arena-sub">Each bar is a node's lead over the one furthest back. At each cut, the unluckiest node is knocked out.</span></div>
       <div class="ln-track" id="track"></div>
       <div class="ln-legend"><span><i style="background:var(--ln-storm)"></i>Out if the cut were now</span><span id="legend-you" hidden><i style="background:var(--ln-you)"></i><span id="legend-you-text">Your node</span></span></div>
       <div class="ln-fallen" id="fallen"></div>

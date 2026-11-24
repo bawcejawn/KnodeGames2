@@ -226,6 +226,8 @@ import * as SP from "./js/lib/send-picks.js";
     if (!df || !df.field) {
       tag(df && df.void ? "Void" : "Field soon", "done");
       const nx = now < ev.start ? ev : L.nextEvent(ev);
+      // M-416: with no field, the clock counts to nx, so the title names nx's day too (not today's unpublished event).
+      $("ev-title").textContent = `${new Date(nx.start).toLocaleDateString(undefined, { weekday: "long" })} ${clock(nx.start)} event`;
       $("ev-clockbox").className = "ln-clock";
       $("ev-clock").textContent = timer(nx.start - now);
       $("ev-clock-label").textContent = `until the ${clock(nx.start)} drop`;
@@ -245,7 +247,7 @@ import * as SP from "./js/lib/send-picks.js";
     tag(res.done ? "Finished" : now < ev.start ? "Picks open" : "Live", res.done ? "done" : now < ev.start ? "wait" : "live");
     $("ev-clockbox").className = `ln-clock${res.done ? " done" : now >= ev.start && nextCut - now < 60000 ? " hot" : ""}`;
     $("ev-clock").textContent = res.done ? nameOf(res.winner) : timer((now < ev.start ? ev.start : nextCut) - now);
-    $("ev-clock-label").textContent = res.done ? "last node standing" : now < ev.start ? "until the drop" : `until cut ${res.cuts.length + 1} of ${n - 1}`;
+    $("ev-clock-label").textContent = res.done ? "Last Node Standing" : now < ev.start ? "until the drop" : `until cut ${res.cuts.length + 1} of ${n - 1}`;
     const recorded = (df.hours || []).length;
     $("ev-sub").textContent = res.done ? `${res.cuts.length} cuts, ${clock(ev.start)} to ${clock(df.start + res.cuts.length * H)}.`
       : now < ev.start ? `${n} nodes. Picks close at ${clock(cutoff(ev.round))}, first cut at ${clock(ev.start + H)}.`
@@ -273,7 +275,7 @@ import * as SP from "./js/lib/send-picks.js";
       return el("div", { class: cls },
         badge(nd.a),
         el("div", { class: "ln-who" }, el("b", {}, (won ? "👑 " : "") + nameOf(nd.a), isMine ? el("span", { class: "ln-you", text: "you" }) : null),
-          el("small", { text: gone ? "knocked out" : won ? "last node standing" : danger ? "out if the cut were now" : `×${fmt(nd.h, 2)} a block` })),
+          el("small", { text: gone ? "knocked out" : won ? "Last Node Standing" : danger ? "out if the cut were now" : `×${fmt(nd.h, 2)} a block` })),
         run,
         el("div", { class: "ln-num", text: steps(t.steps) }, el("em", { text: `${fmt(t.blocks)} blocks` })));
     }));
@@ -288,7 +290,7 @@ import * as SP from "./js/lib/send-picks.js";
     // (fix-check) While the note waits, the cut isn't marked as seen, so the note still comes once the picks are read.
     const holdNote = !!(me() && picksContract && !mineOk && just && fresh(just));
     if (seen && seen.day === ev.day && !holdNote) {
-      if (res.done && !seen.done && !announced.has(`${ev.day}:won`) && fresh(res.cuts[res.cuts.length - 1]) && announced.add(`${ev.day}:won`)) flash(`${nameOf(res.winner)} wins`, mine && mine.rode ? `You rode it home: +${mine.points} points` : "The last node standing", "gold");
+      if (res.done && !seen.done && !announced.has(`${ev.day}:won`) && fresh(res.cuts[res.cuts.length - 1]) && announced.add(`${ev.day}:won`)) flash(`${nameOf(res.winner)} wins`, mine && mine.rode ? `You rode it home: +${mine.points} points` : "The Last Node Standing", "gold");
       else if (just && !announced.has(`${ev.day}:${res.cuts.length}`) && fresh(just) && announced.add(`${ev.day}:${res.cuts.length}`)) {
         const hit = mine && mine.entered && (mine.path[mine.path.length - 1].a === just.a || (mine.out && mine.out === res.cuts.length));
         const backedUp = mine && mine.jumped && mine.path.some((p) => p.at === just.at);
@@ -317,7 +319,7 @@ import * as SP from "./js/lib/send-picks.js";
     tag(res.done ? "Finished" : now < ev.start ? "Picks open" : "Live", res.done ? "done" : now < ev.start ? "wait" : "live");
     $("ev-clockbox").className = `ln-clock${res.done ? " done" : now >= ev.start && nextCut - now < 60000 ? " hot" : ""}`;
     $("ev-clock").textContent = res.done ? (res.winner ? nameOf(res.winner) : "No winner") : timer((now < ev.start ? ev.start : nextCut) - now);
-    $("ev-clock-label").textContent = res.done ? "last node standing" : now < ev.start ? "until the drop" : `until hour ${V.hour + 1}'s cut`;
+    $("ev-clock-label").textContent = res.done ? "Last Node Standing" : now < ev.start ? "until the drop" : `until hour ${V.hour + 1}'s cut`;
     $("ev-sub").textContent = res.done ? `${res.cuts.length} nodes out over ${V.hour} hours, ${clock(ev.start)} to ${clock(df.start + V.hour * H)}.`
       : now < ev.start ? `${n} nodes. Picks close at ${clock(cutoff(ev.round))}, first cut at ${clock(ev.start + H)}.`
       : `${V.standing.length} of ${n} still standing${now >= nextCut ? lateNote(now - nextCut) : V.live ? " · luck this hour is an estimate until the hour's card is in" : ""}`;
@@ -334,7 +336,7 @@ import * as SP from "./js/lib/send-picks.js";
       return el("div", { class: cls },
         badge(nd.a),
         el("div", { class: "ln-who" }, el("b", {}, (won ? "👑 " : "") + nameOf(nd.a), isMine ? el("span", { class: "ln-you", text: "you" }) : null),
-          el("small", { text: gone ? `knocked out (${cut.why === "luck" ? "worst luck that hour" : cut.why === "void" ? "its VHP left the band: void" : "no entry that hour"})` : won ? "last node standing" : danger ? "worst luck so far this hour" : `${fmt(Number(BigInt(nd.own) / 100000000n), 0)} VHP` })),
+          el("small", { text: gone ? `knocked out (${cut.why === "luck" ? "worst luck that hour" : cut.why === "void" ? "its VHP left the band: void" : "no entry that hour"})` : won ? "Last Node Standing" : danger ? "worst luck so far this hour" : `${fmt(Number(BigInt(nd.own) / 100000000n), 0)} VHP` })),
         el("div", { class: "ln-run", role: "img", "aria-label": pct == null ? "no blocks yet" : `${pct}% luck` },
           el("i", { style: `--node:${colorOf(nd.a)};width:${pct == null ? 2 : Math.max(2, Math.min(100, Math.round((lk / maxL) * 100)))}%` })),
         el("div", { class: "ln-num", text: pct == null ? "–" : `${pct}%` }, el("em", { text: `${fmt(V.blocks.get(nd.a) || 0)} blocks` })));
@@ -346,7 +348,7 @@ import * as SP from "./js/lib/send-picks.js";
     const fresh = (c) => now - (df.start + c.at * H) < 3 * H;
     const holdNote = !!(me() && picksContract && !mineOk && just && fresh(just));
     if (seen && seen.day === ev.day && !holdNote) {
-      if (res.done && !seen.done && !announced.has(`${ev.day}:won`) && res.winner && announced.add(`${ev.day}:won`)) flash(`${nameOf(res.winner)} wins`, mine && mine.rode ? `You rode it home: +${mine.points} points` : "The last node standing", "gold");
+      if (res.done && !seen.done && !announced.has(`${ev.day}:won`) && res.winner && announced.add(`${ev.day}:won`)) flash(`${nameOf(res.winner)} wins`, mine && mine.rode ? `You rode it home: +${mine.points} points` : "The Last Node Standing", "gold");
       else if (just && !announced.has(`${ev.day}:${res.cuts.length}`) && fresh(just) && announced.add(`${ev.day}:${res.cuts.length}`)) {
         const hit = mine && mine.entered && mine.out && res.cuts[mine.out - 1] && res.cuts[mine.out - 1].at === just.at;
         const backedUp = mine && mine.jumped && mine.path.some((p) => p.at === just.at);
@@ -467,7 +469,7 @@ import * as SP from "./js/lib/send-picks.js";
     if (!who) {
       box.replaceChildren(el("p", { class: "ln-cta", text: `Pick a node for the ${clock(nx.start)} drop` }),
         el("p", { class: "note", style: "margin:0", text: TESTNET ? "Play free gives you a Test wallet with test KOIN in one tap." : "Connect a wallet to pick (Kondor, KOIN Vault or a guest wallet)." }),
-        TESTNET ? el("button", { class: "ln-go", type: "button", onclick: () => walletButton() }, "Play free") : null);
+        ...(TESTNET ? [el("button", { class: "ln-go", type: "button", onclick: () => walletButton() }, "Play free")] : []));
       return;
     }
     // Fix-check LNF-25: between the lock and the start, your locked pick for the race about to start.

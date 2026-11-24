@@ -6,13 +6,13 @@ body.ln-arena {
      The ln-* names are kept so the rules below read the same; they now point at the site tokens. */
   --ln-night: var(--paper); --ln-panel: var(--surface); --ln-panel-2: var(--violet-soft); --ln-line: var(--line);
   --ln-text: var(--ink); --ln-muted: var(--muted); --ln-storm: var(--rose); --ln-gold: var(--sun); --ln-you: var(--violet);
-  --ln-gold-ink: #8A5A00; --ln-tint: color-mix(in srgb, var(--ink) 6%, transparent);
+  --ln-gold-ink: #8A5A00; --ln-accent: #D62F47; --ln-tint: color-mix(in srgb, var(--ink) 6%, transparent);
   --ln-display: "Inter", system-ui, sans-serif;
   background: var(--paper);
   color: var(--ln-text);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body.ln-arena { --ln-gold-ink: #FFC83D; } }
-:root[data-theme="dark"] body.ln-arena { --ln-gold-ink: #FFC83D; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body.ln-arena { --ln-gold-ink: #FFC83D; --ln-accent: #E8445A; } }
+:root[data-theme="dark"] body.ln-arena { --ln-gold-ink: #FFC83D; --ln-accent: #E8445A; }
 body.ln-arena a:not(.btn) { color: var(--violet); }
 .ln { font-size: 16px; line-height: 1.5; max-width: 1040px; margin: 0 auto; padding: 20px 16px 72px; }
 .ln :focus-visible { outline: 3px solid var(--ln-you); outline-offset: 2px; }
@@ -22,8 +22,9 @@ body.ln-arena a:not(.btn) { color: var(--violet); }
 
 /* ── the hero: the name, the event, the clock ── */
 .ln-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: end; margin: 6px 0 18px; }
-.ln-hero h1 { font-family: var(--ln-display); font-weight: 900; font-size: clamp(46px, 9vw, 96px); line-height: .86; margin: 0; letter-spacing: -.005em; text-transform: uppercase; }
-.ln-hero h1 span { display: block; color: transparent; -webkit-text-stroke: 2px var(--ln-text); }
+.ln-hero h1 { font-family: var(--ln-display); font-weight: 900; font-size: clamp(46px, 9vw, 96px); line-height: .9; margin: 0; letter-spacing: -.01em; }
+.ln-hero h1 span { display: block; color: var(--ln-accent); }  /* solid letters, the game colour (owner, 23 Nov: option A) */
+.ln-hero .ln-tagline { grid-column: 1 / -1; margin: 4px 0 0; font-size: 17px; font-weight: 600; color: var(--ln-text); }
 .ln-hero .ln-event { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 16px; color: var(--ln-muted); }
 .ln-hero .ln-event b { color: var(--ln-text); font-weight: 700; }
 .ln-tag { font-family: var(--ln-display); font-weight: 800; font-size: 16px; padding: 3px 12px; border-radius: 99px; background: var(--mint-soft); color: var(--mint); }
