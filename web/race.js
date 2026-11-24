@@ -270,9 +270,10 @@
         for (const u of ups) {
           const mineP = myPicks.get(cur.index + u.k), dr = drafts.get(cur.index + u.k), chosen = (dr || mineP) === r.a, inField = !!(u.c && u.c.field.some((x) => x.a === r.a));
           // phones show each button's race time on the button itself (the time header is hidden there)
-          const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : "Pick"} ${nameOf(r.a)} for the race at ${dayTime(u.r.start)}` }, el("span", { text: chosen ? (dr && dr !== mineP ? "Picked" : "Locked in") : "Pick" }), el("small", { class: "rt-pk-t", text: clock(u.r.start) }));
-          if (sending || !inField) b.disabled = true;
-          b.addEventListener("click", () => { if (batchOn()) { if (drafts.get(cur.index + u.k) === r.a) drafts.delete(cur.index + u.k); else drafts.set(cur.index + u.k, r.a); renderBar(); render(); return; } sendPick(cur.index + u.k, r.a); });
+          const used = !chosen && mineP && !changesLeft(0, cur.index + u.k);   // D-745: the race's 1 change is used
+          const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(r.a)} for the race at ${dayTime(u.r.start)}` }, el("span", { text: chosen ? (dr && dr !== mineP ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: clock(u.r.start) }));
+          if (sending || !inField || used) b.disabled = true;
+          b.addEventListener("click", () => { if (batchOn() && !myPicks.get(cur.index + u.k)) { if (drafts.get(cur.index + u.k) === r.a) drafts.delete(cur.index + u.k); else drafts.set(cur.index + u.k, r.a); renderBar(); render(); return; } sendPick(cur.index + u.k, r.a); });
           lane.appendChild(b);
         }
         lane.classList.toggle("lead", !ended && i === 0);
@@ -358,6 +359,7 @@
   const ROOT = new URL("./", location.href);
   const W = window.KWallet;
   let raceContract = null, myPicks = new Map(), usage = null, sending = false, board = null;
+  const changesUsed = new Map();   // D-745: "type:index" -> the changes the contract has stored for the player's pick
   // The pick panel is redrawn only when something in it changed (the race redraws every few seconds), and a horse you
   // chose but haven't sent yet is kept across redraws.
   let picksKey = "";
@@ -382,8 +384,8 @@
     const who = me(), cur = M.raceIndex(Date.now());
     if (who) {
       try {
-        const reads = [0, 1, 2, 3, 4].map((k) => raceContract.functions.get_pick({ player: who, race: String(cur + k) }).then((r) => [cur + k, r.result && r.result.pick && r.result.pick.horse]));
-        for (const [i, h] of await Promise.all(reads)) if (h) myPicks.set(i, h);
+        const reads = [0, 1, 2, 3, 4].map((k) => raceContract.functions.get_pick({ player: who, race: String(cur + k) }).then((r) => [cur + k, r.result && r.result.pick && r.result.pick.horse, Number((r.result && r.result.pick && r.result.pick.changes) || 0)]));
+        for (const [i, h, n] of await Promise.all(reads)) if (h) { myPicks.set(i, h); changesUsed.set(`0:${i}`, n); }
         usage = (await raceContract.functions.get_usage({ player: who })).result || null;
       } catch { /* shown as "couldn't read" below */ }
       for (const wf of weeks.values()) for (const r of wf.races) {
@@ -484,13 +486,13 @@
     const out = [];
     for (const [index, horse] of drafts) {
       const start = M.raceStart(index);
-      if (KBlocks.isAddr(horse) && horse !== myPicks.get(index) && start - Date.now() > LOCK_MARGIN) out.push({ type: 0, index, horse, start });
+      if (KBlocks.isAddr(horse) && !myPicks.get(index) && start - Date.now() > LOCK_MARGIN) out.push({ type: 0, index, horse, start });   // D-743: a change never goes in a batch
     }
     for (const [k, horse] of rtDrafts) {
       const [type, index] = k.split(":").map(Number);
       if (!(type >= 1 && type <= 4) || !Number.isInteger(index)) continue;
       const start = M.typedStart(type, index);
-      if (KBlocks.isAddr(horse) && horse !== rtPicks.get(k) && start - Date.now() > LOCK_MARGIN) out.push({ type, index, horse, start });
+      if (KBlocks.isAddr(horse) && !rtPicks.get(k) && start - Date.now() > LOCK_MARGIN) out.push({ type, index, horse, start });   // D-743: a change never goes in a batch
     }
     return out.sort((a, b) => a.start - b.start);
   }
@@ -518,6 +520,9 @@
     const wallet = W.kind === "guest" ? "your guest wallet" : W.label ? W.label() : "your wallet";
     pickModal("busy", W.kind === "guest" ? "Sending your picks…" : `Confirm in ${wallet}`, [`${list.length} pick${list.length === 1 ? "" : "s"} in one go.`, "Free when the Knode Games Mana sponsor can pay; if it can't, your wallet asks to use your own Mana."]);
     try {
+      // R3-18: a race that already has a pick on chain (made elsewhere since the last read) is a change: never in a batch.
+      for (const d of [...list]) { const r0 = await raceContract.functions.get_pick({ player: who, race: M.contractRace(d.type, d.index) }); if (r0.result && r0.result.pick && KBlocks.isAddr(r0.result.pick.horse)) list.splice(list.indexOf(d), 1); }
+      if (!list.length) throw new Error("those races already have your pick; a change is sent one at a time");
       const ops = [];
       for (const d of list) { const { operation } = await raceContract.functions.pick({ player: who, race: M.contractRace(d.type, d.index), horse: d.horse }, { onlyOperation: true }); ops.push(Object.defineProperty(operation, "__start", { value: d.start, enumerable: false })); }
       // Dropped right before signing: any race that started while the box was open.
@@ -535,22 +540,55 @@
     } finally { sending = false; await loadMine(); renderPicks(true); if (rtype) { await rtLoadMine(); rtRender(true); } renderBar(); }
   }
 
+  /** D-743 / D-745 (Vault M-522): 1 change per race, set by this page until the Race contract has its own cap. A change
+   *  costs the player about 0.9 Mana on the Race contract (mainnet mana-report). */
+  const CHANGE_CAP = 1, CHANGE_MANA = 0.9;
+  const changesLeft = (type, index) => Math.max(0, CHANGE_CAP - (changesUsed.get(`${type}:${index}`) || 0));
+  /** D-743: "You already have a pick for this race" with Confirm and Cancel. Resolves true only on Confirm. */
+  function askChange(old, horse, when, have, left) {
+    return new Promise((done) => pickModal("info", "Change your pick?", [
+      `You already have a pick for this race (${nameOf(old)}). Changing it uses your own Mana: about ${CHANGE_MANA} (you have ${fmt(have, 1)}).`,
+      el("p", {}, "Change to ", el("b", { text: nameOf(horse) }), ` for the race at ${when}?`),
+      `${left} of ${CHANGE_CAP} change${CHANGE_CAP === 1 ? "" : "s"} left.`,
+    ], [el("button", { class: "btn btn-ghost", type: "button", "data-cancel": "", onclick: () => { closeModal(); done(false); } }, "Cancel"),   // first, so it has the focus
+      el("button", { class: "btn", type: "button", onclick: () => { closeModal(); done(true); } }, "Confirm change")]));
+  }
   async function sendPick(index, horse, type = 0) {
     const who = me();
     if (!who || !raceContract || sending) return;
     // D-166: the contract v2 takes the race type in the race number from bit 48 (below 2^53, so exact in the browser: #D-13 H-1); type 0 is sent exactly as before v2.
-    const tr = M.typedRace(type, index), mineNow = type ? rtPicks.get(`${type}:${index}`) : myPicks.get(index);
+    const tr = M.typedRace(type, index);
+    let mineNow = type ? rtPicks.get(`${type}:${index}`) : myPicks.get(index);
     const when = type ? `the ${M.TYPES[type].name.toLowerCase()} race at ${dayTime(tr.start)}` : `${dayTime(M.raceStart(index))} (${M.raceId(index).slice(11)}:00 UTC)`;
     const args = { player: who, race: M.contractRace(type, index) };
+    // R3-18: read the pick from the chain right before deciding; this page's own list can be up to a minute old, and a
+    // pick made on another device would otherwise go out as a sponsored "first pick" that is really a change (D-278).
+    let chainPick = null;
+    try { const r0 = await raceContract.functions.get_pick(args); chainPick = (r0.result && r0.result.pick) || null; }
+    catch { return pickModal("bad", "Couldn't check your pick", ["Nothing was sent. Try again in a moment."], [okBtn("OK")]); }
+    if (chainPick && KBlocks.isAddr(chainPick.horse)) { mineNow = chainPick.horse; if (type) rtPicks.set(`${type}:${index}`, mineNow); else myPicks.set(index, mineNow); changesUsed.set(`${type}:${index}`, Number(chainPick.changes || 0)); }
     if (!KBlocks.isAddr(horse)) return pickModal("info", "Choose a horse first", ["Pick a producer from the list, then press Pick."], [okBtn("OK")]);
     if (mineNow === horse) return pickModal("info", "That is already your pick", [`${nameOf(horse)} for the race at ${when}.`], [okBtn("OK")]);
     if (Date.now() >= tr.start) return pickModal("bad", "That race has started", ["Picks lock when a race starts."], [okBtn("OK")]);
+    // D-743 (owner, 23 Nov): a pick that replaces one you already have is a change: never on one tap. It is asked first,
+    // capped on this page, and paid with the player's own Mana (D-278: the Knode Games Mana sponsor pays first picks only).
+    const change = KBlocks.isAddr(mineNow);
+    if (change) {
+      let n = 0;
+      try { const r = await raceContract.functions.get_pick(args); n = Number((r.result && r.result.pick && r.result.pick.changes) || 0); changesUsed.set(`${type}:${index}`, n); } catch { n = changesUsed.get(`${type}:${index}`) || 0; }
+      if (n >= CHANGE_CAP) return pickModal("info", "Already changed", [`You have used your ${CHANGE_CAP} change for this race, so ${nameOf(mineNow)} stays your pick.`], [okBtn("OK")]);
+      // No Mana of its own (or a guest): never falls back to the sponsor (Vault M-522).
+      let have = 0;
+      if (W.kind !== "guest") { try { have = Number(BigInt(await provider.getAccountRc(who))) / 1e8; } catch { have = 0; } }
+      if (W.kind === "guest" || !(have >= CHANGE_MANA)) return pickModal("info", "Your first pick stays", ["You need your own Mana to change a pick. Your first pick stays.", el("p", {}, el("a", { href: "get.html", text: "How to get KOIN and Mana" }))], [okBtn("OK")]);
+      if (!(await askChange(mineNow, horse, when, have, CHANGE_CAP - n))) return;
+    }
     sending = true; renderPicks(true);
     const wallet = W.kind === "guest" ? "your guest wallet" : W.label ? W.label() : "your wallet";
-    pickModal("busy", W.kind === "guest" ? "Sending your pick…" : `Confirm in ${wallet}`, [`${nameOf(horse)} for the race at ${when}.`, W.kind === "guest" ? "Free: the Knode Games Mana sponsor pays." : "Free: the Knode Games Mana sponsor pays the Mana. Approve it in your wallet."]);
+    pickModal("busy", W.kind === "guest" ? "Sending your pick…" : `Confirm in ${wallet}`, [`${nameOf(horse)} for the race at ${when}.`, change ? "A change: your own Mana pays. Approve it in your wallet." : W.kind === "guest" ? "Free: Knode Games pays the Mana." : "Free: Knode Games pays the Mana. Approve it in your wallet."]);
     try {
       const { operation } = await raceContract.functions.pick({ ...args, horse }, { onlyOperation: true });
-      const id = await W.send(`pick ${nameOf(horse)} for the race at ${dayTime(tr.start)}`, [operation]);
+      const id = await W.send(`${change ? "change your pick to" : "pick"} ${nameOf(horse)} for the race at ${dayTime(tr.start)}`, [operation], change ? { noSponsor: true } : {});
       pickModal("busy", "Sent. Checking the chain…", [`${nameOf(horse)} for the race at ${when}.`]);
       // Read the pick back from the race contract: confirmed only when the chain has it.
       let onChain = false;
@@ -828,12 +866,12 @@
       let pill = null;
       if (rk && before && before.has(a) && before.get(a) !== rk) { const d = before.get(a) - rk; pill = el("span", { class: `rt-pill ${d > 0 ? "up" : d < 0 ? "down" : ""}`, text: d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : "–", title: d === 0 ? "Same place" : `${d > 0 ? "Gained" : "Lost"} ${Math.abs(d)} place${Math.abs(d) === 1 ? "" : "s"}` }); }
       const cells = upc.map((u) => {
-        const k = `${rtype}:${u.index}`, mine = rtPicks.get(k), draft = rtDrafts.get(k), chosen = (draft || mine) === a;
-        const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
-          el("span", { text: chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
-        if (!who || !raceContract || sending) b.disabled = true;
+        const k = `${rtype}:${u.index}`, mine = rtPicks.get(k), draft = rtDrafts.get(k), chosen = (draft || mine) === a, used = !chosen && mine && !changesLeft(rtype, u.index);   // D-745
+        const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
+          el("span", { text: chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
+        if (!who || !raceContract || sending || used) b.disabled = true;
         b.addEventListener("click", () => {
-          if (batchOn()) { if (rtDrafts.get(k) === a) rtDrafts.delete(k); else rtDrafts.set(k, a); rtRender(true); return; }
+          if (batchOn() && !mine) { if (rtDrafts.get(k) === a) rtDrafts.delete(k); else rtDrafts.set(k, a); rtRender(true); return; }
           sendPick(u.index, a, rtype);
         });
         return b;
@@ -891,8 +929,16 @@
     }
     return { used: c.used(who, week, type), cap };
   }
+  /** M-528 (owner, 23 Nov): the header's steps follow the open tab: that race's length and its real points (the chip). */
+  const RACE_LEN = { 0: "6 hours", 1: "1 hour", 2: "2 hours", 3: "a day", 4: "a week (Monday to Saturday)" };
+  function heroSteps(t) {
+    const len = $("rc-step-len"), pts = $("rc-step-pts");
+    if (len) len.textContent = `${RACE_LEN[t] || RACE_LEN[0]}, live, block by block`;
+    if (pts) pts.textContent = chipText(t);
+  }
   function rtSelect(t) {
     rtype = t;
+    heroSteps(t);
     for (const id of ["rt-track", "rt-picks"]) { const z = $(id); if (z) z.replaceChildren(); }   // L-9: no row of the old type stays on screen
     try { localStorage.setItem("pr-type", String(t)); } catch { /* per-viewer convenience only */ }
     for (const id of ["live", "pick-zone"]) { const n = $(id); if (n) n.hidden = t !== 0; }
@@ -912,8 +958,8 @@
     if (!who || !raceContract || !rtype) return;
     const list = [M.typedRace(rtype, M.typedIndex(rtype, Date.now())), ...upcoming(rtype)];
     try {
-      const got = await Promise.all(list.map((r) => raceContract.functions.get_pick({ player: who, race: M.contractRace(rtype, r.index) }).then((x) => [r.index, x.result && x.result.pick && x.result.pick.horse])));
-      for (const [i, h] of got) if (h) rtPicks.set(`${rtype}:${i}`, h);
+      const got = await Promise.all(list.map((r) => raceContract.functions.get_pick({ player: who, race: M.contractRace(rtype, r.index) }).then((x) => [r.index, x.result && x.result.pick && x.result.pick.horse, Number((x.result && x.result.pick && x.result.pick.changes) || 0)])));
+      for (const [i, h, n] of got) if (h) { rtPicks.set(`${rtype}:${i}`, h); changesUsed.set(`${rtype}:${i}`, n); }
     } catch { /* shown as no pick */ }
   }
   function rtRender(force = false) {
@@ -979,6 +1025,7 @@
     catch (e) { say("Couldn't reach the Koinos network. Trying again in a moment…"); }
     await picksReady; renderPicks();
     rtTabs(); if (typesLive() && rtype) rtSelect(rtype); else rtype = 0;
+    heroSteps(rtype);
     loadBoard(); loadRuler();
     setInterval(() => { if (!document.hidden) { loadBoard(); loadRuler(); } }, 300000);
     setInterval(() => { if (!document.hidden && raceContract) loadMine(); }, 60000);
