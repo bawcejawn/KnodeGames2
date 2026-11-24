@@ -58,11 +58,19 @@ test("a game card gives the game's length in blocks and roughly in time (14,400 
 
 test("the look (D-730, D-732): one short box with Rules and Ruler links, 'the number', ▲ Over / ▼ Under, a calm flash, a sticky Send bar", () => {
   const css = read("overunder.css");
-  assert.ok(html.includes("Free test game, no prizes yet. Pick a producer and call whether it signs more or fewer blocks than the number shown. A new game starts every 30 minutes."), "Marketing's box text (M-491)");
-  assert.match(html, /<a href="#help" id="ou-rules-link">Rules<\/a> · <a href="ruler\.html">The Ruler<\/a>/);
+  const box = JSON.parse(fs.readFileSync(new URL("../../../tools/page-box.json", import.meta.url), "utf8"))["overunder.html"][1];
+  assert.equal(box, "Free test game, no prizes yet. Pick a producer and call whether it signs more or fewer blocks than the number shown. A new game starts every 30 minutes.", "Marketing's box text (M-491), in the shared box (#94)");
+  assert.equal((html.match(/class="page-box"/g) || []).length, 1, "exactly one box on the page (R3-17 F-5)");
+  assert.ok(!html.includes('class="ou-box"'), "no second, page-own box");
+  assert.match(html, /<p class="ou-links"><a href="#help" id="ou-rules-link">Rules<\/a> · <a href="ruler\.html">The Ruler<\/a><\/p>/);
   assert.match(code, /\$\("help"\)\.open = true/, "the Rules link opens the rules box");
   assert.ok(js.includes('"The number"') && js.includes('"▲ Over"') && js.includes('"▼ Under"'));
   assert.match(css, /prefers-reduced-motion: reduce\) \{ \.ou-g\.sent \{ animation: none; \}/, "no flash for people who ask for less motion");
   assert.match(css, /\.ou-actions\.ready \{ position: sticky;/);
   assert.match(code, /: el\("span", \{ class: "ou-g-lock", text: "Cancelled" \}\)/, "a cancelled game shows no countdown");
+});
+
+test("the buttons speak the game's own words: over / under the number, never more / fewer (owner, M-540)", () => {
+  assert.ok(js.includes('btn(F.OVER, "Over", "over the number", "ou-o"), btn(F.UNDER, "Under", "under the number", "ou-u")'));
+  assert.doesNotMatch(js, /"(more|fewer)"/, "no more/fewer label on a button");
 });

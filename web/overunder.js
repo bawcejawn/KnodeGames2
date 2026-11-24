@@ -127,12 +127,12 @@ function start() {
       if (!e) return el("article", { class: "ou-g ou-off" }, head, el("p", { class: "ou-none", text: "No game at this start: it was cancelled for everyone (no schedule file)." }));
       const label = F.formLabel(e.form);
       const btn = (c, txt, sub, cls) => el("button", { type: "button", class: cls, "aria-pressed": String((mine ? Number(mine) : want) === c),
-        "aria-label": `${txt}: ${sub} than ${lineText(e.line)} blocks for ${nameOf(e.producer)}`, disabled: !open(s, now) || !!mine ? "" : null, onclick: () => choose(s, c) },
+        "aria-label": `${txt}: ${txt.toLowerCase()} ${lineText(e.line)} blocks for ${nameOf(e.producer)}`, disabled: !open(s, now) || !!mine ? "" : null, onclick: () => choose(s, c) },
         txt === "Over" ? "▲ Over" : "▼ Under", el("span", { text: sub }));
       return el("article", { class: "ou-g" + (want ? " on" : "") + (flashed.has(s) ? " sent" : "") }, head,
         el("p", { class: "ou-g-who" }, el("b", { text: nameOf(e.producer) }), el("span", { class: "ou-form", text: ` · ${label}` })),
         el("p", { class: "ou-g-line" }, el("span", { text: "The number" }), el("span", { class: "ou-num" }, `${lineText(e.line)} `, el("small", { text: "blocks" })), el("span", { text: " in its next 14,400 blocks (about 12 hours)" })),
-        el("div", { class: "ou-btns" }, btn(F.OVER, "Over", "more", "ou-o"), btn(F.UNDER, "Under", "fewer", "ou-u")),
+        el("div", { class: "ou-btns" }, btn(F.OVER, "Over", "over the number", "ou-o"), btn(F.UNDER, "Under", "under the number", "ou-u")),
         el("p", { class: "ou-small", text: mine ? `Your pick: ${mine === "1" ? "Over" : "Under"}. No changes.` : unread.has(s) ? "Couldn't read your pick for this game. Nothing is sent for it until it reads." : "" }));
     }));
     const n = [...draft.keys()].filter((s) => open(s, now) && games.get(s) && !unread.has(s)).length;
