@@ -12,7 +12,7 @@
   "golf.html": ["golf", "Block Golf: your places in the other games become your score. Nothing to pick; the lowest score wins."],
   "fantasy.html": ["fantasy", "Fantasy Producers: draft five producers under a salary cap and name a captain, then send your team."],
   "lastnode.html": ["lastnode", "Last Node Standing: pick a node. Each hour the unluckiest node is knocked out."],
-  "overunder.html": ["overunder", "Over Under: call whether a producer signs more or fewer blocks than the number shown. A free test, no prizes yet."],
+  "overunder.html": ["overunder", "Free test game, no prizes yet. Pick a producer and call whether it signs more or fewer blocks than the number shown. A new game starts every 30 minutes."],
   "vs.html": ["vs", "Knode Games VS: pick which producers beat our node each day. A free test."],
   "combo.html": ["combo", "Build a card of 2 to 10 calls from races and Block X. Every leg has to hit. Free to play."],
   "survivor.html": ["survivor", "Pick one producer a day, and you have two lives. Free to play."],
