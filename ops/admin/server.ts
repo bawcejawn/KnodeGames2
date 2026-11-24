@@ -24,7 +24,8 @@ import { fileURLToPath } from "node:url";
 import { ACTIONS, AREAS, KINDS, commandFor } from "./actions.ts";
 import { GAMES, VARIABLES, VARIABLES_URL, STANDARD_STEPS, LAUNCH } from "./switches.ts";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// The repo folder (this file is ops/admin/server.ts): commands run from here, so bot/… and .env are found (audit AB-073).
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PORT = Number(process.env.ADMIN_PORT ?? 8787);
 const HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
 const KEY = crypto.randomBytes(24).toString("hex");
@@ -32,7 +33,7 @@ const PREVIEW_MS = 10 * 60_000;
 const previews = new Map<string, number>();   // action + values → time of its dry run
 let busy = false;
 
-const page = fs.readFileSync(path.join(ROOT, "admin", "index.html"), "utf8");
+const page = fs.readFileSync(path.join(ROOT, "ops", "admin", "index.html"), "utf8");
 // What the page shows: every area of the platform, the kinds of control, and each action with its plain-words fields
 // and the command it runs (with {placeholders} for the values). The patterns stay on the server, which checks them.
 // Which version of the page this is (shown at the top), so it's easy to tell an old copy from a new one.
