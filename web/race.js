@@ -109,8 +109,9 @@
   // Owner 14 Nov: "space the horses out so it's easier to see who is ahead". Pack view (default) zooms each lane onto the
   // pack, last place at the left and the leader at the right, like a TV camera following the race (owner, 14 Nov:
   // no extra strip under the lane). "Whole race" is the old 0-to-finish scale with the hour marks.
-  let packView = true;
-  try { packView = localStorage.getItem("pr-view") !== "whole"; } catch { /* default */ }
+  // M-448 (owner, 23 Nov): "Whole race" is the default on every tab; Pack is one tap away (and remembered).
+  let packView = false;
+  try { packView = localStorage.getItem("pr-view") === "pack"; } catch { /* default */ }
   // Owner 15 Nov: a couple of sort options. "Most VHP" (the fixed line-up, default), "Current place" (live order), "A–Z".
   const SORTS = [["vhp", "Most VHP"], ["place", "Current place"], ["name", "A–Z"]];
   let sortBy = "vhp";
@@ -120,7 +121,8 @@
    *  shared choice (pr-view / pr-sort), so switching tabs keeps it; `redraw` repaints the board that was clicked. */
   function viewButtons(bar, redraw, finish) {
     bar.replaceChildren(el("span", { class: "rt-wl", text: "View:" }),
-      ...[["Pack", true, "Zoomed in on the pack: easier to see who is ahead"], ["Whole race", false, `From the start line to the ${finish} finish`]].map(([t, v, tip]) => el("button", { type: "button", title: tip, "aria-pressed": String(packView === v), onclick: () => { packView = v; try { localStorage.setItem("pr-view", v ? "pack" : "whole"); } catch { /* fine */ } redraw(); } }, t)));
+      ...[["Whole race", false, `From the start line to the ${finish} finish`], ["Pack", true, "Zoomed in on the pack: easier to see who is ahead"]].map(([t, v, tip]) => el("button", { type: "button", title: tip, "aria-pressed": String(packView === v), onclick: () => { packView = v; try { localStorage.setItem("pr-view", v ? "pack" : "whole"); } catch { /* fine */ } redraw(); } }, t)),
+      el("span", { class: "pr-viewnote", text: "Whole race shows the real way to the finish. Pack zooms in on the runners, so the leader is always on the right." }));
   }
   function sortButtons(bar, redraw) {
     bar.replaceChildren(el("span", { class: "rt-wl", text: "Sort:" }),
@@ -654,6 +656,41 @@
     const s = M.pagePick(type, r.start, RO ? RO.standings : res.standings, p[1], o.win, o.show);
     return { text: `${won}; you picked ${nameOf(p[1])}`, mark: s.label ? `✓ ${s.label} +${s.pts}` : "✗", ok: o.win || o.show };
   }
+  /** Owner, M-448: ONE results list per tab, for that tab's race length only (6-hour results only on the 6-hour tab).
+   *  Each finished race: the Ruler's 1st, 2nd and 3rd, the void producers by name, and your pick. */
+  var rulerCur = null;
+  function renderRulerBox() {
+    const cur = rulerCur, box = $("ruler-box");
+    if (!cur || !box) return;
+    const T = M.TYPES[rtype], who = me(), V = window.KRulerVoid, rows = [];
+    $("ruler-title").textContent = `Results · ${T.name} race`;
+    for (const j of rulerFiles.filter((f) => f._type === rtype).sort((a, b) => b.week - a.week)) for (const e of j.races.slice().reverse()) {
+      if (rows.length >= 8) break;
+      const p = M.parseTypedId(e.id);
+      const r = rtype ? (p && p.type ? { id: e.id, start: M.typedStart(p.type, p.index) } : null) : (weeks.get(j.week)?.races || []).find((x) => x.id === e.id) || null;
+      const res = rtype ? (typedRec(rtype, e.id) || {}).result : r && r.result;
+      const v = V ? V.rulerVoids(e, j) : { has: false, voids: [], wholeVoid: false };
+      const pl = (i) => e.placings && e.placings[i] ? nameOf(e.placings[i]) : null;
+      const top = !e.card ? "Result comes in once the race's blocks are in."
+        : v.wholeVoid ? "Every producer was void: no pick scores."
+        : [pl(0) && `1st ${pl(0)}`, pl(1) && `2nd ${pl(1)}`, pl(2) && `3rd ${pl(2)}`].filter(Boolean).join(" · ") || "–";
+      const voidLine = e.card && v.has && v.voids.length && !v.wholeVoid
+        ? el("span", { class: "rl-void", text: `Void: ${v.voids.map(nameOf).join(", ")} (VHP moved too much during the race, so ${v.voids.length === 1 ? "it can't place; a pick on it doesn't" : "they can't place; picks on them don't"} score)` }) : null;
+      const pick = who && res && Array.isArray(res.picks) ? res.picks.find((x) => x[0] === who) : null;
+      const o = pick && r && e.card && !j.shadow ? pickOutcome(r, rtype, res || {}, pick) : null;
+      rows.push(el("div", { class: "pk-row done rl-row" },
+        el("div", { class: "pk-when" }, el("b", { text: r ? dayTime(r.start) : e.id }), el("span", { text: j.shadow ? "trial" : e.card ? "final" : "checking" })),
+        el("div", { class: "pk-now" }, el("span", { text: top }), voidLine ? el("br") : "", voidLine || "", pick ? el("br") : "", pick ? el("span", { class: "rl-you", text: `You picked ${nameOf(pick[1])}` }) : ""),
+        el("span", { class: o && !o.wait ? (o.ok ? "pk-ok" : "pk-no") : "", text: o && !o.wait ? o.mark : "" })));
+    }
+    const trial = cur.mode !== "on";
+    $("ruler-list").replaceChildren(!rows.length ? el("p", { class: "note", text: `No ${T.name.toLowerCase()} results yet.` }) : trial ? el("details", { class: "rl-trial" }, el("summary", { text: "Trial results (count for nothing)" }), ...rows) : el("div", { class: "pk-list rl" }, ...rows));
+    // Once the Ruler scores the race, this list is the results: the older lists would repeat them.
+    const hist = document.getElementById("history");
+    rulerHidesHistory = cur.mode === "on" && rows.length > 0;
+    if (hist) hist.hidden = rulerHidesHistory || rtype !== 0;   // G28-2: and stays hidden on the other tabs (rtSelect)
+    for (const id of ["rt-results", "rt-results-h"]) { const n = $(id); if (n) n.hidden = cur.mode === "on"; }   // M-448: no second list on the typed tabs
+  }
   async function loadRuler() {
     const w = M.weekOf(Date.now()), files = [];
     // The race types (option A): their ruler files too, once the types are live (R<week>-<type>.json).
@@ -667,27 +704,10 @@
     $("ruler-box").hidden = false;
     const mon = new Date(M.weekStart(cur.rulerFrom)).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
     $("ruler-when").textContent = cur.mode === "on"
-      ? `The 6-hour race is scored by the VHP Ruler from ${mon} (00:00 UTC). The horses are a live estimate; the final 1st, 2nd and 3rd come from the Ruler once the race's blocks are in (usually 1 to 2 hours).`
+      ? `Every race length is scored by the VHP Ruler (6-hour races from ${mon}, 00:00 UTC). The horses are a live estimate; the final 1st, 2nd and 3rd come from the Ruler once the race's blocks are in (usually 1 to 2 hours).`
       : `The 6-hour race switches to the VHP Ruler on ${mon} (00:00 UTC). Until then the Ruler runs beside the race as a trial: its results count for nothing.`;
-    // One compact table: the race, then its 1st, 2nd and 3rd; "Void" names how many producers did not count.
-    const V = window.KRulerVoid, body = [];
-    for (const j of files.slice().sort((a, b) => b.week - a.week)) for (const e of j.races.slice().reverse()) {
-      if (body.length >= 6) break;
-      const r = (weeks.get(j.week)?.races || []).find((x) => x.id === e.id) || ((p) => (p && p.type ? { start: M.typedStart(p.type, p.index) } : null))(M.parseTypedId(e.id)), v = V ? V.rulerVoids(e, j) : { has: false, voids: [], wholeVoid: false };
-      const place = (i) => el("td", {}, e.card && e.placings && e.placings[i] ? nameOf(e.placings[i]) : "–");
-      const note = !e.card ? el("td", { colspan: "3", class: "muted", text: "Result comes in once the race's blocks are in." })
-        : v.wholeVoid ? el("td", { colspan: "3" }, "Every producer was void: no pick scores.") : null;
-      const voided = v.has && v.voids.length && !v.wholeVoid ? el("span", { class: "void-chip", title: "Void: its VHP moved too much during this race, so it didn't count", text: `${v.voids.length} void` }) : null;
-      const when = el("td", { class: "rl-when" }, el("b", { text: r ? dayTime(r.start) : e.id }), el("span", { text: j.shadow ? "trial" : e.card ? "final" : "checking" }), voided);
-      body.push(el("tr", {}, when, ...(note ? [note] : [place(0), place(1), place(2)])));
-    }
-    const table = el("table", { class: "rl" }, el("thead", {}, el("tr", {}, el("th", { text: "Race (your time)" }), el("th", { text: "1st" }), el("th", { text: "2nd" }), el("th", { text: "3rd" }))), el("tbody", {}, ...body));
-    const trial = cur.mode !== "on";
-    $("ruler-list").replaceChildren(!body.length ? el("p", { class: "note", text: "No Ruler results yet." }) : trial ? el("details", { class: "rl-trial" }, el("summary", { text: "Trial results (count for nothing)" }), table) : table);
-    // Once the Ruler scores the race, its table is the results: the older Results table below would repeat them.
-    const hist = document.getElementById("history");
-    rulerHidesHistory = cur.mode === "on" && body.length > 0;
-    if (hist) hist.hidden = cur.mode === "on" && body.length > 0 || rtype !== 0;   // G28-2: and stays hidden on the 6-hour tab (rtSelect)
+    rulerCur = cur;
+    renderRulerBox();
     renderPicks(); renderHistory(); if (rtype) rtRender();   // G28-1: the pick rows and the Results table now know the ruler's results
   }
   if (W && W.subscribe) W.subscribe(() => { loadMine(); renderBoard(); });
@@ -876,7 +896,8 @@
     for (const id of ["rt-track", "rt-picks"]) { const z = $(id); if (z) z.replaceChildren(); }   // L-9: no row of the old type stays on screen
     try { localStorage.setItem("pr-type", String(t)); } catch { /* per-viewer convenience only */ }
     for (const id of ["live", "pick-zone"]) { const n = $(id); if (n) n.hidden = t !== 0; }
-    { const h = $("history"); if (h) h.hidden = t !== 0 || rulerHidesHistory; }   // Repo Lens #G-28 G28-2: the Ruler's table replaces it in an ON week
+    { const h = $("history"); if (h) h.hidden = t !== 0 || rulerHidesHistory; }
+    renderRulerBox();   // M-448: the results list follows the tab   // Repo Lens #G-28 G28-2: the Ruler's table replaces it in an ON week
     $("typed").hidden = t === 0;
     rtTabs();
     if (t) { rtLoadMine().then(() => rtRender(true)); }
