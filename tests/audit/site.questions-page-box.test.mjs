@@ -22,6 +22,10 @@ test("the long text moved from Play into the Daily Questions rules tab", () => {
     assert.ok(rules.includes(id), `${id} is in Rules`);
   }
   assert.doesNotMatch(src, /class: "band-text" \}, "Answer each day's questions/, "the hero keeps its headline only");
+  // Rules (#view-how) is one <section>: nothing moved into it may open or close a section of its own
+  // (tests/audit/open-network.test.ts reads #view-how up to its first </section>).
+  const how = html.slice(html.indexOf('id="view-how"'), html.indexOf("</section>", html.indexOf('id="view-how"')));
+  assert.ok(how.includes('id="panel-remind"') && how.includes("Koinos is an open network"), "Reminders and the open-network text are both inside #view-how");
 });
 
 test("the tap hint shows once above the questions, not under every card; Reminders say both rounds", () => {
