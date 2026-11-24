@@ -10,18 +10,24 @@
   --ou-pill: #FBE9C8;  --ou-pill-ink: #5A3B00;
   --ou-hot: #A63A27;   --ou-hot-ink: #FFFFFF;
   --ou-flash: #3CCBF0;
+  --ou-picked-ink: #FFFFFF;                          /* text on a picked Over/Under button (R3-17 F-1) */
+  --ou-box-bg: rgba(255, 255, 255, .82); --ou-box-ink: #15122B;
+  --ou-chip-bg: rgba(255, 255, 255, .55); --ou-tag-bg: rgba(255, 255, 255, .75);
+  --ou-step-num-ink: #FFFFFF;
+  --ou-bar-shadow: 0 -8px 20px -14px rgba(20, 22, 31, .45);
+  --ou-tabbar-h: 66px;                               /* the bottom menu's height on phones (R3-17 F-3) */
   max-width: 760px; margin: 0 auto; padding: 16px 14px 96px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .ou {
     --ou-band: linear-gradient(135deg, #1FA6C9 0%, #2C9FD9 55%, #5C8FE0 100%);
-    --ou-over: #3FAF7F; --ou-over-soft: #173528; --ou-under: #D9705A; --ou-under-soft: #3B231D;
+    --ou-over: #3FAF7F; --ou-over-soft: #173528; --ou-under: #E5846F; --ou-under-soft: #3B231D; --ou-picked-ink: #111216;
     --ou-pill: #4A3A12; --ou-pill-ink: #FBE9C8; --ou-hot: #D9705A; --ou-hot-ink: #111216; --ou-accent: #1FA6C9;
   }
 }
 :root[data-theme="dark"] .ou {
   --ou-band: linear-gradient(135deg, #1FA6C9 0%, #2C9FD9 55%, #5C8FE0 100%);
-  --ou-over: #3FAF7F; --ou-over-soft: #173528; --ou-under: #D9705A; --ou-under-soft: #3B231D;
+  --ou-over: #3FAF7F; --ou-over-soft: #173528; --ou-under: #E5846F; --ou-under-soft: #3B231D; --ou-picked-ink: #111216;
   --ou-pill: #4A3A12; --ou-pill-ink: #FBE9C8; --ou-hot: #D9705A; --ou-hot-ink: #111216; --ou-accent: #1FA6C9;
 }
 
@@ -30,14 +36,14 @@
 .ou-hero a { color: var(--ou-band-ink); font-weight: 700; }
 .ou-kicker { margin: 0; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 12px; opacity: .8; }
 .ou-hero h1 { margin: 4px 0 10px; font-size: clamp(30px, 8vw, 44px); line-height: 1.05; font-weight: 800; }
-.ou-tag { display: inline-block; vertical-align: middle; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.75); color: var(--ou-band-ink); }
-.ou-box { background: rgba(255,255,255,.82); color: #15122B; border-radius: var(--r-md, 14px); padding: 10px 12px; }
+.ou-tag { display: inline-block; vertical-align: middle; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: var(--ou-tag-bg); color: var(--ou-band-ink); }
+.ou-box { background: var(--ou-box-bg); color: var(--ou-box-ink); border-radius: var(--r-md, 14px); padding: 10px 12px; }
 .ou-box p { margin: 0; }
-.ou-box a { color: #15122B; }
+.ou-box a { color: var(--ou-box-ink); }
 .ou-box-links { margin-top: 6px !important; font-size: 14px; }
 .ou-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 10px 0 0; }
-.ou-steps li { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.55); border-radius: 999px; padding: 5px 10px 5px 5px; font-size: 13px; font-weight: 600; }
-.ou-steps b { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ou-band-ink); color: #fff; font-size: 12px; }
+.ou-steps li { display: flex; align-items: center; gap: 6px; background: var(--ou-chip-bg); border-radius: 999px; padding: 5px 10px 5px 5px; font-size: 13px; font-weight: 600; }
+.ou-steps b { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ou-band-ink); color: var(--ou-step-num-ink); font-size: 12px; }
 
 /* ── status strip ── */
 .ou-strip { margin: 0 0 10px; padding: 8px 12px; border-radius: var(--r-sm, 10px); background: var(--ou-pill); color: var(--ou-pill-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -61,12 +67,12 @@
 /* ── Over / Under ── */
 .ou-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 2px; }
 .ou-btns button { min-height: 52px; border-radius: 12px; border: 2px solid currentColor; background: transparent; font: 800 17px/1.1 var(--body, system-ui); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: transform .1s ease, background-color .15s ease, opacity .15s ease; }
-.ou-btns button span { font-size: 12px; font-weight: 600; opacity: .85; }
+.ou-btns button span { font-size: 12px; font-weight: 600; }
 .ou-btns button.ou-o { color: var(--ou-over); background: var(--ou-over-soft); }
 .ou-btns button.ou-u { color: var(--ou-under); background: var(--ou-under-soft); }
 .ou-btns button:active { transform: translateY(1px); }
-.ou-btns button[aria-pressed="true"].ou-o { background: var(--ou-over); border-color: var(--ou-over); color: #fff; }
-.ou-btns button[aria-pressed="true"].ou-u { background: var(--ou-under); border-color: var(--ou-under); color: #fff; }
+.ou-btns button[aria-pressed="true"].ou-o { background: var(--ou-over); border-color: var(--ou-over); color: var(--ou-picked-ink); }
+.ou-btns button[aria-pressed="true"].ou-u { background: var(--ou-under); border-color: var(--ou-under); color: var(--ou-picked-ink); }
 .ou-btns:has(button[aria-pressed="true"]) button[aria-pressed="false"] { opacity: .45; }
 .ou-btns button[disabled] { cursor: default; }
 .ou-btns button[disabled][aria-pressed="false"] { opacity: .45; }
@@ -82,7 +88,7 @@
 .ou-actions .btn { min-height: 48px; padding: 12px 22px; font-size: 1rem; }
 /* phones: the Send bar sticks to the bottom once a pick is chosen (owner default) */
 @media (max-width: 720px) {
-  .ou-actions.ready { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); z-index: 5; margin: 8px -14px; padding: 10px 14px; background: var(--surface, #fff); box-shadow: 0 -8px 20px -14px rgba(20, 22, 31, .45); }
+  .ou-actions.ready { position: sticky; bottom: calc(var(--ou-tabbar-h) + env(safe-area-inset-bottom, 0px)); z-index: 5; margin: 8px -14px; padding: 10px 14px; background: var(--surface, #fff); box-shadow: var(--ou-bar-shadow); }
   .ou-actions.ready .btn { flex: 1; }
 }
 .ou-small { font-size: 12px; color: var(--muted, #4B4766); margin: 4px 0; }
