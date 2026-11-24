@@ -148,7 +148,7 @@ const MAINNET_KNODE_GAME = (() => { try { return JSON.parse(fs.readFileSync(new 
 const GAME_ABI = () => JSON.parse(fs.readFileSync(new URL("../../contracts/vault/abi/kpred.koilib.json", import.meta.url), "utf8"));
 
 /** Every game in games.json that has a reader, and whether it is live. */
-export function sourcesFromGames(file: URL | string = new URL("../../games.json", import.meta.url)): Source[] {
+export function sourcesFromGames(file: URL | string = new URL("../../web/games.json", import.meta.url)): Source[] {   // web/ since the KG2 layout (HANDOFF)
   let list: any[] = [];
   try { list = JSON.parse(fs.readFileSync(file, "utf8")).games; } catch { return []; }
   const readerOf = (g: any): string => Object.hasOwn(READERS, g.id) && g.id !== STANDARD ? g.id : (g.golf === STANDARD && STANDARD_ID.test(g.id) ? STANDARD : "");
