@@ -1154,7 +1154,7 @@
     const act = oc && oc !== 1000 && (S.demo || q.result?.option + 1 === oc) ? actualText(q) : null;   // only once decided on chain
     const foot = el("div", { class: "q-foot" },
       el("span", { class: "q-where" }, qWhere(q, false)),
-      mine !== null ? el("span", { class: `q-done${oc && oc !== 1000 ? (mine + 1 === oc ? " ok" : " miss") : ""}` }, outcomeNote(q, mine, oc)) : mode === "open" ? el("span", { class: "q-cta" }, S.account ? "Tap an answer" : "Tap an answer to play: free, and a guest wallet works") : null);
+      mine !== null ? el("span", { class: `q-done${oc && oc !== 1000 ? (mine + 1 === oc ? " ok" : " miss") : ""}` }, outcomeNote(q, mine, oc)) : null);   // D-730: the "Tap an answer" hint shows once, above the first open question (renderPlay)
     return el("article", { class: `q q-${(q.tier || "Medium")}${mine !== null ? " q-answered" : ""}` }, top,
       el("h3", { title: q.text }, el("span", { class: "qno" }, qTag(q)), " ", ...headline(q)), qHint(q), groupView(q),
       el("div", { class: "q-facts" }, ...windowFacts(q, mode)),
@@ -1191,8 +1191,7 @@
     if (!S.account) {
       band.replaceChildren(
         el("div", { class: "band-main" }, kicker,
-          el("h1", { class: "band-title" }, "Call the next blocks."),
-          el("p", { class: "band-text" }, "Answer each day's questions about Koinos block producers. Play free, or stake 1 VHP or more to share the weekly pool.")),
+          el("h1", { class: "band-title" }, "Call the next blocks.")),   // D-730: the page box says what to do; the rest is in Rules
         el("div", { class: "band-actions" },
           el("button", { class: "btn btn-tang", type: "button", onclick: connect }, "Connect wallet"),
           el("a", { class: "btn btn-onnavy", href: "#welcome" }, "How it works")));
@@ -1336,7 +1335,7 @@
       renderReminders();
     };
     return el("div", { class: "remind" },
-      el("p", { class: "muted" }, `New questions come out Monday to Saturday at ${localHour(12)} your time (from Monday 9 November also at ${localHour(0)}).`),
+      el("p", { class: "muted" }, `New questions come out Monday to Saturday at ${localHour(0)} and ${localHour(12)} your time.`),
       el("div", { class: "row-btns" },
         el("button", { class: "btn btn-primary", type: "button", onclick: ics }, "Add to my calendar"),
         canNotify() ? el("button", { class: "btn btn-ghost", type: "button", onclick: toggle }, notifyOn() ? "Turn notifications off" : "Notify me while Knode Games is open") : null),
@@ -1386,7 +1385,8 @@
       : posting
         ? `New questions are on their way. They're posted on the Koinos chain at ${localTime(round.releaseAt)} your time and show up here within a few minutes. This page checks every minute, so there's no need to refresh.`
         : `No open questions right now. ${nextRound ? `The next ones come out ${dayTime(nextRound.releaseAt)}.` : `New questions arrive Monday to Saturday at ${localHour(12)} your time.`}`;
-    oq.replaceChildren(...(open.length ? open.map((q) => questionCard(q, "open")) : [el("div", { class: "empty" }, emptyText)]));
+    const hint = el("p", { class: "q-cta q-tap" }, S.account ? "Tap an answer to send it." : "Tap an answer to play: free, and a guest wallet works");
+    oq.replaceChildren(...(open.length ? [hint, ...open.map((q) => questionCard(q, "open"))] : [el("div", { class: "empty" }, emptyText)]));
     renderWelcomeToday();
     const sk = $("#skipped-rounds");
     if (sk) {
