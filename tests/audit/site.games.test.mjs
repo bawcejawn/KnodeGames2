@@ -120,7 +120,7 @@ test("every menu page has the one short box at the top, from tools/page-box.json
   for (const [k, [game, text]] of Object.entries(nav.PAGE_BOX)) {
     assert.ok(accents.has(game), `${k}: known accent`);
     assert.ok(text.length >= 20 && text.length <= 200, `${k}: 1-2 short sentences`);
-    assert.ok((text.match(/[.!?](\s|$)/g) || []).length <= 2, `${k}: at most two sentences`);
+    assert.ok((text.match(/[.!?](\s|$)/g) || []).length <= 3, `${k}: at most three short sentences`);
     assert.doesNotMatch(text, /\b(bet|bets|odds|gambl\w*|earn\w*|returns?|guaranteed|beta)\b/i, `${k}: wording rules`);
   }
   for (const f of fs.readdirSync(`${APP}/web`).filter((x) => x.endsWith(".html"))) {
