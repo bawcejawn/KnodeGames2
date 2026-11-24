@@ -7,6 +7,8 @@
 .bx h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; letter-spacing: -.01em; }
 .bx-intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 28px; flex-wrap: wrap; margin-bottom: 18px; }
 .bx-intro p { margin: 10px 0 0; color: var(--muted); max-width: 52ch; font-size: 17px; }
+.bx-intro .bx-links { margin: 0; font-size: 15px; }
+.bx-more > .bx-sec { margin-top: 14px; }
 .bx-games { display: flex; gap: 6px; flex-wrap: wrap; }
 .bx-games a { font-size: 14px; font-weight: 700; text-decoration: none; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink); background: var(--surface); }
 .bx-games a[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }

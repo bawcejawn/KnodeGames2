@@ -7,7 +7,7 @@
   "games.html": ["site", "Every Knode Games game in one place. Pick one to start; most are free to play."],
   "stake.html": ["site", "Staking is optional, and rewards can be zero. Your VHP goes into one shared vault and you can withdraw it any time."],
   "race.html": ["race", "Producer Race: pick the producers you think will run best, then send your picks. Free to play as a guest."],
-  "blockx.html": ["blockx", "Who Signs Block X: pick the producer you think signs the milestone block, then send your pick."],
+  "blockx.html": ["blockx", "Pick which producer signs the next milestone block. Free to play. Correct calls climb the weekly board."],
   "bracket.html": ["bracket", "Producer Bracket: pick the winner of every matchup in a weekly knockout, then send your bracket."],
   "golf.html": ["golf", "Block Golf: your places in the other games become your score. Nothing to pick; the lowest score wins."],
   "fantasy.html": ["fantasy", "Fantasy Producers: draft five producers under a salary cap and name a captain, then send your team."],
