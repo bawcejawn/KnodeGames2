@@ -520,6 +520,9 @@
     const wallet = W.kind === "guest" ? "your guest wallet" : W.label ? W.label() : "your wallet";
     pickModal("busy", W.kind === "guest" ? "Sending your picks…" : `Confirm in ${wallet}`, [`${list.length} pick${list.length === 1 ? "" : "s"} in one go.`, "Free when the Knode Games Mana sponsor can pay; if it can't, your wallet asks to use your own Mana."]);
     try {
+      // R3-18: a race that already has a pick on chain (made elsewhere since the last read) is a change: never in a batch.
+      for (const d of [...list]) { const r0 = await raceContract.functions.get_pick({ player: who, race: M.contractRace(d.type, d.index) }); if (r0.result && r0.result.pick && KBlocks.isAddr(r0.result.pick.horse)) list.splice(list.indexOf(d), 1); }
+      if (!list.length) throw new Error("those races already have your pick; a change is sent one at a time");
       const ops = [];
       for (const d of list) { const { operation } = await raceContract.functions.pick({ player: who, race: M.contractRace(d.type, d.index), horse: d.horse }, { onlyOperation: true }); ops.push(Object.defineProperty(operation, "__start", { value: d.start, enumerable: false })); }
       // Dropped right before signing: any race that started while the box was open.
@@ -554,9 +557,16 @@
     const who = me();
     if (!who || !raceContract || sending) return;
     // D-166: the contract v2 takes the race type in the race number from bit 48 (below 2^53, so exact in the browser: #D-13 H-1); type 0 is sent exactly as before v2.
-    const tr = M.typedRace(type, index), mineNow = type ? rtPicks.get(`${type}:${index}`) : myPicks.get(index);
+    const tr = M.typedRace(type, index);
+    let mineNow = type ? rtPicks.get(`${type}:${index}`) : myPicks.get(index);
     const when = type ? `the ${M.TYPES[type].name.toLowerCase()} race at ${dayTime(tr.start)}` : `${dayTime(M.raceStart(index))} (${M.raceId(index).slice(11)}:00 UTC)`;
     const args = { player: who, race: M.contractRace(type, index) };
+    // R3-18: read the pick from the chain right before deciding; this page's own list can be up to a minute old, and a
+    // pick made on another device would otherwise go out as a sponsored "first pick" that is really a change (D-278).
+    let chainPick = null;
+    try { const r0 = await raceContract.functions.get_pick(args); chainPick = (r0.result && r0.result.pick) || null; }
+    catch { return pickModal("bad", "Couldn't check your pick", ["Nothing was sent. Try again in a moment."], [okBtn("OK")]); }
+    if (chainPick && KBlocks.isAddr(chainPick.horse)) { mineNow = chainPick.horse; if (type) rtPicks.set(`${type}:${index}`, mineNow); else myPicks.set(index, mineNow); changesUsed.set(`${type}:${index}`, Number(chainPick.changes || 0)); }
     if (!KBlocks.isAddr(horse)) return pickModal("info", "Choose a horse first", ["Pick a producer from the list, then press Pick."], [okBtn("OK")]);
     if (mineNow === horse) return pickModal("info", "That is already your pick", [`${nameOf(horse)} for the race at ${when}.`], [okBtn("OK")]);
     if (Date.now() >= tr.start) return pickModal("bad", "That race has started", ["Picks lock when a race starts."], [okBtn("OK")]);
