@@ -1,7 +1,7 @@
 /* stake.html: the staking hub, in three plain parts (owner, 2026-11-03: "clear and easy to understand exactly what I'm
    doing, where I'm staked and how much"):
      1. Your stake: the total staked, what's in the wallet, and rewards ready to claim (one Claim button).
-     2. Where you're staked: one row per game holding your VHP: how much, whether it's earning this week or from which
+     2. Where you're staked: one row per game holding your VHP: how much, whether it is counting this week or from which
         Monday, and Add · Withdraw · Move · Claim right on the row.
      3. Stake in a game: the games you're not in yet, each with one Stake button.
    Every action opens one small step-by-step box under its game: the amount, then a sentence saying exactly what will
@@ -249,7 +249,7 @@
       el("div", { class: "hub-sum-main" },
         el("small", {}, "You have staked"),
         el("b", { class: "hub-big" }, vhp(staked)),
-        el("span", { class: "muted" }, mine.length ? `in ${mine.length} game${mine.length === 1 ? "" : "s"}${earning > 0n && earning < staked ? ` · ${vhp(earning)} earning this week` : ""}` : "Nothing staked yet: pick a game below.")),
+        el("span", { class: "muted" }, mine.length ? `in ${mine.length} game${mine.length === 1 ? "" : "s"}${earning > 0n && earning < staked ? ` · ${vhp(earning)} counting this week` : ""}` : "Nothing staked yet: pick a game below.")),
       el("div", { class: "hub-sum-side" },
         el("div", {}, el("small", {}, "In your wallet"), el("b", {}, vhp(d.wallet ? d.wallet.vhp : 0n)),
           d.wallet && d.wallet.koin > 0n ? el("small", { class: "muted" }, `+ ${F.amount(d.wallet.koin)} KOIN`) : el("small", { class: "muted" }, "ready to stake")),

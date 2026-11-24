@@ -46,7 +46,7 @@ async function boot(d, { address = "1Abc", kind = "kondor" } = {}) {
 test("summary: total staked, where, what's earning, wallet, and rewards with one Claim all", async () => {
   const p = await boot(data());
   const s = p.text(".hub-sum");
-  assert.match(s, /You have staked 30 VHP in 2 games · 25 VHP earning this week/);
+  assert.match(s, /You have staked 30 VHP in 2 games · 25 VHP counting this week/);
   assert.match(s, /In your wallet 42 VHP/);
   assert.match(s, /Rewards to claim 0\.75 VHP Claim all/);
   p.button(".hub-sum", "Claim all").click(); await tick();
