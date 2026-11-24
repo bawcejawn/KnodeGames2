@@ -129,7 +129,7 @@ export function footBlock(file = "index.html") {
 }
 
 // race.html and golf.html keep their own menu look until their PRs merge (B2); they are left as they are for now.
-export const HOLD_UI = new Set(["race.html", "golf.html"]);
+export const HOLD_UI = new Set();   // B2 (23 Nov): race.html and golf.html now get the bold menus too
 const BOX_LINK = '<link rel="stylesheet" href="page-box.css">';
 export const PAGE_BOX = JSON.parse(fs.readFileSync(new URL("./page-box.json", import.meta.url), "utf8"));
 const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
