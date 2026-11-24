@@ -6,7 +6,7 @@
   "index.html#how": ["site", "The rules in short. Pick a game's tab to read its rules."],
   "games.html": ["site", "Every Knode Games game in one place. Pick one to start; most are free to play."],
   "stake.html": ["site", "Staking is optional, and rewards can be zero. Your VHP goes into one shared vault and you can withdraw it any time."],
-  "race.html": ["race", "Producer Race: pick the producers you think will run best, then send your picks. Free to play as a guest."],
+  "race.html": ["race", "Pick the producer you think finishes first, then watch the race run live on real blocks. Free to play."],
   "blockx.html": ["blockx", "Who Signs Block X: pick the producer you think signs the milestone block, then send your pick."],
   "bracket.html": ["bracket", "Producer Bracket: pick the winner of every matchup in a weekly knockout, then send your bracket."],
   "golf.html": ["golf", "Block Golf: your places in the other games become your score. Nothing to pick; the lowest score wins."],
