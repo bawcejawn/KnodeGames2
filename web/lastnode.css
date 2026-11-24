@@ -13,7 +13,7 @@ body.ln-arena {
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body.ln-arena { --ln-gold-ink: #FFC83D; } }
 :root[data-theme="dark"] body.ln-arena { --ln-gold-ink: #FFC83D; }
-body.ln-arena a { color: var(--violet); }
+body.ln-arena a:not(.btn) { color: var(--violet); }
 .ln { font-size: 16px; line-height: 1.5; max-width: 1040px; margin: 0 auto; padding: 20px 16px 72px; }
 .ln :focus-visible { outline: 3px solid var(--ln-you); outline-offset: 2px; }
 .ln .status { font-size: 15px; color: var(--ln-muted); margin: 0 0 8px; min-height: 1.2em; }

@@ -84,3 +84,10 @@
 @keyframes ss-up { from { transform: translateY(24px); opacity: .5; } }
 @keyframes ss-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ss-back, .ss-card { animation: none !important; } .welcome-also .gtile { transition: none; } }
+
+/* Very small phones (320 px): the wallet button was 27 px too wide; tighter gaps and type so the top bar fits. */
+@media (max-width: 340px) {
+  .top-row { gap: 6px; }
+  .top-row .btn-play-free, .top-row .btn-wallet { padding-left: 7px; padding-right: 7px; font-size: .78rem; }
+  .top-row .hw-wrap { min-width: 0; }
+}
