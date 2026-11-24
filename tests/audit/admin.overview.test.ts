@@ -85,7 +85,7 @@ test("switches that cannot be undone say so, and the Ruler and hold switches are
   const V = (n: string) => VARIABLES.find((v) => v.name === n)!;
   assert.match(V("GOLF_STAKED_FROM_WEEK").note!, /PERMANENT/);
   assert.deepEqual(V("GOLF_STAKED_FROM_WEEK").games, [6]);
-  assert.deepEqual(V("RACE_RULER_FROM_WEEK").games, [7]); assert.match(V("RACE_RULER_FROM_WEEK").when, /Week 1.*16 Nov.*week 4/);
+  assert.deepEqual(V("RACE_RULER_FROM_WEEK").games, [7]); assert.match(V("RACE_RULER_FROM_WEEK").when, /Week 4 \(Mon 16 Nov\)/); assert.doesNotMatch(V("RACE_RULER_FROM_WEEK").when, /Week 1/, "Ruler M-367: weeks are vault weeks now");
   assert.deepEqual(V("BRACKET_RULER_FROM_WEEK").games, [9]);
   for (const n of ["GOLF_HOLD_WEEKS", "RACE_HOLD_WEEKS", "QUESTIONS_HOLD", "BLOCKX_RELEASE", "BRACKET_RELEASE"]) assert.ok(V(n), n);
   // The Golf area's hand-written guide and the catalog agree on the names.
@@ -119,7 +119,7 @@ test("every command can be copied exactly as typed, and the page lists both new 
   for (const id of ["glance", "switches"]) { const ar = AREAS.find((a) => a.id === id)!; assert.equal(ar.section, "Start here"); assert.equal(ar.status, "live"); }
   // The first two areas after the health checks, so the owner sees them before any single game.
   const order = AREAS.filter((a) => a.section === "Start here").map((a) => a.id);
-  assert.deepEqual(order, ["overview", "glance", "switches"]);
+  assert.deepEqual(order, ["overview", "thisweek", "glance", "switches"]);
 });
 
 test("the server sends the games and switches to the page", async () => {
