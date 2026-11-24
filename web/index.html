@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="vault-card.css">
   <link rel="stylesheet" href="board.css">
+  <link rel="stylesheet" href="page-box.css">
   <link rel="stylesheet" href="hub-ui.css">
 </head>
 <body class="play-wait">
@@ -106,6 +107,7 @@
 
     <!-- ───────────── WELCOME (first visit, and "New here?") ───────────── -->
     <section class="view welcome" id="view-welcome" data-view="welcome">
+      <aside class="page-box" data-game="site"><p>Knode Games are free prediction games on Koinos. Press Play free to make your first pick as a guest.</p></aside>
       <div class="welcome-card">
         <!-- Play first (launch UI research item 7, mockup version 2, owner 5 Nov: "build the mock up version 2"):
              today's question with its answer buttons on the first screen, a clear path for wallet users beside it. -->
@@ -173,6 +175,7 @@
 
     <!-- ───────────── PLAY ───────────── -->
     <section class="view" id="view-play" data-view="play">
+      <aside class="page-box" data-game="questions"><p>Daily Questions: a few quick calls about the chain each day. Pick your answers and send them.</p></aside>
       <nav class="qtabs" aria-label="Daily Questions"><a href="#play" data-view="play">Questions</a><a href="#leaderboard" data-view="leaderboard">Leaderboard</a><a href="#results" data-view="results">Results</a></nav>
       <p class="play-loading" id="play-loading" role="status">Loading today's questions…</p>
       <section class="band" id="band" aria-label="Your week"></section>
@@ -227,6 +230,7 @@
 
     <!-- ───────────── LEADERBOARD ───────────── -->
     <section class="view" id="view-leaderboard" data-view="leaderboard" hidden>
+      <aside class="page-box" data-game="site"><p>This week's Daily Questions leaderboard. Other games keep their own boards on their own pages.</p></aside>
       <nav class="qtabs" aria-label="Daily Questions"><a href="#play" data-view="play">Questions</a><a href="#leaderboard" data-view="leaderboard">Leaderboard</a><a href="#results" data-view="results">Results</a></nav>
       <div class="section-head big">
         <h1 id="lb-title">Leaderboard · Daily Questions</h1>
@@ -251,6 +255,7 @@
 
     <!-- ───────────── RESULTS ───────────── -->
     <section class="view" id="view-results" data-view="results" hidden>
+      <aside class="page-box" data-game="site"><p>How finished games turned out. Pick a game to see each call.</p></aside>
       <nav class="qtabs" aria-label="Daily Questions"><a href="#play" data-view="play">Questions</a><a href="#leaderboard" data-view="leaderboard">Leaderboard</a><a href="#results" data-view="results">Results</a></nav>
       <div class="lb-games res-games" role="group" aria-label="Game" id="res-games"><button type="button" aria-pressed="true">Daily Questions</button></div>
       <div id="res-q">
@@ -280,6 +285,7 @@
 
     <!-- ───────────── HOW IT WORKS ───────────── -->
     <section class="view rules" id="view-how" data-view="how" hidden>
+      <aside class="page-box" data-game="site"><p>The rules in short. Pick a game's tab to read its rules.</p></aside>
       <div class="section-head big">
         <h1>Rules</h1>
         <p class="muted">The rules for every open game. Pick one to see how it works in a minute.</p>
