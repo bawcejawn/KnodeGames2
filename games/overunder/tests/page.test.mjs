@@ -55,3 +55,14 @@ test("the page is listed in games.json as a live, free-play game (Hub, 23 Nov: i
 test("a game card gives the game's length in blocks and roughly in time (14,400 blocks at about 3 s a block)", () => {
   assert.ok(js.includes('" in its next 14,400 blocks (about 12 hours)"'));
 });
+
+test("the look (D-730, D-732): one short box with Rules and Ruler links, 'the number', ▲ Over / ▼ Under, a calm flash, a sticky Send bar", () => {
+  const css = read("overunder.css");
+  assert.ok(html.includes("Free test game, no prizes yet. Pick a producer and call whether it signs more or fewer blocks than the number shown. A new game starts every 30 minutes."), "Marketing's box text (M-491)");
+  assert.match(html, /<a href="#help" id="ou-rules-link">Rules<\/a> · <a href="ruler\.html">The Ruler<\/a>/);
+  assert.match(code, /\$\("help"\)\.open = true/, "the Rules link opens the rules box");
+  assert.ok(js.includes('"The number"') && js.includes('"▲ Over"') && js.includes('"▼ Under"'));
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.ou-g\.sent \{ animation: none; \}/, "no flash for people who ask for less motion");
+  assert.match(css, /\.ou-actions\.ready \{ position: sticky;/);
+  assert.match(code, /: el\("span", \{ class: "ou-g-lock", text: "Cancelled" \}\)/, "a cancelled game shows no countdown");
+});

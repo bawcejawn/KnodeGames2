@@ -1,24 +1,93 @@
-/* Over Under page (small; the shared look is styles.css and board.css). */
-.ou { max-width: 760px; margin: 0 auto; padding: 16px 14px 48px; }
-.ou-hero h1 { margin: 4px 0 6px; font-size: clamp(26px, 6vw, 38px); line-height: 1.1; }
-.ou-kicker { margin: 0; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: 12px; opacity: .7; }
-.ou-lede { margin: 0 0 14px; opacity: .85; }
-.ou-games { display: grid; gap: 10px; margin: 10px 0; }
-.ou-g { border: 1px solid #8884; border-radius: 12px; padding: 10px 12px; }
-.ou-g.on { box-shadow: inset 0 0 0 1px currentColor; }
-.ou-g-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; opacity: .8; }
-.ou-g-who, .ou-g-line { margin: 6px 0; }
-.ou-g-line b { font-variant-numeric: tabular-nums; }
-.ou-form { opacity: .75; }
-.ou-btns { display: flex; gap: 8px; margin: 8px 0 2px; }
-.ou-btns button { min-width: 90px; min-height: 40px; border-radius: 10px; border: 1px solid #8886; background: transparent; color: inherit; font-weight: 700; cursor: pointer; }
-.ou-btns button[disabled] { cursor: default; opacity: .6; }
-.ou-btns button[aria-pressed="true"].ou-o { background: #1b8a4b; border-color: #1b8a4b; color: #fff; opacity: 1; }
-.ou-btns button[aria-pressed="true"].ou-u { background: #b4402b; border-color: #b4402b; color: #fff; opacity: 1; }
-.ou-none { padding: 12px 0; opacity: .8; }
+/* Over Under page (the shared look is styles.css and board.css). Owner defaults (D-732, M-495): cyan band, green ▲ Over /
+   red ▼ Under, a small flash when a pick is sent, a sticky Send bar on phones, dark mode the same colours a bit darker.
+   Every colour is a variable below, so a taste change is one line. */
+.ou {
+  --ou-band: linear-gradient(135deg, #3CCBF0 0%, #4CC9FF 55%, #7FB2FF 100%);
+  --ou-band-ink: #0B2530;
+  --ou-accent: #3CCBF0;
+  --ou-over: #12704F;  --ou-over-soft: #DDF1E6;
+  --ou-under: #A63A27; --ou-under-soft: #F8E2DA;
+  --ou-pill: #FBE9C8;  --ou-pill-ink: #5A3B00;
+  --ou-hot: #A63A27;   --ou-hot-ink: #FFFFFF;
+  --ou-flash: #3CCBF0;
+  max-width: 760px; margin: 0 auto; padding: 16px 14px 96px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ou {
+    --ou-band: linear-gradient(135deg, #1FA6C9 0%, #2C9FD9 55%, #5C8FE0 100%);
+    --ou-over: #3FAF7F; --ou-over-soft: #173528; --ou-under: #D9705A; --ou-under-soft: #3B231D;
+    --ou-pill: #4A3A12; --ou-pill-ink: #FBE9C8; --ou-hot: #D9705A; --ou-hot-ink: #111216; --ou-accent: #1FA6C9;
+  }
+}
+:root[data-theme="dark"] .ou {
+  --ou-band: linear-gradient(135deg, #1FA6C9 0%, #2C9FD9 55%, #5C8FE0 100%);
+  --ou-over: #3FAF7F; --ou-over-soft: #173528; --ou-under: #D9705A; --ou-under-soft: #3B231D;
+  --ou-pill: #4A3A12; --ou-pill-ink: #FBE9C8; --ou-hot: #D9705A; --ou-hot-ink: #111216; --ou-accent: #1FA6C9;
+}
+
+/* ── the header band, the one box (D-730), the three steps ── */
+.ou-hero { background: var(--ou-band); color: var(--ou-band-ink); border-radius: var(--r-lg, 20px); padding: 18px 16px 16px; margin: 4px 0 12px; }
+.ou-hero a { color: var(--ou-band-ink); font-weight: 700; }
+.ou-kicker { margin: 0; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 12px; opacity: .8; }
+.ou-hero h1 { margin: 4px 0 10px; font-size: clamp(30px, 8vw, 44px); line-height: 1.05; font-weight: 800; }
+.ou-tag { display: inline-block; vertical-align: middle; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.75); color: var(--ou-band-ink); }
+.ou-box { background: rgba(255,255,255,.82); color: #15122B; border-radius: var(--r-md, 14px); padding: 10px 12px; }
+.ou-box p { margin: 0; }
+.ou-box a { color: #15122B; }
+.ou-box-links { margin-top: 6px !important; font-size: 14px; }
+.ou-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 10px 0 0; }
+.ou-steps li { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.55); border-radius: 999px; padding: 5px 10px 5px 5px; font-size: 13px; font-weight: 600; }
+.ou-steps b { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ou-band-ink); color: #fff; font-size: 12px; }
+
+/* ── status strip ── */
+.ou-strip { margin: 0 0 10px; padding: 8px 12px; border-radius: var(--r-sm, 10px); background: var(--ou-pill); color: var(--ou-pill-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ── game cards ── */
+.ou-sheet h2 { margin: 6px 0 2px; }
+.ou-games { display: grid; gap: 12px; margin: 10px 0; }
+.ou-g { background: var(--surface, #fff); border: 1px solid var(--line, #E2E4EA); border-top: 4px solid var(--ou-accent); border-radius: var(--r-md, 14px); padding: 10px 12px 12px; box-shadow: var(--shadow, none); transition: box-shadow .2s ease; }
+.ou-g.on { box-shadow: 0 0 0 2px var(--ou-accent), var(--shadow, none); }
+.ou-g.ou-off { border-top-color: var(--line, #E2E4EA); opacity: .85; }
+.ou-g-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+.ou-g-when { color: var(--muted, #4B4766); font-weight: 600; }
+.ou-g-lock { padding: 3px 9px; border-radius: 999px; background: var(--ou-pill); color: var(--ou-pill-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ou-g-lock.hot { background: var(--ou-hot); color: var(--ou-hot-ink); }
+.ou-g-who { margin: 8px 0 2px; font-size: 18px; }
+.ou-form { color: var(--muted, #4B4766); font-size: 14px; }
+.ou-g-line { margin: 4px 0; color: var(--muted, #4B4766); }
+.ou-g-line .ou-num { display: block; color: var(--ink, #15122B); font-size: 28px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ou-g-line .ou-num small { font-size: 15px; font-weight: 700; color: var(--muted, #4B4766); }
+
+/* ── Over / Under ── */
+.ou-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 2px; }
+.ou-btns button { min-height: 52px; border-radius: 12px; border: 2px solid currentColor; background: transparent; font: 800 17px/1.1 var(--body, system-ui); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: transform .1s ease, background-color .15s ease, opacity .15s ease; }
+.ou-btns button span { font-size: 12px; font-weight: 600; opacity: .85; }
+.ou-btns button.ou-o { color: var(--ou-over); background: var(--ou-over-soft); }
+.ou-btns button.ou-u { color: var(--ou-under); background: var(--ou-under-soft); }
+.ou-btns button:active { transform: translateY(1px); }
+.ou-btns button[aria-pressed="true"].ou-o { background: var(--ou-over); border-color: var(--ou-over); color: #fff; }
+.ou-btns button[aria-pressed="true"].ou-u { background: var(--ou-under); border-color: var(--ou-under); color: #fff; }
+.ou-btns:has(button[aria-pressed="true"]) button[aria-pressed="false"] { opacity: .45; }
+.ou-btns button[disabled] { cursor: default; }
+.ou-btns button[disabled][aria-pressed="false"] { opacity: .45; }
+
+/* the small flash when a pick is sent (owner default); none for people who ask for less motion */
+@keyframes ou-flash { 0% { box-shadow: 0 0 0 0 var(--ou-flash); } 50% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.ou-g.sent { animation: ou-flash .9s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { .ou-g.sent { animation: none; } .ou-btns button { transition: none; } }
+
+.ou-none { padding: 6px 0; color: var(--muted, #4B4766); }
 .ou-check { min-height: 1.4em; margin: 10px 0 6px; }
 .ou-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-.ou-small { font-size: 12px; opacity: .7; margin: 4px 0; }
-.ou-pop { border: 1px solid #8886; border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+.ou-actions .btn { min-height: 48px; padding: 12px 22px; font-size: 1rem; }
+/* phones: the Send bar sticks to the bottom once a pick is chosen (owner default) */
+@media (max-width: 720px) {
+  .ou-actions.ready { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); z-index: 5; margin: 8px -14px; padding: 10px 14px; background: var(--surface, #fff); box-shadow: 0 -8px 20px -14px rgba(20, 22, 31, .45); }
+  .ou-actions.ready .btn { flex: 1; }
+}
+.ou-small { font-size: 12px; color: var(--muted, #4B4766); margin: 4px 0; }
+.ou-pop { border: 1px solid var(--line, #E2E4EA); border-radius: var(--r-md, 14px); padding: 10px 12px; margin: 10px 0; background: var(--surface, #fff); }
 .ou-pop h3 { margin: 0 0 6px; }
 .ou-board { margin-top: 28px; }
+.ou-help { margin-top: 24px; }
+.ou-help summary { cursor: pointer; font-weight: 700; }

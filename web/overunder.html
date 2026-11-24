@@ -90,11 +90,20 @@
   <main class="ou">
     <div id="stake-badge" hidden></div>
     <section class="ou-hero" aria-labelledby="ou-title">
-      <p class="ou-kicker">Over Under · TEST</p>
-      <h1 id="ou-title">Over or under? One producer, one line.</h1>
-      <p class="ou-lede">A new game starts every 30 minutes. Each game is one producer and a line in half blocks, set from the <a href="ruler.html">VHP Ruler</a>. Call Over or Under. One point for each game you call right.</p>
+      <p class="ou-kicker">Over Under</p>
+      <h1 id="ou-title">More or fewer? <span class="ou-tag">Test</span></h1>
+      <div class="ou-box" role="note">
+        <p>Free test game, no prizes yet. Pick a producer and call whether it signs more or fewer blocks than the number shown. A new game starts every 30 minutes.</p>
+        <p class="ou-box-links"><a href="#help" id="ou-rules-link">Rules</a> · <a href="ruler.html">The Ruler</a></p>
+      </div>
+      <ol class="ou-steps" aria-label="How to play">
+        <li><b>1</b> Pick an open game</li>
+        <li><b>2</b> Tap Over or Under</li>
+        <li><b>3</b> Send: the first pick is free</li>
+      </ol>
     </section>
 
+    <p class="ou-strip" id="ou-strip" role="status" hidden></p>
     <p class="status" id="status" role="status">Loading…</p>
     <div id="ou-stake"></div>
 
@@ -103,8 +112,8 @@
       <p class="ou-small">Picks open 2 hours before the start and lock 5 minutes before it. 3 or 4 games are open at a time, never more than 4. No changes.</p>
       <div class="ou-games" id="ou-games" aria-live="polite"></div>
       <p class="ou-check" id="ou-check" role="status"></p>
-      <div class="ou-actions">
-        <button type="button" class="btn" id="ou-send" disabled>Send my pick</button>
+      <div class="ou-actions" id="ou-actions">
+        <button type="button" class="btn btn-primary" id="ou-send" disabled>Send my pick</button>
       </div>
       <div class="ou-pop" id="ou-pop" role="alertdialog" hidden></div>
     </section>
@@ -115,7 +124,7 @@
     </section>
 
     <details class="ou-help" id="help">
-      <summary>How it works</summary>
+      <summary>Rules</summary>
       <div>
         <p><b>Who plays.</b> A new game starts every 30 minutes (:00 and :30 UTC). The producer whose last game started longest ago plays next. A producer can have at most 2 games running at once; if it already has 2, the next one in line plays. Producers marked Unreliable (form below 80%) don't play. The pool node never plays.</p>
         <p><b>The line.</b> Each game's line is its producer's forecast blocks for the game, from the VHP Ruler: its share of the network, scaled by its form (counted up to 104%), rounded to a half block (28.5, 29.5, …). Nobody types a line. The line is published about 3 and a half hours before the start, before picks open, and never changes.</p>
