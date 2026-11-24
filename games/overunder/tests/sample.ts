@@ -57,7 +57,7 @@ export function sample(): Sample {
   let decided = false;
   const now = { t: 0 };
   const w = () => sampleWorld(now.t, decided);
-  // hours 0 and 1 are inside the schedule windows of N0 and N0 + 1 (213 to 183 minutes before their starts); then the week ends
+  // hours 0 and 1 are inside the schedule windows of N0 and N0 + 1 (213 to 140 minutes before their starts); then the week ends
   const chain = (i: number) => (i === 0 ? startOf(N0) - 200 * 60000 : i === 1 ? startOf(N0 + 1) - 200 * 60000 : at(WEEK + 1, 0, 1) + (i - 2) * HOUR);
   return {
     week: WEEK,
