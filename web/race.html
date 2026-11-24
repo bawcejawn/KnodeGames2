@@ -42,6 +42,9 @@
     .rl td.rl-when b { display: block; }
     .rl td.rl-when span { font-size: 13px; color: var(--muted); }
     .rl td.rl-when .void-chip { margin-top: 4px; color: var(--ink); }
+    .rl-void { font-size: 12.5px; color: var(--muted); }
+    .rl-you { font-size: 12.5px; }
+    .pr-viewnote { flex-basis: 100%; font-size: 12px; color: var(--muted); margin-top: 2px; }
     .rl .void-chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 13px; font-weight: 700; border: 1px solid rgba(128,128,128,.45); }
     details.rl-trial > summary { cursor: pointer; font-weight: 700; }
   </style>
@@ -379,7 +382,7 @@
       <h3 class="rt-h3">My picks</h3>
       <p class="note" id="rt-who" style="margin-top:0"></p>
       <div class="pk-list" id="rt-picks"></div>
-      <h3 class="rt-h3">Latest results</h3>
+      <h3 class="rt-h3" id="rt-results-h">Latest results</h3>
       <div class="pk-list" id="rt-results"></div>
     </section>
     <section class="card" id="live">
@@ -419,7 +422,7 @@
 
     <!-- The VHP ruler (owner, 11 Nov 2026): shown only once the ruler is switched on for the Race (its R<week>.json says so). -->
     <section class="card" id="ruler-box" hidden>
-      <div class="head"><h2>Ruler results</h2><a class="tag" href="ruler.html#race">How the Ruler works</a></div>
+      <div class="head"><h2 id="ruler-title">Results</h2><a class="tag" href="ruler.html#race">How the Ruler works</a></div>
       <p class="note" style="margin-top:0" id="ruler-when"></p>
       <p class="note" id="ruler-types" hidden>The 1-hour, 2-hour, daily and weekly races are scored by the Ruler too, each with its own void limit (<a href="ruler.html">see the limits by race length</a>).</p>
       <div id="ruler-list"></div>

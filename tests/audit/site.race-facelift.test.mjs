@@ -17,8 +17,8 @@ const field = [[A, 300, 1], [Bp, 200, 1.5], [C, 100, 3]];
 const prevSt = [{ a: C, steps: 40, blocks: 13, last: 1 }, { a: A, steps: 30, blocks: 30, last: 2 }, { a: Bp, steps: 20, blocks: 13, last: 3 }];
 // blocks since before the live race: A signs most, then B, then C rarely, so the live order is A, B, C
 const blocks = (T) => { const ts = [], sig = []; for (let t = T - 7 * 3600000, i = 0; t <= T; t += 20000, i++) { ts.push(t); sig.push(i % 10 < 6 ? 0 : i % 10 < 9 ? 1 : 2); } return { ts, sig, signers: [A, Bp, C], from: 1, top: ts.length }; };
-async function live() {
-  const p = await H.boot({ app: APP, now: NOW, files: { "W002.json": H.weekFile(2, FIN, LIVE, prevSt, field) }, vhp: { [A]: 300, [Bp]: 200, [C]: 100 }, blocks });
+async function live(view = "pack") {   // M-448: Whole race is the default now; most tests here look at the Pack view
+  const p = await H.boot({ app: APP, now: NOW, files: { "W002.json": H.weekFile(2, FIN, LIVE, prevSt, field) }, vhp: { [A]: 300, [Bp]: 200, [C]: 100 }, blocks, view });
   await p.tick(6000);
   return p;
 }
@@ -34,7 +34,7 @@ test("the horse is the runner again (not the bird)", async () => {
   for (const i of imgs) assert.equal(i.getAttribute("src"), "media/animals/horse.png");
 });
 
-test("Pack view (default): the leader at the right, last place at the left, no extra strip under the lane", async () => {
+test("Pack view: the leader at the right, last place at the left, no extra strip under the lane", async () => {
   const p = await live();
   const order = p.lanes().sort((x, y) => Number(x.rank.replace(/\D/g, "")) - Number(y.rank.replace(/\D/g, ""))).map((l) => l.a);
   assert.deepEqual(order, [A, Bp, C], "live order");
@@ -47,8 +47,11 @@ test("Pack view (default): the leader at the right, last place at the left, no e
     assert.equal(run.querySelector(".pr-true"), null, "owner 14 Nov: the grey strip is gone");
   }
   const vb = p.doc.getElementById("r6-view");
-  assert.match(vb.textContent, /View:PackWhole race/);
+  assert.match(vb.textContent, /View:Whole racePack/);
   assert.equal(vb.querySelector('button[aria-pressed="true"]').textContent, "Pack");
+  const d = await live(null);
+  assert.equal(d.doc.getElementById("r6-view").querySelector('button[aria-pressed="true"]').textContent, "Whole race", "M-448: Whole race is the default");
+  assert.match(d.doc.getElementById("r6-view").textContent, /Pack zooms in on the runners, so the leader is always on the right\./);
 });
 
 test("Whole race view: the old 0-to-finish scale, and the choice is remembered", async () => {

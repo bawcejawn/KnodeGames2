@@ -13,12 +13,12 @@ const { A, Bp, C } = H;
 const prod = { [A]: 1, [Bp]: 1, [C]: 1 };
 
 /** Week 5 (race types live), a typed race running at Mon 23 Nov 10:20 UTC; A signs most, then B, then C. */
-async function typed(type) {
+async function typed(type, view = "pack") {   // M-448: Whole race is the default now; these checks start in Pack
   const now = Date.parse("2026-11-23T10:20:00Z"), ws = Date.parse("2026-11-23T00:00:00Z");
   const hours = []; for (let t = ws; t < Date.parse("2026-11-23T10:00:00Z"); t += 3600000) hours.push({ t, n: { [A]: 12, [Bp]: 6, [C]: 2 }, l: { [A]: t + 1000, [Bp]: t + 2000, [C]: t + 3000 }, c: [1, 1, 1, 1] });
   const blocks = (T) => { const ts = [], sig = []; for (let t = T - 7 * 3600000, i = 0; t <= T; t += 20000, i++) { ts.push(t); sig.push(i % 10 < 6 ? 0 : i % 10 < 9 ? 1 : 2); } return { ts, sig, signers: [A, Bp, C], from: 1, top: ts.length }; };
   const files = { "W005.json": { v: 1, week: 5, races: [] }, "T005.json": { v: 1, week: 5, races: [], hours }, "R004.json": H.rulerFile(4, "on", 4, []), "R005.json": H.rulerFile(5, "on", 4, []) };
-  const p = await H.boot({ app: APP, now, files, vhp: { [A]: 100, [Bp]: 300, [C]: 200 }, blocks, type });
+  const p = await H.boot({ app: APP, now, files, vhp: { [A]: 100, [Bp]: 300, [C]: 200 }, blocks, type, view });
   await p.tick(6000);
   return p;
 }

@@ -90,9 +90,10 @@ test("the Ruler page says which games use it (Race live from Week 4; the others 
 });
 test("the Race page keeps a short Ruler line and one results table; its Rules tab carries the Ruler line", () => {
   const h = fs.readFileSync(`${APP}web/race.html`, "utf8"), js = fs.readFileSync(`${APP}web/race.js`, "utf8"), idx = fs.readFileSync(`${APP}web/index.html`, "utf8");
-  assert.match(h, /<h2>Ruler results<\/h2>/); assert.match(h, /href="ruler\.html#race">How the Ruler works/);
+  assert.match(h, /<h2 id="ruler-title">Results<\/h2>/);   // M-448: one Results list per tab ("Results · 6-hour race")
+  assert.match(h, /href="ruler\.html#race">How the Ruler works/);
   assert.ok((h.match(/id="ruler-box"[\s\S]*?<\/section>/)[0].length) < 700, "a short box");
-  assert.match(js, /hist\.hidden = cur\.mode === "on" && body\.length > 0/, "the older Results table is hidden once the Ruler scores the race");
-  assert.match(js, /class: "rl"/);
+  assert.match(js, /rulerHidesHistory = cur\.mode === "on" && rows\.length > 0;/, "the older Results table is hidden once the Ruler scores the race");
+  assert.match(js, /class: "pk-list rl"/);
   assert.match(idx, /Scored by the VHP Ruler<\/b> from Week 4/);
 });
