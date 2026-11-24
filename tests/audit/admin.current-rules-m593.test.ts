@@ -168,7 +168,7 @@ test("the page: the new screens only read; the branch banner says main; no key o
 test("the page draws This week, the recorders and the sponsor numbers (browser-like window)", async () => {
   const { JSDOM } = await import("jsdom");
   const cat = JSON.parse(JSON.stringify({ version: { branch: "main", commit: "abc", date: "" }, areas: AREAS, kinds: (await import("../../ops/admin/actions.ts")).KINDS, games: [], otherGames: OTHER_GAMES, launchAsOf: "x", variables: [], variablesUrl: "", standardSteps: [], launch: [],
-    actions: ACTIONS.map(({ id, area, kind, label, what, when, signer, effect, timing, step, tool, params, sends, args }) => ({ id, area, kind, label, what, when, signer, effect, timing, step, sends, testnet: args.includes("--testnet"), command: `npm run ${tool} -- ${args.join(" ")}`, params: (params ?? []).map(({ name, label, hint, choices, value }) => ({ name, label, hint, choices, value })) })) }));
+    actions: ACTIONS.map(({ id, area, kind, label, what, when, signer, effect, timing, step, tool, params, sends, args, done }) => ({ id, area, kind, label, what, when, signer, effect, timing, step, sends, done, testnet: args.includes("--testnet"), command: `npm run ${tool} -- ${args.join(" ")}`, params: (params ?? []).map(({ name, label, hint, choices, value }) => ({ name, label, hint, choices, value })) })) }));
   const calendar = readCalendar(".");
   const seen: string[] = [];
   const dom = new JSDOM(fs.readFileSync("ops/admin/index.html", "utf8"), {
@@ -194,6 +194,21 @@ test("the page draws This week, the recorders and the sponsor numbers (browser-l
   assert.match(main(), /Late: Producer Race/); assert.match(main(), /Leaderboard entry/);
   click(/Mana sponsor/);
   assert.match(main(), /Agreed value/); assert.match(main(), /4\.5/); assert.doesNotMatch(main(), /save the report's suggestions/);
+  // Owner, 24 Nov: long pages grouped. A jump bar with counts; every card one line until opened.
+  assert.ok(doc.querySelector("#main nav.jump"), "jump bar"); assert.match(doc.querySelector("#main nav.jump").textContent, /Check \(read-only\) \(\d+\)/);
+  const cards = [...doc.querySelectorAll("#main details.card")] as any[];
+  assert.ok(cards.length >= 10 && cards.every((c) => !c.open), "every card starts closed");
+  [...doc.querySelectorAll("#main nav.jump button")].find((b: any) => /Open all/.test(b.textContent))!.dispatchEvent(new w.Event("click"));
+  assert.ok(cards.every((c) => c.open), "Open all opens every card");
+  // a step already taken sits in the closed Done group at the bottom
+  click(/Picks contract/);
+  const done = doc.querySelector("#kind-done") as any;
+  assert.ok(done && !done.open && done.querySelector('[data-card="picks-upload"]'), "the 30 Oct upload is in Done");
+  assert.ok(!doc.querySelector('#main .kind [data-card="picks-upload"]') || doc.querySelector('#kind-done [data-card="picks-upload"]'));
+  // the calendar's button opens its card
+  click(/This week/); await tick(); await tick();
+  [...doc.querySelectorAll("#main button")].find((b: any) => /Open the card: Clear the v2/.test(b.textContent))!.dispatchEvent(new w.Event("click"));
+  assert.equal((doc.querySelector('[data-card="picks-upgrade-clear"]') as any).open, true, "Open the card opens it");
   assert.ok(seen.every((x) => x.startsWith("GET ")), "opening these screens only reads: " + seen.join(", "));
   w.close();
 });

@@ -66,6 +66,16 @@
   .card.emergency { border-left: 4px solid var(--bad); }
   .card-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
   .card-top h4 { margin: 0 6px 0 0; font-size: 15.5px; }
+  details.card { padding: 10px 16px; margin: 6px 0; } details.card[open] { padding-bottom: 14px; }
+  details.card > summary { cursor: pointer; list-style: none; margin: 0; } details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before { content: "▸"; color: var(--muted); margin-right: 2px; } details.card[open] > summary::before { content: "▾"; }
+  details.card[open] > summary { margin-bottom: 8px; }
+  .gist { flex: 1 1 100%; font-size: 13px; color: var(--muted); margin-left: 14px; } details.card[open] .gist { display: none; }
+  .jump { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; margin: 0 0 4px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .jump .spacer { flex: 1; }
+  .chip { font: 13px inherit; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .today { border-left: 4px solid var(--accent); }
   .where { font-size: 12.5px; color: var(--muted); margin: -2px 0 6px; }
   .info { display: grid; grid-template-columns: 110px 1fr; gap: 3px 10px; font-size: 14px; margin: 0 0 10px; }
   .info dt { color: var(--muted); }
@@ -201,7 +211,7 @@
 
   // `preset` fixes some values (the game's id, name and season on a game's own cards): those boxes are read-only, so a
   // card opened for one game cannot act on another by mistake. The server checks every value again.
-  function card(a, withWhere, preset = {}) {
+  function card(a, withWhere, preset = {}, open = false) {
     const area = CAT.areas.find((x) => x.id === a.area);
     const inputs = (a.params || []).map((p) => {
       const input = p.choices ? el("select", { name: p.name }, ...p.choices.map((c) => el("option", { value: c }, c))) : el("input", { name: p.name, placeholder: p.hint, autocomplete: "off", spellcheck: "false", value: preset[p.name] ?? p.value ?? null, readonly: p.name in preset });
@@ -234,12 +244,15 @@
     runBtn.addEventListener("click", () => go(false));
     if (sendBtn) sendBtn.addEventListener("click", () => go(true));
     const [effText, effCls] = EFFECT[a.effect];
-    return el("div", { class: "card" + (a.kind === "emergency" ? " emergency" : ""), "data-card": a.id },
-      el("div", { class: "card-top" },
+    // Each card is one line until you open it (owner, 24 Nov: long pages are hard to search by eye).
+    const first = String(a.what).split(/(?<=\.)\s/)[0];
+    return el("details", { class: "card" + (a.kind === "emergency" ? " emergency" : ""), "data-card": a.id, open },
+      el("summary", { class: "card-top" },
         el("h4", {}, a.label),
         a.step ? el("span", { class: "tag step" }, `Step ${a.step}`) : null,
         el("span", { class: "tag " + effCls }, effText),
-        a.effect !== "chain" ? null : el("span", { class: "tag " + (a.testnet ? "testnet" : "mainnet") }, a.testnet ? "Testnet" : "Mainnet")),
+        a.effect !== "chain" ? null : el("span", { class: "tag " + (a.testnet ? "testnet" : "mainnet") }, a.testnet ? "Testnet" : "Mainnet"),
+        el("span", { class: "gist" }, first)),
       withWhere ? el("div", { class: "where" }, `${area.name} · ${CAT.kinds[a.kind].title}`) : null,
       el("dl", { class: "info" },
         el("dt", {}, "What it does"), el("dd", {}, a.what),
@@ -272,13 +285,22 @@
   const GUIDE_STEPS = ["Open GitHub's repository variables page with the button below.", "Press New repository variable (or the pencil to edit an existing one).", "Type the switch's name exactly as shown, and the value in the format shown. Press Add variable.", "Come back here and press the matching status check to see the platform pick it up (the next hourly run)."];
   const switchGuide = () => guide({ title: "How to set a switch on GitHub (this page never holds a GitHub token)", steps: GUIDE_STEPS, link: { label: "Open GitHub repository variables", url: CAT.variablesUrl } });
 
+  // An area's cards, grouped by kind: a jump bar with counts, open-all / close-all, and the cards each one line until
+  // opened, in the order actions.ts lists them (so a hand-over's step 1 and step 2 stay together). Cards marked done (a step already taken) go to one closed group at the bottom, kept for the record.
   function byKind(list) {
-    const out = [];
-    for (const k of Object.keys(CAT.kinds)) {
-      const items = list.filter((a) => a.kind === k).sort((x, y) => (x.step || 0) - (y.step || 0));
-      if (!items.length) continue;
-      out.push(el("div", { class: "kind " + k }, el("h3", {}, CAT.kinds[k].title), el("p", {}, CAT.kinds[k].blurb)), ...items.map((a) => card(a, false)));
-    }
+    const live = list.filter((a) => !a.done), done = list.filter((a) => a.done);
+    const groups = Object.keys(CAT.kinds).map((k) => [k, live.filter((a) => a.kind === k)]).filter(([, items]) => items.length);
+    if (!groups.length && !done.length) return [];
+    const toggle = (open) => () => { for (const d of document.querySelectorAll("#main details.card")) d.open = open; };
+    const bar = el("nav", { class: "jump", "aria-label": "Jump to a group" },
+      ...groups.map(([k, items]) => el("button", { type: "button", class: "chip", onclick: () => document.getElementById("kind-" + k).scrollIntoView({ block: "start" }) }, `${CAT.kinds[k].title} (${items.length})`)),
+      done.length ? el("button", { type: "button", class: "chip", onclick: () => { const d = document.getElementById("kind-done"); d.open = true; d.scrollIntoView({ block: "start" }); } }, `Done (${done.length})`) : null,
+      el("span", { class: "spacer" }),
+      el("button", { type: "button", class: "chip", onclick: toggle(true) }, "Open all"), el("button", { type: "button", class: "chip", onclick: toggle(false) }, "Close all"));
+    const out = [bar];
+    for (const [k, items] of groups) out.push(el("div", { class: "kind " + k, id: "kind-" + k }, el("h3", {}, `${CAT.kinds[k].title} (${items.length})`), el("p", {}, CAT.kinds[k].blurb)), ...items.map((a) => card(a, false)));
+    if (done.length) out.push(el("details", { class: "gbox", id: "kind-done" }, el("summary", {}, `Done, kept for the record (${done.length}): steps already taken; don't use them unless a chat asks`),
+      ...done.map((a) => el("div", {}, el("div", { class: "note" }, a.done), card(a, false)))));
     return out;
   }
 
@@ -409,8 +431,21 @@
           el("p", { class: "note" }, "The Leaderboard and Results pickers list a game only when it has an entry here (web/games.json on this PC: run git pull first). The free-prize switch is read from the public prize-settings file.")].filter(Boolean));
       } catch (e) { site.replaceChildren(el("div", { class: "banner bad" }, "Could not read the site data: " + (e.message || e))); }
     };
+    // Today and tomorrow from the calendar, at the very top, so the first screen says what's due.
+    const due = el("div", {});
+    (async () => {
+      try {
+        const r = await api("/api/calendar"); if (r.error || !r.calendar) return;
+        const d0 = new Date(), ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const today = ymd(d0), tomorrow = ymd(new Date(d0.getTime() + 86_400_000));
+        const items = r.calendar.items.filter((x) => x.date === today || x.date === tomorrow);
+        due.replaceChildren(el("div", { class: "card today" }, el("h4", {}, items.length ? "Due today and tomorrow" : "Nothing in the calendar for today or tomorrow"),
+          ...items.map((x) => el("div", {}, el("b", {}, `${x.date === today ? "Today" : "Tomorrow"}, ${x.time}: `), x.what)),
+          el("div", { class: "btns" }, el("button", { type: "button", class: "chip", onclick: () => openArea("thisweek") }, "The whole week"))));
+      } catch { /* the calendar has its own screen; nothing to add here */ }
+    })();
     loadRec(); loadSite();
-    return [
+    return [due,
       el("div", { class: "kind" }, el("h3", {}, "Recorders: when each last published"), el("p", {}, "Read-only, from the public data branches. LATE means more than 90 minutes ago.")),
       el("div", { class: "btns" }, el("button", { type: "button", class: "btn", onclick: loadRec }, "Read again")), rec,
       el("div", { class: "kind" }, el("h3", {}, "Site data: boards, results and free prizes")),
@@ -443,7 +478,7 @@
   function openCard(a) {
     openArea(a.area);
     const c = document.querySelector(`[data-card="${a.id}"]`);
-    if (c) { c.scrollIntoView({ block: "start" }); c.style.outline = "2px solid var(--accent)"; setTimeout(() => { c.style.outline = ""; }, 2500); }
+    if (c) { c.open = true; const g = c.closest("#kind-done"); if (g) g.open = true; c.scrollIntoView({ block: "start" }); c.style.outline = "2px solid var(--accent)"; setTimeout(() => { c.style.outline = ""; }, 2500); }
   }
   const numbersTable = (rows) => el("table", { class: "tbl numtbl" }, el("thead", {}, el("tr", {}, ...["Setting", "Agreed value", "Where it comes from"].map((x) => el("th", {}, x)))),
     el("tbody", {}, ...rows.map((n) => el("tr", {}, el("td", {}, n.label), el("td", {}, el("b", {}, n.value)), el("td", { class: "dim" }, n.note || "")))));
@@ -482,7 +517,10 @@
     const sections = [...new Set(CAT.areas.map((a) => a.section))];
     for (const s of sections) {
       nav.append(el("div", { class: "side-sec" }, s));
-      for (const a of CAT.areas.filter((x) => x.section === s)) {
+      const rank = { live: 0, launching: 1, planned: 2, testnet: 3 };   // in Games: live first, then launching, then not live yet
+      const inSec = CAT.areas.filter((x) => x.section === s);
+      if (s === "Games") inSec.sort((x, y) => rank[x.status] - rank[y.status]);
+      for (const a of inSec) {
         const n = CAT.actions.filter((x) => x.area === a.id).length;
         const b = el("button", { type: "button", class: "area-btn" + (a.status === "planned" ? " planned" : ""), onclick: () => openArea(a.id) },
           el("span", {}, a.name, el("br"), el("span", { class: "n" }, a.id === "thisweek" ? "dates and times" : a.status === "planned" ? "no controls yet" : `${n} control${n === 1 ? "" : "s"}`)),
@@ -504,7 +542,7 @@
     const vhits = CAT.variables.filter((v) => [v.name, v.what, v.when, v.note || "", v.format].join(" ").toLowerCase().includes(q));
     $("#main").replaceChildren(el("div", { class: "area-head" }, el("h2", {}, `Search: “${$("#search").value.trim()}”`), el("p", {}, `${hits.length} control${hits.length === 1 ? "" : "s"} and ${vhits.length} GitHub switch${vhits.length === 1 ? "" : "es"} across the platform.`)),
       ...(vhits.length ? [el("div", { class: "kind" }, el("h3", {}, "Switches on GitHub")), varTable(vhits)] : []),
-      ...(hits.length ? hits.map((a) => card(a, true)) : vhits.length ? [] : [el("p", { class: "empty" }, "Nothing matches. Try another word.")]));
+      ...(hits.length ? hits.map((a) => card(a, true, {}, hits.length <= 3)) : vhits.length ? [] : [el("p", { class: "empty" }, "Nothing matches. Try another word.")]));
   });
 
   (async () => {

@@ -46,8 +46,8 @@ const catalog = JSON.stringify({
   version: VERSION, areas: AREAS, kinds: KINDS,
   // Every game and every GitHub switch, for the "Games at a glance" and "All switches" screens (plain data, no keys).
   games: GAMES, otherGames: OTHER_GAMES, launchAsOf: LAUNCH_AS_OF, variables: VARIABLES, variablesUrl: VARIABLES_URL, standardSteps: STANDARD_STEPS, launch: LAUNCH,
-  actions: ACTIONS.map(({ id, area, kind, label, what, when, signer, effect, timing, step, tool, params, sends, args }) => ({
-    id, area, kind, label, what, when, signer, effect, timing, step, sends,
+  actions: ACTIONS.map(({ id, area, kind, label, what, when, signer, effect, timing, step, tool, params, sends, args, done }) => ({
+    id, area, kind, label, what, when, signer, effect, timing, step, sends, done,
     testnet: args.includes("--testnet"), command: `npm run ${tool} -- ${args.join(" ")}`,
     params: (params ?? []).map(({ name, label, hint, choices, value }) => ({ name, label, hint, choices, value })),
   })),
