@@ -80,7 +80,7 @@ function start() {
     render();
   }
 
-  const EMPTY_NOTE = "No producers this week. The producer list appears on Mon 30 Nov. Until then you can only pick the pool node against all, and nothing scores.";
+  const EMPTY_NOTE = "No producers on this day's list, so you can only pick the pool node against all, and nothing scores.";   // date-free (Repo Lens 5 R5-13-2)
   function dayCard(d) {
     const roster = files.rosters.get(d);
     const box = el("div", { class: "vs-day" }, el("h3", { text: dayLabel(d) }));

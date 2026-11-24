@@ -26,6 +26,7 @@ test("the page says picks open 2 days ahead, no changes, names only; no banned w
 });
 
 test("an empty roster says so in plain words, instead of 'Tick the producers' over an empty list", () => {
-  assert.ok(js.includes('"No producers this week. The producer list appears on Mon 30 Nov. Until then you can only pick the pool node against all, and nothing scores."'));
+  assert.ok(js.includes('"No producers on this day\'s list, so you can only pick the pool node against all, and nothing scores."'));
+  assert.doesNotMatch(js.match(/const EMPTY_NOTE = [^\n]*/)[0], /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b|\d{1,2} (Nov|Dec)/, "the note names no date (R5-13-2)");
   assert.match(js, /roster\.rows\.length === 0[^?]*\?\s*el\("p", \{ class: "note vs-empty", text: EMPTY_NOTE \}\)\s*:\s*el\("p", \{ class: "note", text: "Tick the producers/);
 });

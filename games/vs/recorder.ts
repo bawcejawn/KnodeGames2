@@ -69,6 +69,9 @@ export const game: GameModule<RawPick, DayResult, VsInputs> = {
 
   async inputsFor(week, ctx) {
     const producers = await listFor(week, ctx);
+    // R5-16: too short a list is "not yet", not a crash: the kit keeps recording the current week, warns, and turns it into an
+    // owner error 6 h before the week (runtime: NotYet in the inputs step). makeRoster's own check stays as the backstop.
+    if (new Set(producers).size < V.MIN_ROWS) throw new NotYet(`VS: only ${new Set(producers).size} producer(s) qualify for week ${week.week}'s list, at least ${V.MIN_ROWS} are needed; retried next run`);
     const rosters: Record<string, any> = {};
     for (let d = week.start; d < week.end; d += DAY) rosters[String(d)] = V.makeRoster({ week: week.week, day: d, pool: POOL, producers, madeAt: week.start - 2 * DAY });
     return { week: week.week, rosters };
