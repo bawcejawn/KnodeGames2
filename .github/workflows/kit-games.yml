@@ -30,6 +30,7 @@ jobs:
       contents: read
     outputs:
       rc: ${{ steps.rec.outputs.rc }}
+      files: ${{ steps.rec.outputs.files }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -90,6 +91,8 @@ jobs:
           rc=0; npm run kit -- fantasy || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then rm -rf "$O"; mkdir -p "$O"; echo "rc $rc: a stop, nothing uploaded"; fi
+          # M-538: how many files this run hands to publish-kit; 0 means no artifact, which publish-kit reports as a notice.
+          echo "files=$(find "$O" -type f | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
@@ -118,6 +121,7 @@ jobs:
       contents: read
     outputs:
       rc: ${{ steps.rec.outputs.rc }}
+      files: ${{ steps.rec.outputs.files }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -178,6 +182,8 @@ jobs:
           rc=0; npm run kit -- overunder || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then rm -rf "$O"; mkdir -p "$O"; echo "rc $rc: a stop, nothing uploaded"; fi
+          # M-538: how many files this run hands to publish-kit; 0 means no artifact, which publish-kit reports as a notice.
+          echo "files=$(find "$O" -type f | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
@@ -206,6 +212,7 @@ jobs:
       contents: read
     outputs:
       rc: ${{ steps.rec.outputs.rc }}
+      files: ${{ steps.rec.outputs.files }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -266,6 +273,8 @@ jobs:
           rc=0; npm run kit -- survivor || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then rm -rf "$O"; mkdir -p "$O"; echo "rc $rc: a stop, nothing uploaded"; fi
+          # M-538: how many files this run hands to publish-kit; 0 means no artifact, which publish-kit reports as a notice.
+          echo "files=$(find "$O" -type f | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
@@ -294,6 +303,7 @@ jobs:
       contents: read
     outputs:
       rc: ${{ steps.rec.outputs.rc }}
+      files: ${{ steps.rec.outputs.files }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -354,6 +364,8 @@ jobs:
           rc=0; npm run kit -- vs || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then rm -rf "$O"; mkdir -p "$O"; echo "rc $rc: a stop, nothing uploaded"; fi
+          # M-538: how many files this run hands to publish-kit; 0 means no artifact, which publish-kit reports as a notice.
+          echo "files=$(find "$O" -type f | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
         env:
           RPC: ${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: ${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
@@ -383,22 +395,38 @@ jobs:
     permissions:
       contents: write         # push the games-data branch (never main)
     steps:
+      - name: No files from fantasy this run
+        if: ${{ needs.record-fantasy.outputs.files == '0' }}
+        run: echo "::notice title=fantasy::nothing to publish this run (its recorder wrote 0 files)"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: ${{ needs.record-fantasy.outputs.files != '0' && needs.record-fantasy.outputs.files != '' }}
         continue-on-error: true
         with:
           name: kit-games-data-fantasy
           path: ${{ runner.temp }}/incoming/fantasy
+      - name: No files from overunder this run
+        if: ${{ needs.record-overunder.outputs.files == '0' }}
+        run: echo "::notice title=overunder::nothing to publish this run (its recorder wrote 0 files)"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: ${{ needs.record-overunder.outputs.files != '0' && needs.record-overunder.outputs.files != '' }}
         continue-on-error: true
         with:
           name: kit-games-data-overunder
           path: ${{ runner.temp }}/incoming/overunder
+      - name: No files from survivor this run
+        if: ${{ needs.record-survivor.outputs.files == '0' }}
+        run: echo "::notice title=survivor::nothing to publish this run (its recorder wrote 0 files)"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: ${{ needs.record-survivor.outputs.files != '0' && needs.record-survivor.outputs.files != '' }}
         continue-on-error: true
         with:
           name: kit-games-data-survivor
           path: ${{ runner.temp }}/incoming/survivor
+      - name: No files from vs this run
+        if: ${{ needs.record-vs.outputs.files == '0' }}
+        run: echo "::notice title=vs::nothing to publish this run (its recorder wrote 0 files)"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: ${{ needs.record-vs.outputs.files != '0' && needs.record-vs.outputs.files != '' }}
         continue-on-error: true
         with:
           name: kit-games-data-vs
