@@ -212,7 +212,7 @@
 
     <!-- ───────────── PLAY ───────────── -->
     <section class="view" id="view-play" data-view="play">
-      <aside class="page-box" data-game="questions"><p>Daily Questions: a few quick calls about the chain each day. Pick your answers and send them.</p></aside>
+      <aside class="page-box" data-game="questions"><p>A few quick questions about the chain, Monday to Saturday. Free to play, guest play works. Correct answers climb the weekly board.</p></aside>
       <nav class="qtabs" aria-label="Daily Questions"><a href="#play" data-view="play">Questions</a><a href="#leaderboard" data-view="leaderboard">Leaderboard</a><a href="#results" data-view="results">Results</a></nav>
       <p class="play-loading" id="play-loading" role="status">Loading today's questions…</p>
       <section class="band" id="band" aria-label="Your week"></section>
@@ -229,8 +229,6 @@
             <p class="muted" id="today-note">Answers close when the timer hits zero.</p>
             <p class="yesterday" id="yesterday" hidden></p>
           </div>
-          <p class="schedule" id="schedule"></p>
-          <p class="q-intro"><b>New here?</b> Block producers are the computers that take turns making Koinos blocks, about one every 3 seconds. Each question asks how that will go: pick an answer, and you score a point if you're right. <a href="#how">The full rules</a></p>
           <div id="open-questions" class="qlist"></div>
           <p class="meta skipped-rounds" id="skipped-rounds" hidden></p>
 
@@ -246,10 +244,6 @@
           <section class="panel" id="panel-claim" hidden>
             <h2>Rewards to collect</h2>
             <div id="claim-body"></div>
-          </section>
-          <section class="panel" id="panel-remind">
-            <h2>Reminders</h2>
-            <div id="remind-body"></div>
           </section>
           <section class="panel" id="panel-you">
             <h2>Your game</h2>
@@ -345,6 +339,14 @@
           <li><span class="ri" aria-hidden="true">📈</span><div><b>Climb the weekly leaderboard</b><p>Results come straight from the blocks. Check them on the Results page.</p></div></li>
           <li><span class="ri" aria-hidden="true">🏆</span><div><b>Collect your reward</b><p>From Week 4 (the week of 16 November) Daily Questions is paid like every vault game: each week's results are posted by Thursday <b class="lt" data-utc-hour="0">00:00 UTC</b> and are final 24 hours later, and you collect on the <a href="stake.html#g1">Stake page</a>. Rewards are paid in VHP and never expire.</p></div></li>
         </ol>
+        <div class="q-more" id="questions-more">
+          <p class="schedule" id="schedule"></p>
+          <p class="q-intro"><b>New here?</b> Block producers are the computers that take turns making Koinos blocks, about one every 3 seconds. Each question asks how that will go: pick an answer, and you score a point if you're right.</p>
+          <div class="panel" id="panel-remind">
+            <h2>Reminders</h2>
+            <div id="remind-body"></div>
+          </div>
+        </div>
         <div class="rules-good"><h3>Good to know</h3><ul>
           <li><b>Free to play.</b> Knode Games pays the Mana (the network's transaction fee) for you, within daily limits.</li>
           <li><b>Who wins:</b> the top 30% of staked players with at least 1 point share Daily Questions' part of the week's rewards: the vault's block rewards, after a flat 5% fee and the free prizes, are split across the staked games by each game's stake. The 2 best free players win 2 VHP and 1 VHP.</li>
