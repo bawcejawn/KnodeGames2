@@ -55,7 +55,7 @@ function start() {
     const hues = [152, 12, 205, 268, 330, 100, 180, 230, 295, 350];
     return `hsl(${hues[x % hues.length] + ((x >>> 8) % 14) - 7} ${58 + ((x >>> 12) % 18)}% ${46 + ((x >>> 16) % 12)}%)`;
   }
-  /** A producer's kit: a shirt in its own colour with a two-letter monogram (SVG built node by node). */
+  /** A producer's kit: a basketball jersey (sleeveless) in its own colour with a two-letter monogram (SVG built node by node). */
   const SVG = "http://www.w3.org/2000/svg";
   const sv = (tag, attrs) => { const e = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
   const initials = (a) => (!isAddr(a) ? "?" : NAMES[a] ? NAMES[a].split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() : a.slice(1, 3).toUpperCase());
@@ -63,9 +63,9 @@ function start() {
     const box = el("span", { class: `fx-kit ${cls}`.trim(), "aria-hidden": "true" });
     box.style.setProperty("--c", colorOf(a));
     const s = sv("svg", { viewBox: "0 0 64 60", focusable: "false" });
-    s.append(sv("path", { class: "body", d: "M21 3 9 9 2 24l10 5 3-6v34h34V23l3 6 10-5-7-15-12-6c-2 5-6 8-11 8s-9-3-11-8Z" }),
-      sv("path", { class: "trim", d: "M21 3c2 5 6 8 11 8s9-3 11-8l-3-1c-1 4-4 6-8 6s-7-2-8-6Z" }),
-      sv("path", { class: "sleeve", d: "M2 24l10 5 1.6-3.2L4 21Zm60 0-10 5-1.6-3.2L60 21Z" }));
+    s.append(sv("path", { class: "body", d: "M19 2h6c1 6 4 9 7 9s6-3 7-9h6c0 7 2 11 6 14v41H13V16c4-3 6-7 6-14Z" }),
+      sv("path", { class: "trim", d: "M19 2h6c1 6 4 9 7 9s6-3 7-9h6c-.4 1.6-.9 3-1.5 4.2H40.6C39 10.4 35.8 13 32 13s-7-2.6-8.6-6.8H20.5C19.9 5 19.4 3.6 19 2Z" }),
+      sv("path", { class: "sleeve", d: "M13 16c4-3 6-7 6-14l2 .2c-.3 7.4-2.6 11.8-6.4 14.8V57H13Zm38 0c-4-3-6-7-6-14l-2 .2c.3 7.4 2.6 11.8 6.4 14.8V57H51Z" }));
     const t = sv("text", { x: "32", y: "42", "text-anchor": "middle" }); t.textContent = initials(a);
     s.append(t); box.append(s);
     return box;
