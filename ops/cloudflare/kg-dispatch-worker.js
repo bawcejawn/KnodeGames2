@@ -35,10 +35,14 @@ export const JOBS = {
   "41 * * * *": [{ workflow: "race.yml", windowMin: 30 }],
   "51 * * * *": [{ workflow: "games.yml", windowMin: 30 }],
   "7,37 * * * *": [
-    { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25 },
+    { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25, ownOnly: true },
     { workflow: "bot.yml", windowMin: 50 }, { workflow: "names.yml", windowMin: 50 }, { workflow: "golf.yml", windowMin: 50 },
   ],
 };
+// ownOnly (kit-games.yml, Mon 23 Nov): count only this Worker's own runs (event workflow_dispatch). GitHub's timer (:27,
+// :57) can start a run very late (21:44 UTC for 21:27 on Mon 23), and that late run made the 22:07 check skip, so no kit
+// run happened between 21:44 and 22:37 and an Over Under round was cancelled (D-344). Rolling games need every :07 and
+// :37 run; a GitHub-timer run in between is extra and harmless (the concurrency group queues it).
 const API = "https://api.github.com/repos/" + REPO + "/actions/workflows/";
 
 /** One Cron Trigger: runs each of its jobs and returns what each did ([{ workflow, dispatched, why }]). A trigger it
@@ -62,12 +66,12 @@ export async function runJob(cron, env, f = fetch, now = Date.now(), log = () =>
 async function runOne(job, token, f, now) {
   const headers = { Authorization: "Bearer " + token, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "kg-dispatch" };
   const since = new Date(now - job.windowMin * 60000).toISOString().replace(/\.\d{3}Z$/, "Z");
-  const list = await f(API + job.workflow + "/runs?branch=main&per_page=5&created=" + encodeURIComponent(">=" + since), { headers });
+  const list = await f(API + job.workflow + "/runs?branch=main&per_page=5" + (job.ownOnly ? "&event=workflow_dispatch" : "") + "&created=" + encodeURIComponent(">=" + since), { headers });
   if (!list.ok) throw new Error(`${job.workflow}: GitHub answered ${list.status} listing runs`);
   const j = await list.json();
   const n = Number(j && j.total_count);
   if (!Number.isFinite(n)) throw new Error(`${job.workflow}: GitHub's run list had no total_count`);
-  if (n > 0) return { workflow: job.workflow, dispatched: false, why: `already ran in the last ${job.windowMin} minutes (${n} run(s) since ${since})` };
+  if (n > 0) return { workflow: job.workflow, dispatched: false, why: `already ran in the last ${job.windowMin} minutes (${n} ${job.ownOnly ? "Worker " : ""}run(s) since ${since})` };
   const d = await f(API + job.workflow + "/dispatches", { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ ref: "main" }) });
   if (d.status !== 204) throw new Error(`${job.workflow}: GitHub answered ${d.status} to the dispatch`);
   return { workflow: job.workflow, dispatched: true, why: `no run since ${since}: started one` };

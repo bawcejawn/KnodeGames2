@@ -1,0 +1,42 @@
+/* The one short box at the top of every page (owner, D-730): what this page is and what to do. Text lives in
+   tools/page-box.json. One accent hook per game (--pb-accent); the accent only colours the edge and the dot, never
+   the words, so it reads the same in light and dark mode and at 320 px. */
+.page-box { --pb-accent: var(--violet, #6B3DFF); display: block; box-sizing: border-box; max-width: 720px; margin: 14px auto 12px; padding: 12px 16px 12px 18px;
+  background: var(--surface, #fff); color: var(--ink, #15122B); border: 1px solid var(--line, #E2E4EA); border-left: 6px solid var(--pb-accent); border-radius: 14px; }
+.page-box p { margin: 0; font-size: 1rem; line-height: 1.45; font-weight: 600; overflow-wrap: anywhere; }
+@media (max-width: 400px) { .page-box { margin: 10px 10px 10px; padding: 10px 12px 10px 14px; } .page-box p { font-size: .95rem; } }
+.page-box[data-game="questions"] { --pb-accent: #D98A00; }
+.page-box[data-game="race"] { --pb-accent: #E8590C; }
+.page-box[data-game="blockx"] { --pb-accent: #0F9488; }
+.page-box[data-game="bracket"] { --pb-accent: #5F8F0A; }
+.page-box[data-game="golf"] { --pb-accent: #2F9E44; }
+.page-box[data-game="fantasy"] { --pb-accent: #D6336C; }
+.page-box[data-game="lastnode"] { --pb-accent: #D6283E; }
+.page-box[data-game="overunder"] { --pb-accent: #0B8CB5; }
+.page-box[data-game="vs"] { --pb-accent: #2F66E0; }
+.page-box[data-game="combo"] { --pb-accent: #8A63D2; }
+.page-box[data-game="survivor"] { --pb-accent: #A68A3E; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .page-box[data-game="questions"] { --pb-accent: #FFB020; }
+  :root:not([data-theme="light"]) .page-box[data-game="race"] { --pb-accent: #FF7A3D; }
+  :root:not([data-theme="light"]) .page-box[data-game="blockx"] { --pb-accent: #2EC4B6; }
+  :root:not([data-theme="light"]) .page-box[data-game="bracket"] { --pb-accent: #B7E34A; }
+  :root:not([data-theme="light"]) .page-box[data-game="golf"] { --pb-accent: #5BD66F; }
+  :root:not([data-theme="light"]) .page-box[data-game="fantasy"] { --pb-accent: #F25CC1; }
+  :root:not([data-theme="light"]) .page-box[data-game="lastnode"] { --pb-accent: #E8445A; }
+  :root:not([data-theme="light"]) .page-box[data-game="overunder"] { --pb-accent: #3CCBF0; }
+  :root:not([data-theme="light"]) .page-box[data-game="vs"] { --pb-accent: #5B8CFF; }
+  :root:not([data-theme="light"]) .page-box[data-game="combo"] { --pb-accent: #C7A8FF; }
+  :root:not([data-theme="light"]) .page-box[data-game="survivor"] { --pb-accent: #E7D3A1; }
+}
+:root[data-theme="dark"] .page-box[data-game="questions"] { --pb-accent: #FFB020; }
+:root[data-theme="dark"] .page-box[data-game="race"] { --pb-accent: #FF7A3D; }
+:root[data-theme="dark"] .page-box[data-game="blockx"] { --pb-accent: #2EC4B6; }
+:root[data-theme="dark"] .page-box[data-game="bracket"] { --pb-accent: #B7E34A; }
+:root[data-theme="dark"] .page-box[data-game="golf"] { --pb-accent: #5BD66F; }
+:root[data-theme="dark"] .page-box[data-game="fantasy"] { --pb-accent: #F25CC1; }
+:root[data-theme="dark"] .page-box[data-game="lastnode"] { --pb-accent: #E8445A; }
+:root[data-theme="dark"] .page-box[data-game="overunder"] { --pb-accent: #3CCBF0; }
+:root[data-theme="dark"] .page-box[data-game="vs"] { --pb-accent: #5B8CFF; }
+:root[data-theme="dark"] .page-box[data-game="combo"] { --pb-accent: #C7A8FF; }
+:root[data-theme="dark"] .page-box[data-game="survivor"] { --pb-accent: #E7D3A1; }

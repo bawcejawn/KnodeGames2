@@ -12,7 +12,7 @@ test("results.js only reads and draws: no sending, storage, eval or HTML from da
   assert.doesNotMatch(js, /innerHTML|insertAdjacentHTML|document\.write|eval\(|new Function|localStorage|sessionStorage|indexedDB|sendTransaction|\.send\(|signTransaction/);
   assert.match(js, /RAW \+ "race-data\/index\.json"/);
   assert.match(js, /race-data\/W\$\{String\(w\)\.padStart\(3, "0"\)\}\.json/, "week files by number only");
-  assert.match(js, /const ADAPTERS = \{ race, blockx, bracket \};/, "a game needs a drawing here before it gets a tab");
+  assert.match(js, /const ADAPTERS = \{ race, blockx, bracket, lastnode \};/, "a game needs a drawing here before it gets a tab");
 });
 
 test("the results view has a game switcher and keeps the question results whole", () => {
@@ -46,4 +46,11 @@ test("Block X results: its own tab, read from games-data/blockx by week number o
   const g = JSON.parse(read("web/games.json")).games.find((x) => x.id === "blockx");
   assert.equal(g.results, true);
   assert.ok(read("web/index.html").includes("https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/"), "index.html may read games-data");
+});
+
+test("Last Node Standing has a Results tab that points to its page (owner's three-places rule, M-416/M-449)", () => {
+  const g = JSON.parse(read("web/games.json")).games.find((x) => x.id === "lastnode");
+  assert.equal(g.results, true);
+  const js = read("web/results.js");
+  assert.match(js, /const lastnode = \{[\s\S]*?href: "lastnode\.html", text: "Open Last Node Standing"/);
 });

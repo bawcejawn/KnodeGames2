@@ -364,7 +364,16 @@
         el("p", {}, el("a", { class: "btn btn-primary", href: "bracket.html", text: "Open the Bracket" }))));
     },
   };
-  const ADAPTERS = { race, blockx, bracket };
+  // Last Node Standing: each day's race (the cuts and the winner) and your run are on its own page; until its drawing
+  // here (week of Mon 30 Nov), the tab points there (owner's rule: every game in the games list, Results and Leaderboards).
+  const lastnode = {
+    open(box) {
+      box.replaceChildren(el("div", { class: "empty" },
+        el("p", { text: "Last Node Standing's results (each day's knockouts, the last node standing and your points) are on its own page for now. They are listed here soon." }),
+        el("p", {}, el("a", { class: "btn btn-primary", href: "lastnode.html", text: "Open Last Node Standing" }))));
+    },
+  };
+  const ADAPTERS = { race, blockx, bracket, lastnode };
   let games = [{ id: "questions", name: "Daily Questions" }], current = "questions";
   const qPart = $("res-q"), gPart = $("res-g");
 
