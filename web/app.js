@@ -1446,10 +1446,12 @@
   async function renderBoard(week = S.boardWeek ?? S.week) {
     if (!S.demo && !S.st) return; // not loaded yet
     const fin = S.demo ? 0 : num(S.st?.totals?.weeks_finalized);
-    const weeks = [S.week, ...Array.from({ length: Math.min(4, fin) }, (_, i) => fin - 1 - i)].filter((w, i, a) => w >= 0 && a.indexOf(w) === i);
+    // Last week always shows (M-432): a week the vault pays from its results file is finalized on chain later, so it
+    // would otherwise be missing from the tabs on the days right after it ends. Same words as the Results tabs.
+    const weeks = [S.week, S.week - 1, ...Array.from({ length: Math.min(4, fin) }, (_, i) => fin - 1 - i)].filter((w, i, a) => w >= 0 && a.indexOf(w) === i);
     $("#lb-weeks").replaceChildren(...weeks.map((w) => el("button", {
       type: "button", role: "tab", "aria-selected": String(w === week), onclick: () => renderBoard(w),
-    }, w === S.week ? `This week (${WS(w)})` : `${WL(w)}`)));
+    }, w === S.week ? `This week (${WL(w)})` : w === S.week - 1 ? `Last week (${WL(w)})` : `${WL(w)}`)));
     const tbody = $("#board tbody");
     const cards = $("#board-cards");
     const cardMsg = (t) => { if (cards && cards.replaceChildren) cards.replaceChildren(el("div", { class: "empty" }, t)); };
