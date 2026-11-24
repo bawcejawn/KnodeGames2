@@ -1,5 +1,5 @@
-# Last Node Standing recorder (bot/games/lastnode.ts): every 5 minutes during the event (14:00 UTC until the last cut,
-# which runs past midnight when the field is big) and the hour before it, when the next day's field is published.
+# Last Node Standing recorder (bot/games/lastnode.ts): three times an hour, all day (:02, :22, :42 UTC), so it covers the
+# event (14:00 UTC until the last cut, past midnight when the field is big) and the next day's field.
 # It records each hour from the chain once it is irreversible and matches on two nodes, so each cut appears a few
 # minutes after the hour. The page works the live cut out itself from public chain data; these files are final.
 #
@@ -15,9 +15,7 @@ name: Last Node Standing recorder
 
 on:
   schedule:
-    - cron: "2-57/5 13-23 * * *"   # every 5 minutes from 13:02 to 23:57 UTC
-    - cron: "2-57/5 0-3 * * *"     # and after midnight, for a big field's late cuts
-    - cron: "7 4-12 * * *"         # hourly overnight, for the largest fields (up to 23 nodes, ending by 13:00)
+    - cron: "2,22,42 * * * *"      # three times an hour, all day (23 Nov: GitHub skipped most runs of the old 5-minute ranges)
   workflow_dispatch: {}
 
 concurrency:
@@ -2107,7 +2105,7 @@ jobs:
           _rid = [0]
           def rpc(url, method, params):
               _rid[0] += 1
-              req = urllib.request.Request(url, data=json.dumps({"jsonrpc": "2.0", "id": _rid[0], "method": method, "params": params}).encode(), headers={"Content-Type": "application/json"})
+              req = urllib.request.Request(url, data=json.dumps({"jsonrpc": "2.0", "id": _rid[0], "method": method, "params": params}).encode(), headers={"Content-Type": "application/json", "User-Agent": "knode-vhp-ruler-publish"})  # without one, the node answers 403 (23 Nov)
               last = None
               for attempt in range(3):
                   try:
