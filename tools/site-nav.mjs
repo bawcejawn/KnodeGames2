@@ -129,7 +129,7 @@ export function footBlock(file = "index.html") {
 }
 
 // race.html and golf.html keep their own menu look until their PRs merge (B2); they are left as they are for now.
-export const HOLD_UI = new Set(["race.html", "golf.html"]);
+export const HOLD_UI = new Set();   // B2 (23 Nov): race.html and golf.html now get the bold menus too
 const UI_LINK = '<link rel="stylesheet" href="hub-ui.css">';
 
 /** Replace the existing blocks in a page's HTML: the top menu, the footer's links, and the tab bar + More sheet. */
