@@ -246,7 +246,8 @@
         "decidedChance": 1e-9
       },
       "hashRule": 2,
-      "paramsHash": "3f9ce05670aadbaeeded237077c0909cf70e412ba52d44f8d05683fec1027655"
+      "paramsHash": "3f9ce05670aadbaeeded237077c0909cf70e412ba52d44f8d05683fec1027655",
+      "chainId": 169
     }
   ],
   "daySeal": "10359874fa63b86eab7c782c59bebc93d4d3af1d0284436ac0fb89fa8e8f6328"
