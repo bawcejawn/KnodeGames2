@@ -130,11 +130,29 @@ export function footBlock(file = "index.html") {
 
 // race.html and golf.html keep their own menu look until their PRs merge (B2); they are left as they are for now.
 export const HOLD_UI = new Set();   // B2 (23 Nov): race.html and golf.html now get the bold menus too
+const BOX_LINK = '<link rel="stylesheet" href="page-box.css">';
+export const PAGE_BOX = JSON.parse(fs.readFileSync(new URL("./page-box.json", import.meta.url), "utf8"));
+const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+export function boxHtml(key) {
+  const b = PAGE_BOX[key];
+  return b ? `<aside class="page-box" data-game="${b[0]}"><p>${esc(b[1])}</p></aside>` : "";
+}
 const UI_LINK = '<link rel="stylesheet" href="hub-ui.css">';
 
 /** Replace the existing blocks in a page's HTML: the top menu, the footer's links, and the tab bar + More sheet. */
 export function withNav(file, html) {
   let out = html;
+  // The one short box at the top of every page (owner, D-730): text in tools/page-box.json, look in page-box.css.
+  if (/<nav class="tabs"/.test(out)) {
+    if (!out.includes(BOX_LINK) && out.includes(UI_LINK)) out = out.replace(UI_LINK, `${BOX_LINK}\n  ${UI_LINK}`);
+    else if (!out.includes(BOX_LINK) && out.includes("</head>")) out = out.replace(/(\n)([ \t]*)<\/head>/, (m, nl, ind) => `${nl}${ind}  ${BOX_LINK}${nl}${ind}</head>`);
+    out = out.replace(/\n[ \t]*<aside class="page-box"[^\n]*<\/aside>/g, "");
+    if (file === "index.html") {
+      out = out.replace(/(<section class="view[^"]*" id="view-([a-z]+)"[^>]*>)/g, (m, tag, v) => boxHtml(`index.html#${v}`) ? `${tag}\n      ${boxHtml(`index.html#${v}`)}` : m);
+    } else if (boxHtml(file)) {
+      out = out.replace(/(<main[^>]*>)/, (m) => `${m}\n    ${boxHtml(file)}`);
+    }
+  }
   // The bolder menu look (hub-ui.css) loads last, on every page with the menus except the held ones.
   if (!HOLD_UI.has(file) && /<nav class="tabs"|<nav class="tabbar"/.test(out) && !out.includes(UI_LINK) && out.includes("</head>"))
     out = out.replace(/(\n)([ \t]*)<\/head>/, (m, nl, ind) => `${nl}${ind}  ${UI_LINK}${nl}${ind}</head>`);

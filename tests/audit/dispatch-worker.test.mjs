@@ -58,14 +58,14 @@ test("kg-dispatch: :07 and :37 start kit-games.yml (Fantasy) only when it hasn't
   const { f, calls } = gh((u) => (u.includes("kit-games") ? 0 : 1));
   const [, k] = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, Date.UTC(2026, 10, 16, 19, 7, 0));
   assert.deepEqual([k.workflow, k.dispatched], ["kit-games.yml", true]);
-  assert.match(calls[1].url, /workflows\/kit-games\.yml\/runs\?branch=main&per_page=5&created=%3E%3D2026-11-16T18%3A42%3A00Z$/);
+  assert.match(calls[1].url, /workflows\/kit-games\.yml\/runs\?branch=main&per_page=5&event=workflow_dispatch&created=%3E%3D2026-11-16T18%3A42%3A00Z$/);
   assert.equal(calls[2].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/kit-games.yml/dispatches");
   assert.deepEqual(JSON.parse(calls[2].body), { ref: "main" });
-  // The window is 25 minutes: the normal run 10 minutes before each check (:57 before :07, :27 before :37) is seen, so
-  // neither check starts another; a dropped run leaves only the run 40 minutes earlier, outside the window, so one starts.
+  // The window is 25 minutes and, since Mon 23 Nov, counts only the Worker's own runs (ownOnly): its previous run is 30
+  // minutes back, outside the window, so every :07 and :37 starts one; the window only stops a double start.
   const kit = M.JOBS["7,37 * * * *"].find((j) => j.workflow === "kit-games.yml");
   assert.equal(kit.windowMin, 25);
-  assert.ok(10 < kit.windowMin && kit.windowMin < 40, "sees the run 10 minutes before, never the one 40 minutes before");
+  assert.ok(kit.windowMin < 30 && kit.ownOnly === true, "never sees its own previous run (30 minutes back); counts only its own runs");
 });
 
 test("kg-dispatch: an error on one job still runs the other, then the run fails (logged)", async () => {
@@ -131,4 +131,25 @@ test("kg-dispatch: cutover backup (Fri 20 Nov): bot, names and golf at :07 and :
   const st = at("22 * * * *", "stats.yml");
   assert.ok(st && 60 < st.windowMin && st.windowMin < 120, "stats runs every 2 hours: seen within 2 h, never doubled hourly");
   for (const wf of Object.values(M.JOBS).flat().map((j) => j.workflow)) assert.ok(fs.existsSync(`.github/workflows/${wf}`), wf);
+});
+
+// Mon 23 Nov: GitHub's timer started the 21:27 UTC kit run at 21:44, the 22:07 check saw it and skipped, and no kit run
+// happened until 22:37 (an Over Under round was cancelled). kit-games.yml now counts only the Worker's own runs.
+test("kg-dispatch: kit-games.yml counts only its own (workflow_dispatch) runs, so a late GitHub-timer run can't skip a slot", async () => {
+  const lateTimerRun = (url) => (url.includes("event=workflow_dispatch") ? 0 : 1);   // only a GitHub-timer run in the window
+  const { f, calls } = gh(lateTimerRun);
+  const out = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, Date.UTC(2026, 10, 23, 22, 7, 0));
+  const kit = out.find((r) => r.workflow === "kit-games.yml");
+  assert.equal(kit.dispatched, true, "a late timer run no longer suppresses the :07 / :37 kit run");
+  assert.ok(calls.some((c) => c.url.includes("/kit-games.yml/runs?branch=main&per_page=5&event=workflow_dispatch&created=")));
+  assert.ok(calls.some((c) => c.method === "POST" && c.url.endsWith("/kit-games.yml/dispatches")));
+  for (const w of ["race-samples.yml", "bot.yml", "names.yml", "golf.yml"]) {
+    assert.equal(out.find((r) => r.workflow === w).dispatched, false, `${w} still counts any run (unchanged)`);
+    assert.ok(!calls.some((c) => c.url.includes(`/${w}/runs?`) && c.url.includes("event=")), `${w}'s query is unchanged`);
+  }
+  // its own run in the window still stops a second dispatch
+  const own = gh(1);
+  const [k2] = (await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, own.f, Date.UTC(2026, 10, 23, 22, 7, 0))).filter((r) => r.workflow === "kit-games.yml");
+  assert.equal(k2.dispatched, false);
+  assert.match(k2.why, /already ran in the last 25 minutes \(1 Worker run\(s\)/);
 });
