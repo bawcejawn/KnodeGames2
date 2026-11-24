@@ -123,17 +123,25 @@
           </div>
           <img class="stage-blocky" src="media/blocky-happy.svg" alt="" width="260" height="260">
         </div>
-        <div class="today-card">
-          <div class="today-body">
-            <span class="today-k">Today</span>
-            <b>Four races a day. Pick the producer for the next one.</b>
-          </div>
-          <a class="btn" href="race.html">Pick now</a>
-        </div>
+        <section class="how-strip" aria-labelledby="how-h">
+          <h2 id="how-h">How it works</h2>
+          <ol class="how-steps">
+            <li><span>1</span><div><b>Play free.</b> Make a pick as a guest, no wallet needed. <a href="games.html">Pick a game</a></div></li>
+            <li><span>2</span><div><b>See your results.</b> Check the weekly board for how your picks did. <a href="#leaderboard">Leaderboards</a></div></li>
+            <li><span>3</span><div><b>Stake if you want.</b> It's optional, and you can withdraw any time. <a href="stake.html">Stake</a></div></li>
+          </ol>
+          <ul class="how-links">
+            <li><a href="games.html"><b>Play</b><span>Pick a game and make your first call.</span></a></li>
+            <li><a href="#leaderboard"><b>Leaders</b><span>See who is on top this week in each game.</span></a></li>
+            <li><a href="#results"><b>Results</b><span>Check how your picks did once a week is final.</span></a></li>
+            <li><a href="#how"><b>Rules</b><span>How each game works, in plain words.</span></a></li>
+            <li><a href="stake.html"><b>Stake</b><span>Optional. You can withdraw your stake any time.</span></a></li>
+          </ul>
+        </section>
         <div id="welcome-race" hidden></div>
         <div class="welcome-also game-grid" id="welcome-games">
           <h2 class="game-head">Pick a game</h2>
-          <a class="also-card gtile" href="race.html"><span aria-hidden="true">🏇</span><div><b>Producer Race</b><p>Pick the winning producer. Four races a day.</p></div></a>
+          <a class="also-card gtile" href="race.html"><span aria-hidden="true">🏇</span><div><b>Producer Race</b><p>Pick the winning producer in live races. Free to play.</p></div></a>
           <a class="also-card gtile" href="#play"><span aria-hidden="true">🎯</span><div><b>Daily Questions</b><p>Quick questions, Monday to Saturday.</p></div></a>
           <a class="also-card gtile" href="blockx.html"><span aria-hidden="true">🧱</span><div><b>Who Signs Block X</b><p>Pick who signs the next milestone block.</p></div></a>
           <a class="also-card gtile" href="bracket.html"><span aria-hidden="true">🏆</span><div><b>Producer Bracket</b><p>Pick every matchup in a weekly knockout.</p></div></a>
@@ -146,7 +154,8 @@
           <a class="also-card gtile" href="survivor.html"><span aria-hidden="true">🛡️</span><div><b>Survivor</b><p><span class="tile-tag">Practice</span> One producer a day, two lives. Season 1 starts Mon 30 Nov.</p></div></a>
           <a class="also-more" href="games.html">See every game and your standing →</a>
           <h2 class="game-head">More from Knode Games</h2>
-          <a class="also-card gtile" href="swap.html"><span aria-hidden="true">🔁</span><div><b>Knode Games Swap</b><p>Turn VHP back into KOIN in one step, for a 3% fee.</p></div></a>
+          <a class="also-card gtile" href="swap.html"><span aria-hidden="true">🔁</span><div><b>Knode Games Swap</b><p>Swap VHP for KOIN. Separate from the games.</p></div></a>
+          <a class="also-card gtile" href="get.html"><span aria-hidden="true">🪙</span><div><b>Get VHP</b><p>New to VHP? See how to get some.</p></div></a>
           <a class="also-card gtile" href="run-node.html"><span aria-hidden="true">🖥️</span><div><b>Run a node</b><p>Run your own Koinos block-producer node, with step-by-step help.</p>
         </div></a>
         </div>
@@ -345,7 +354,7 @@
       <div class="rules-panel" id="rp-race" data-rules-panel="race" role="tabpanel" aria-labelledby="rt-race" hidden>
         <div class="rules-short"><h2>In short</h2><p>Every Koinos block producer is a horse, and every block it signs moves it forward. A handicap gives every horse the same chance. <span id="rt-short-pts">Pick the winner for 3 points, or score 1 point (a show) if your horse finishes 2nd or 3rd.</span> It's free and just for fun.</p></div>
         <ol class="rules-steps">
-          <li><span class="ri" aria-hidden="true">🏇</span><div><b>Open the Race</b><p><span id="rt-open">Four 6-hour races a day, every day, starting at 00:00, 06:00, 12:00 and 18:00 UTC</span> (Sunday's races are for fun: they count on All time, not the week)<span class="lt-list" data-utc-hours="0,6,12,18"></span>.</p></div></li>
+          <li><span class="ri" aria-hidden="true">🏇</span><div><b>Open the Race</b><p><span id="rt-open">Races of five lengths run side by side: 1-hour, 2-hour, 6-hour (00:00, 06:00, 12:00 and 18:00 UTC), daily and weekly</span> (Sunday's races are for fun: they count on All time, not the week)<span class="lt-list" data-utc-hours="0,6,12,18"></span>.</p></div></li>
           <li><span class="ri" aria-hidden="true">👆</span><div><b>Pick one horse per race</b><p>For any of the next 4 races, so up to 24 hours ahead. Guests can pick too.</p></div></li>
           <li><span class="ri" aria-hidden="true">🔒</span><div><b>Change your mind until it starts</b><p>When the race starts, the chain locks your pick.</p></div></li>
           <li><span class="ri" aria-hidden="true">📺</span><div><b>Watch it live, then check the board</b><p><span id="rt-watch-pts">A win is 3 points, a show (2nd or 3rd) is 1.</span> Leaderboards for today, this week and all time.</p></div></li>
