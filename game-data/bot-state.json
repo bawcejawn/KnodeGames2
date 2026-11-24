@@ -3,7 +3,7 @@
   "orphans": [],
   "lastCompound": 41327041,
   "warnings": [],
-  "lastProduced": 41338468,
+  "lastProduced": 41340100,
   "producedByDay": {
     "1427": 52,
     "1428": 42,
@@ -13,16 +13,16 @@
     "1432": 59,
     "1433": 46,
     "1434": 55,
-    "1435": 21
+    "1435": 24
   },
-  "producerScannedTo": 41339263,
+  "producerScannedTo": 41340353,
   "settings": "{\"min_stake\":\"100000000\",\"min_stake_next\":\"0\",\"min_stake_next_week\":\"0\",\"max_sponsor_rc\":\"0\",\"min_sponsor_rc\":\"0\",\"paused\":false}",
-  "sealedAt": 41339256,
+  "sealedAt": 41340350,
   "desk": {
     "settings": "{\"fee_bps\":300,\"min_swap\":\"100000000\",\"max_swap\":\"0\",\"paused\":false,\"timelock\":\"172800000\"}",
-    "koin": "504500043716",
+    "koin": "505350934721",
     "koinOut": "291097000000",
-    "at": 1795495460570
+    "at": 1795498728060
   },
   "deskProducerKey": "AzCYCDLDa49PPVHKk60xQbOErS6XY1TcEA8bkSo8Sk6E",
   "notified": [
@@ -33,24 +33,24 @@
   ],
   "vhpLists": {
     "0f9c74801844e61a0d252c7e2e0e93ef398c9f03aa78522a727ea65db31ebb5e": {
-      "n": 16,
-      "last": 41339317
+      "n": 17,
+      "last": 41340410
     },
     "d1034e5e6a4e3c1acf92fc70b7182c4fe22686469daecebe7ed0920f7a0631d8": {
-      "n": 4,
-      "last": 41339317
+      "n": 5,
+      "last": 41340410
     },
     "0966f288c68fb641acd9e6c0541c0f36775d690c3f2e8e094149b51e8cbdde57": {
-      "n": 4,
-      "last": 41339317
+      "n": 5,
+      "last": 41340410
     },
     "b2423f354a278703b401819b495a157bce2a2a7e3670fe4b3b47b787bfe4dd74": {
-      "n": 4,
-      "last": 41339317
+      "n": 5,
+      "last": 41340410
     },
     "9af8379cc50ee5f1835a8a8ec7878e5af49309542830af03db32d7213040f1dc": {
-      "n": 4,
-      "last": 41339317
+      "n": 5,
+      "last": 41340410
     }
   },
   "manaByDay": {
@@ -160,5 +160,5 @@
     1795471813611,
     1795471842928
   ],
-  "seal": "353fa494fc3c8fc441d2116bb0ed89ceab579d950d7ea062d5eb560b965e043e"
+  "seal": "9916bde6a1b750b99a28fd3114ac774e52da07e4da60b940d320f40efc2e7034"
 }
