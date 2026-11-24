@@ -172,7 +172,7 @@ test("the race page sends only one thing itself: the wallet's own pick on the ra
   // D-166 (contract v2): the race type rides in the race number from bit 48; the pick is still player, race, horse.
   assert.match(js, /const args = \{ player: who, race: M\.contractRace\(type, index\) \};/);
   assert.match(js, /raceContract\.functions\.pick\(\{ \.\.\.args, horse \}, \{ onlyOperation: true \}\)/);
-  assert.match(js, /await W\.send\(`pick [^`]*`, \[operation\]\)/);
+  assert.match(js, /await W\.send\(`\$\{change \? "change your pick to" : "pick"\} [^`]*`, \[operation\], change \? \{ noSponsor: true \} : \{\}\)/);   // D-743: a change uses the player's own Mana
   assert.doesNotMatch(js, /signTransaction|sendTransaction|privateKey|wif/i);
   assert.match(js, /const tr = M\.typedRace\(type, index\)/);
   assert.match(js, /if \(Date\.now\(\) >= tr\.start\)/, "the page also refuses a started race (the chain enforces it)");

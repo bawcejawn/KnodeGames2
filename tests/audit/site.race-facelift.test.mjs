@@ -88,7 +88,7 @@ test("top of the page: the game in a line and three steps; the long text is in t
 });
 
 test("signed-in phones (owner 15 Nov): the pick columns don't squeeze the lane; each Pick button shows its race time", () => {
-  assert.match(js, /el\("span", \{ text: chosen \? \(dr && dr !== mineP \? "Picked" : "Locked in"\) : "Pick" \}\), el\("small", \{ class: "rt-pk-t", text: clock\(u\.r\.start\) \}\)/);
+  assert.match(js, /el\("span", \{ text: chosen \? \(dr && dr !== mineP \? "Picked" : "Locked in"\) : used \? "Changed" : "Pick" \}\), el\("small", \{ class: "rt-pk-t", text: clock\(u\.r\.start\) \}\)/);   // D-745: "Changed" once the race's change is used
   const css = html.slice(html.lastIndexOf("owner 15 Nov: signed-in phones"));
   // M-413: the same rules now also cover the typed boards (#rt-track); see site.race-typed-phone.test.mjs
   for (const re of [/#track \.pr-headrow\.rt-head, #rt-track \.pr-lane\.rt-head \{ display: none; \}/, /:is\(#track, #rt-track\) \.pr-lane\.rt-lane \{ min-width: 0; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important;/,
