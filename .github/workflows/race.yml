@@ -2397,13 +2397,42 @@ jobs:
                   if hs[k]["t"] == hs[k - 1]["t"] + 3600000: assert hs[k]["a"] == hs[k - 1]["b"] + 1, f + ": the ledger's heights don't run on"
               for h in hs: assert set(h["l"]) == set(h["n"]), f + ": an hour's last block times"
               byt = {h["t"]: h for h in hs}
+              # M-493 BEGIN: which producers race in a typed race's hour. As the recorder scores it (bot/race.ts typedCardAt,
+              # KRaceMath.typeCard / makeCard / ledgerStandings): the hour's 6-hour card (cardForLeg), every producer with VHP,
+              # k = blocksPerRace x len / 6 h x vhp / total; the field is k >= 10. A producer's blocks count only in the hours
+              # it is in that field, so its standings blocks are the ledger's counts for those hours (the first daily race,
+              # D-2026-11-23, was held for good because producers outside an hour's field still sign blocks in it).
+              TYPE_LEN = {1: 3600000, 2: 7200000, 3: 86400000, 4: 6 * 86400000}
+              def base_card_at(wj, t0):
+                  rs = wj.get("races") if type(wj) is dict and type(wj.get("races")) is list else []
+                  r6 = next((r for r in rs if type(r) is dict and type(r.get("start")) is int and r["start"] <= t0 < r["start"] + 21600000), None)
+                  cards = r6.get("cards") if r6 else None
+                  if type(cards) is not list or not cards: return None
+                  n = len(cards) if len(cards) in (3, 6) else 6
+                  leg = max(0, min(n - 1, (t0 - r6["start"]) // (21600000 // n)))
+                  for l in list(range(leg, -1, -1)) + list(range(leg + 1, len(cards))):
+                      if type(cards[l]) is dict: return cards[l]
+                  return None
+              def typed_field(base, ty):
+                  if type(base) is not dict: return set()
+                  rows = [(q.get("a"), q.get("vhp")) for q in (base.get("field") or []) + (base.get("paddock") or []) if type(q) is dict]
+                  rows = [(a, v) for a, v in rows if type(a) is str and type(v) in (int, float) and v > 0]
+                  total = 0
+                  for _, v in rows: total += v
+                  bpr = base.get("blocksPerRace") * TYPE_LEN[ty] / 21600000
+                  return {a for a, v in rows if total > 0 and bpr * v / total >= 10}
+              # M-493 END
+              _fields = {}
+              def field_at(ty, t0):
+                  if (ty, t0) not in _fields: _fields[(ty, t0)] = typed_field(base_card_at(_wj, t0), ty)
+                  return _fields[(ty, t0)]
               for r in j["races"]:
                   x = r["result"]
                   if type(x) is dict and x.get("final") is True and not x.get("missed"):
                       assert r["end"] <= NOW * 1000, f + " " + r["id"] + ": scored before it ended"
                       hrs = list(range(r["start"], r["end"], 3600000))
                       assert all(t0 in byt for t0 in hrs), f + " " + r["id"] + ": an hour of it isn't in the ledger"
-                      assert type(x.get("standings")) is list and all(type(e) is dict and e.get("blocks") == sum(byt[t0]["n"].get(e.get("a"), 0) for t0 in hrs) for e in x["standings"]), f + " " + r["id"] + ": its standings aren't the ledger's counts"
+                      assert type(x.get("standings")) is list and all(type(e) is dict and e.get("blocks") == sum(byt[t0]["n"].get(e.get("a"), 0) for t0 in hrs if e.get("a") in field_at(r["type"], t0)) for e in x["standings"]), f + " " + r["id"] + ": its standings aren't the ledger's counts (for the hours each producer raced)"
               if pub and os.path.exists(os.path.join(pub, f)):
                   o = json.load(open(os.path.join(pub, f), encoding="utf-8"))
                   # Like the 6-hour cards and results (H-1 a): a published ledger hour and a published final result
