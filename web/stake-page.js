@@ -193,7 +193,7 @@
     return el("li", { class: "hub-row", id: `g${g.id}` },
       el("div", { class: "hub-row-main" },
         el("div", { class: "hub-row-name" }, el("a", { href: PAGES[g.id] || "games.html" }, g.name),
-          el("small", { class: "muted" }, g.last != null ? `Last week paid ${F.amount(g.last)} VHP per 100 staked` : g.id === Q ? "Answer the daily questions; the best staked players share the week" : "New: no full week paid yet")),
+          el("small", { class: "muted" }, g.last != null ? F.lastText(g.last) : g.id === Q ? "Answer the daily questions; the best staked players share the week" : "New: no full week paid yet")),
         el("div", { class: "hub-row-amt" }, el("b", {}, vhp(g.total)), el("small", { class: "muted" }, "staked by everyone"))),
       who ? el("div", { class: "hub-btns" },
         g.active && !d.paused ? el("button", { type: "button", class: `btn btn-small ${open ? "btn-primary" : "btn-ghost"}`, disabled: S.busy, "aria-expanded": String(!!open), onclick: () => (open ? (S.open = null, render()) : openBox(g, "stake")) }, "Stake") : null,
