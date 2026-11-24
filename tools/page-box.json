@@ -1,7 +1,7 @@
 {
   "index.html#welcome": ["site", "Prediction games on Koinos, free to play. Pick producers, blocks and races, and climb the weekly boards."],
   "index.html#play": ["questions", "A few quick questions about the chain, Monday to Saturday. Free to play, guest play works. Correct answers climb the weekly board."],
-  "index.html#leaderboard": ["site", "This week's Daily Questions leaderboard. Other games keep their own boards on their own pages."],
+  "index.html#leaderboard": ["site", "Every game has its own board. Pick a game below."],
   "index.html#results": ["site", "How finished games turned out. Pick a game to see each call."],
   "index.html#how": ["site", "The rules in short. Pick a game's tab to read its rules."],
   "games.html": ["site", "Every Knode Games game in one place. Pick one to start; most are free to play."],

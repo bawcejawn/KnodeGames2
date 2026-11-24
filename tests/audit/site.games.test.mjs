@@ -132,3 +132,16 @@ test("every menu page has the one short box at the top, from tools/page-box.json
     assert.match(h, /href="page-box\.css"/, `${f}: box styles`);
   }
 });
+
+test("Leaderboards and Results: the box is game-neutral, every game is listed (greyed when it has no board or results), and the tabs follow the game", () => {
+  const box = JSON.parse(read("tools/page-box.json"));
+  assert.match(box["index.html#leaderboard"][1], /^Every game has its own board\. Pick a game below\.$/);
+  for (const f of ["web/leaders.js", "web/results.js"]) {
+    const js = read(f);
+    assert.match(js, /g\.status === "live" \|\| g\.status === "preview"/, `${f}: every live or preview game is listed`);
+    assert.match(js, /class: [^}]*"soon"/, `${f}: a game with nothing yet is greyed, not hidden`);
+    assert.match(js, /first\.textContent = q \? "Questions" : "Play"/, `${f}: the first tab follows the game`);
+    assert.match(js, /nav\.setAttribute\("aria-label", g\.name\)/, `${f}: the tabs' label follows the game`);
+  }
+  assert.match(read("web/stake-page.js"), /More games appear here as they open for staking\./);
+});

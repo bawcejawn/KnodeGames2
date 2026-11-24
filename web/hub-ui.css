@@ -100,3 +100,7 @@
 .how-links b { display: block; font-size: .95rem; }
 .how-links span { display: block; margin-top: 2px; font-size: .85rem; color: var(--muted, #5B6070); line-height: 1.3; }
 @media (max-width: 400px) { .how-strip { padding: 12px; } .how-steps a { white-space: normal; } }
+
+/* Leaderboards and Results: a game with no board or results yet is greyed, still tappable (it says so and links to its page). */
+.lb-games button.soon { opacity: .6; border-style: dashed; }
+.lb-games button.soon[aria-pressed="true"] { opacity: 1; }
