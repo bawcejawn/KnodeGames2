@@ -3,7 +3,7 @@
   "orphans": [],
   "lastCompound": 41327041,
   "warnings": [],
-  "lastProduced": 41353102,
+  "lastProduced": 41355434,
   "producedByDay": {
     "1427": 52,
     "1428": 42,
@@ -13,16 +13,16 @@
     "1432": 59,
     "1433": 46,
     "1434": 55,
-    "1435": 49
+    "1435": 52
   },
-  "producerScannedTo": 41354285,
+  "producerScannedTo": 41355523,
   "settings": "{\"min_stake\":\"100000000\",\"min_stake_next\":\"0\",\"min_stake_next_week\":\"0\",\"max_sponsor_rc\":\"0\",\"min_sponsor_rc\":\"0\",\"paused\":false}",
-  "sealedAt": 41354283,
+  "sealedAt": 41355493,
   "desk": {
     "settings": "{\"fee_bps\":300,\"min_swap\":\"100000000\",\"max_swap\":\"0\",\"paused\":false,\"timelock\":\"172800000\"}",
-    "koin": "515561915289",
+    "koin": "517689260010",
     "koinOut": "291097000000",
-    "at": 1795541938770
+    "at": 1795545573360
   },
   "deskProducerKey": "AzCYCDLDa49PPVHKk60xQbOErS6XY1TcEA8bkSo8Sk6E",
   "notified": [
@@ -37,20 +37,20 @@
       "last": 41354343
     },
     "a1dca6c62b750898eb147d4f8eeb0ee35f9a98fcdd14f0c06f4b2c1c08a8fc00": {
-      "n": 5,
-      "last": 41354343
+      "n": 6,
+      "last": 41355554
     },
     "f0b54b5be6a20f29a24a8fe680f976d717fb81054870c292968a4ae902c54864": {
-      "n": 5,
-      "last": 41354343
+      "n": 6,
+      "last": 41355554
     },
     "99f429d21c780d11c4bad397bee94a29910339d861b101cad67b6016cfd175b5": {
-      "n": 5,
-      "last": 41354343
+      "n": 6,
+      "last": 41355554
     },
     "3f9ce05670aadbaeeded237077c0909cf70e412ba52d44f8d05683fec1027655": {
-      "n": 5,
-      "last": 41354343
+      "n": 6,
+      "last": 41355554
     }
   },
   "manaByDay": {
@@ -79,7 +79,7 @@
     "2026-11-21": "747653904",
     "2026-11-22": "316291684",
     "2026-11-23": "931416415",
-    "2026-11-24": "548554484"
+    "2026-11-24": "588695315"
   },
   "games": "[[1,true,true,true,0,0,0],[2,true,true,true,1,3,0],[6,false,true,true,1,5,5],[7,true,true,true,1,3,0],[9,true,true,true,1,5,0]]",
   "vault": {
@@ -99,7 +99,6 @@
     }
   },
   "ownResolves": [
-    1794683449313,
     1794701477420,
     1794722772746,
     1794722798619,
@@ -158,7 +157,8 @@
     1795502356289,
     1795514929077,
     1795514946909,
-    1795514968198
+    1795514968198,
+    1795545554388
   ],
-  "seal": "a42d2cbd55f1d87ee4c3926a7406ece9886f9a1a2c483405947234458891dd0a"
+  "seal": "2c78d6a9e5bf463fa437b0edfc8d8dd588b5a863256e39eab417eb5ab272d844"
 }
