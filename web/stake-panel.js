@@ -156,18 +156,23 @@
     const w = weightOf(gw, g, x);
     return w != null && w > 0n ? (big(gw.bucket) * 100n * UNIT) / w : null;
   }
-  /** What last week paid, as the page says it (D-768): { pot, staked } (the pot shared by the VHP staked), or
-   *  { rolled: true, pot } when nobody won and the pot moved into this week (the week's rolled_over, or voided); null = not known. */
+  /** What last week paid, as the page says it (D-768, Vault's rule): { rolled: true, pot } when nobody won and the pot moved
+   *  into this week (voided, or rolled_over: a finalized week with 0 winners always is); { pending: true, pot } while the week
+   *  is closed but not yet finalized (winners are decided by Wednesday night); otherwise { pot, staked } (at least one winner;
+   *  only the top 30% of staked players share the pot, so no rate is implied). null = not known. */
   function lastWeek(gw, g, x) {
     if (!gw || !gw.closed) return null;
-    if (gw.rolled_over || gw.voided) return { rolled: true, pot: big(gw.bucket) };
+    if (gw.voided || gw.rolled_over) return { rolled: true, pot: big(gw.bucket) };
+    if (!gw.finalized) return { pending: true, pot: big(gw.bucket) };
     const w = weightOf(gw, g, x);
     return w != null && w > 0n ? { pot: big(gw.bucket), staked: w } : null;
   }
-  /** The plain sentence for lastWeek(): no per-100 figure, which read as a rate when the week had no winners. */
+  /** The plain sentence for lastWeek(): no per-100 figure, which read as a rate. */
   function lastText(l) {
     if (!l) return "";
-    return l.rolled ? `No winners last week: its pot (${amount(l.pot)} VHP) rolled into this week` : `Last week's pot: ${amount(l.pot)} VHP, shared by ${amount(l.staked)} VHP staked`;
+    if (l.rolled) return `No winners last week: its pot (${amount(l.pot)} VHP) rolled into this week`;
+    if (l.pending) return `Last week's pot: ${amount(l.pot)} VHP (winners decided by Wednesday night)`;
+    return `Last week's pot: ${amount(l.pot)} VHP; ${amount(l.staked)} VHP was staked`;
   }
   /** "Your Mana is busy" (the node still holds the last transaction's Mana limit) and other wallet errors, in plain words. */
   function sayError(e) {
@@ -622,7 +627,7 @@
   }
 
   /** "Where to stake": every game that takes stakes, side by side — staked in it, your stake, and last week's rewards
-   *  per 100 VHP staked — each with a link to its page's panel. `links` maps a vault game id to that page (the hub's
+   *  the last week's pot — each with a link to its page's panel. `links` maps a vault game id to that page (the hub's
    *  games.json "vault" ids). Hidden until the vault is live, like the panel. */
   function mountList(root, opts = {}) {
     if (!root) return null;

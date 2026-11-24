@@ -65,7 +65,7 @@ test("where you're staked: each game with the amount, its share and whether it's
   assert.ok(p.$("#g7").classList.contains("mine") && p.$("#g7").classList.contains("on"));
   const heads = p.$$("#hub-body h2").map((h) => h.textContent);
   assert.deepEqual(heads, ["Where you're staked", "Stake in another game"]);
-  assert.match(p.text("#g2"), /Who Signs Block X Last week's pot: 36 VHP, shared by 40 VHP staked 80 VHP staked by everyone Stake/);
+  assert.match(p.text("#g2"), /Who Signs Block X Last week's pot: 36 VHP; 40 VHP was staked 80 VHP staked by everyone Stake/);
 });
 
 test("a stake that hasn't started yet says the Monday it starts counting", async () => {
@@ -225,4 +225,10 @@ test("a week with no winners says its pot rolled into this week, not a per-100 f
   const p = await boot(d);
   assert.match(p.text("#g2"), /No winners last week: its pot \(36\.74 VHP\) rolled into this week/);
   assert.doesNotMatch(p.text("#g2"), /per 100/);
+});
+
+test("a closed week not yet finalized says its winners are decided by Wednesday night", async () => {
+  const d = data(); d.games[2].last = { pending: true, pot: 36n * U };
+  const p = await boot(d);
+  assert.match(p.text("#g2"), /Last week's pot: 36 VHP \(winners decided by Wednesday night\)/);
 });
