@@ -919,8 +919,16 @@
     }
     return { used: c.used(who, week, type), cap };
   }
+  /** M-528 (owner, 23 Nov): the header's steps follow the open tab: that race's length and its real points (the chip). */
+  const RACE_LEN = { 0: "6 hours", 1: "1 hour", 2: "2 hours", 3: "a day", 4: "a week (Monday to Saturday)" };
+  function heroSteps(t) {
+    const len = $("rc-step-len"), pts = $("rc-step-pts");
+    if (len) len.textContent = `${RACE_LEN[t] || RACE_LEN[0]}, live, block by block`;
+    if (pts) pts.textContent = chipText(t);
+  }
   function rtSelect(t) {
     rtype = t;
+    heroSteps(t);
     for (const id of ["rt-track", "rt-picks"]) { const z = $(id); if (z) z.replaceChildren(); }   // L-9: no row of the old type stays on screen
     try { localStorage.setItem("pr-type", String(t)); } catch { /* per-viewer convenience only */ }
     for (const id of ["live", "pick-zone"]) { const n = $(id); if (n) n.hidden = t !== 0; }
@@ -1007,6 +1015,7 @@
     catch (e) { say("Couldn't reach the Koinos network. Trying again in a moment…"); }
     await picksReady; renderPicks();
     rtTabs(); if (typesLive() && rtype) rtSelect(rtype); else rtype = 0;
+    heroSteps(rtype);
     loadBoard(); loadRuler();
     setInterval(() => { if (!document.hidden) { loadBoard(); loadRuler(); } }, 300000);
     setInterval(() => { if (!document.hidden && raceContract) loadMine(); }, 60000);
