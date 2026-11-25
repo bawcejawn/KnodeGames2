@@ -114,3 +114,5 @@
 /* Leaderboards and Results: a game with no board or results yet is greyed, still tappable (it says so and links to its page). */
 .lb-games button.soon { opacity: .6; border-style: dashed; }
 .lb-games button.soon[aria-pressed="true"] { opacity: 1; }
+/* Results and Leaderboards pickers: the game's games.json icon before its name (Speed, D-748). */
+.lb-games button .mi { width: 20px; height: 20px; margin-right: 6px; vertical-align: -4px; font-size: 16px; }

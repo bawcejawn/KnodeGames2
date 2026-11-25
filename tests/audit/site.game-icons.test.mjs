@@ -1,6 +1,6 @@
 // One icon per game everywhere (owner, D-748): web/games.json ("icon", "accent") is the only source. The Home tiles,
 // the All games cards, the Games drop-down and the phone More sheet must all show that same emoji, so they cannot drift
-// apart again. The Results and Leaderboards pickers join later (Speed chat, after this PR).
+// apart again. The Results and Leaderboards pickers show it too (Speed chat, last test).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -70,4 +70,34 @@ test("menus: every page's Games drop-down and More sheet show the games.json ico
     }
   }
   assert.ok(pages >= 13, "pages with menus checked");
+});
+
+test("Results and Leaderboards pickers: each game button shows its games.json icon, as text, before its name", async () => {
+  const { JSDOM } = await import("jsdom");
+  for (const [file, host, extra] of [
+    ["leaders.js", "lb-games", '<h2 id="lb-title"></h2><div id="lb-q"></div><div id="lb-game" hidden></div>'],
+    ["results.js", "res-games", '<div id="results-list"></div><div id="res-game" hidden></div><h2 id="res-title"></h2>'],
+  ]) {
+    const js = read(file);
+    assert.match(js, /el\("span", \{ class: "mi", "aria-hidden": "true", text: g\.icon \}\)/, `${file}: icon drawn as text`);
+    assert.match(js, /const iconOf = \(g\) => \(g && typeof g\.icon === "string" && g\.icon\.length >= 1 && g\.icon\.length <= 8 && !\/\[<>&"'A-Za-z0-9\\s\]\/\.test\(g\.icon\) \? g\.icon : ""\);/, `${file}: icon checked before use`);
+    const dom = new JSDOM(`<div class="lb-games" id="${host}"></div>${extra}`, { url: "https://knodegames.com/index.html#leaderboard", runScripts: "outside-only" });
+    const w = dom.window;
+    w.fetch = async (url) => ({ ok: true, json: async () => (url === "games.json" ? JSON.parse(read("games.json")) : { v: 1 }) });
+    w.KBoard = { create: () => ({ set() {}, setMe() {} }), LABELS: { staked: "Staked", free: "Free play" } };
+    if (file === "results.js") w.eval(read("race-math.js"));   // results.js needs the race maths before it draws
+    try {
+    try { w.eval(js); } catch { /* page parts not in this stub; the picker is drawn first */ }
+    let btns = [];
+    for (let i = 0; i < 40 && btns.length < 2; i++) { await new Promise((r) => setTimeout(r, 25)); btns = [...w.document.querySelectorAll(`#${host} button`)]; }
+    assert.ok(btns.length >= shown.length - 1, `${file}: picker drawn (${btns.length} buttons)`);
+    for (const b of btns) {
+      const name = b.lastChild && b.lastChild.textContent;
+      const g = games.find((x) => x.name === name);
+      assert.ok(g, `${file}: button "${name}" is a games.json game`);
+      const ic = b.querySelector(".mi");
+      assert.ok(ic && ic.textContent === g.icon && ic.getAttribute("aria-hidden") === "true" && b.firstChild === ic, `${file}: ${g.id} shows ${g.icon} first`);
+    }
+    } finally { w.close(); }
+  }
 });
