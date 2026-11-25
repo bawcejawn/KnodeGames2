@@ -143,5 +143,5 @@ test("Leaderboards and Results: the box is game-neutral, every game is listed (g
     assert.match(js, /first\.textContent = q \? "Questions" : "Play"/, `${f}: the first tab follows the game`);
     assert.match(js, /nav\.setAttribute\("aria-label", g\.name\)/, `${f}: the tabs' label follows the game`);
   }
-  assert.match(read("web/stake-page.js"), /More games appear here as they open for staking\./);
+  assert.match(read("web/stake-page.js"), /Only games that take a stake are listed here\. New games appear once they open for staking\. Free-play games don't need a stake\./);
 });
