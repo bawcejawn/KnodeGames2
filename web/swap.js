@@ -104,7 +104,7 @@
 
   /** The fee exactly as the contract computes it: rounded up to the smallest unit. */
   const feeOf = (units, bps) => (units * BigInt(bps) + 9999n) / 10000n;
-  const feeBps = () => Number(S.st?.config?.fee_bps ?? 300);
+  const feeBps = () => Number(S.st?.config?.fee_bps ?? 1000);
 
   // ═══════════════ reading the desk ═══════════════
   async function read(method, args = {}) {
@@ -256,7 +256,7 @@
     $("#demo-note").hidden = false;
     const now = Date.now();
     S.st = {
-      config: { fee_bps: 300, min_swap: String(UNIT), max_swap: "0", paused: false },
+      config: { fee_bps: 1000, min_swap: String(UNIT), max_swap: "0", paused: false },
       totals: { swaps: "14", vhp_in: String(3820n * UNIT), koin_out: String(3705n * UNIT) },
       available: String(2412n * UNIT), max_vhp_in: String(2486n * UNIT),
     };

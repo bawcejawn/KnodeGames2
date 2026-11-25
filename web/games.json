@@ -48,7 +48,7 @@
       "board": { "data": "games-data/overunder/board.json",
         "free": { "show": 6, "prize": "More or Fewer is free play and pays no prizes yet." },
         "columns": [{ "key": "pts", "label": "Points" }] } },
-    { "id": "combo", "name": "Combo Card", "icon": "🎟️", "accent": "hot", "short": "Stack 2 to 10 calls on one card.", "kinds": ["free", "staked"], "status": "preview", "href": "combo.html", "opens": "Opens Mon 7 Dec",
-      "line": "Build a card of 2 to 10 calls from the races and Block X. Every leg must hit; harder legs pay more. Preview: build and share cards now; sending opens Mon 7 Dec." }
+    { "id": "combo", "name": "Combo Card", "icon": "🎟️", "accent": "hot", "short": "Stack 2 to 10 calls on one card.", "kinds": ["free", "staked"], "status": "preview", "href": "combo.html", "opens": "Practice from Wed 25 Nov",
+      "line": "Build a card of 2 to 10 calls from the races and Block X. Every leg must hit; harder legs pay more. Preview: build and share cards now; practice play from Wed 25 Nov, staking from Sun 6 Dec, 7 PM ET." }
   ]
 }

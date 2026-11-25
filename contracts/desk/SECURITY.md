@@ -15,7 +15,7 @@ Latest results: **25/25 tests passed**, **34/34 offline checks passed**. Release
 | 2 | Someone uses an approval a user left open. | Same check: an approval alone is not enough. | "a leftover approval cannot be used…" |
 | 3 | The owner raises the fee while a user's swap is in flight. | The user's `min_koin_out` makes the swap fail instead of paying less. | "a fee raised just before a swap lands…" |
 | 4 | A swap takes VHP but pays no KOIN, or pays half. | It takes VHP and pays KOIN in one transaction; if either fails, both are undone. | "needs the VHP approval…", "refuses to pay less…" |
-| 5 | Rounding leaks value. | The fee rounds up by at most 1 unit, so it is never under 3%. A 1-unit swap is refused, never paid for free. | "200 random swaps…", "tiny amounts…" |
+| 5 | Rounding leaks value. | The fee rounds up by at most 1 unit, so it is never under the set fee (10% since 25 Nov 2026; 3% at launch). A 1-unit swap is refused, never paid for free. | "200 random swaps…", "tiny amounts…" |
 | 6 | Tokens get created or destroyed by accounting bugs. | The only token moves are `transfer`s, and totals are tracked. | "200 random swaps": total KOIN and VHP unchanged across all accounts |
 | 7 | Huge numbers overflow. | Fee math uses 128-bit numbers. | "huge amounts never overflow" |
 | 8 | The desk pays out more than it can. | Each swap is capped at min(KOIN, Mana), exactly to the last unit. | "pays out at most…", "the exact last KOIN…" |
