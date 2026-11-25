@@ -86,3 +86,28 @@ test("(blocked) ?demo never reaches the wallet", async () => {
   assert.equal(env.ops.length, 0);
   assert.equal(env.elem("demo-note").hidden, false, "the preview banner is shown");
 });
+
+// Owner, 25 Nov 2026: the Swap Desk fee is 10% on chain (was 3%). Every public text that names the fee says the same
+// number, and swap.js's fallback (used only when the chain config can't be read) is 10% too. When the owner changes the
+// fee on chain again, change PAGE_FEE and the texts below together; the live swap page itself reads fee_bps from the chain.
+test("the Swap Desk fee in every public text is 10%, never the old 3% or a vague 'small fee'", () => {
+  const PAGE_FEE = 10;
+  const read = (f) => fs.readFileSync(`${APP}/${f}`, "utf8");
+  const swapHtml = read("web/swap.html");
+  assert.match(swapHtml, new RegExp(`<b id="fee-inline">${PAGE_FEE}%</b>`));
+  assert.match(swapHtml, /A 10% fee, paid out from Knode Games' own node/);
+  assert.match(read("tools/page-box.json"), /"swap\.html": \["tool", "Swap VHP for KOIN here\. A 10% fee applies/);
+  assert.match(read("tools/site-seo.mjs"), /A 10% fee, paid out from Knode Games' own node/);
+  assert.match(read("web/get.html"), /one step in your wallet, 10% fee\./);
+  assert.match(read("web/terms.html"), /minus a fee \(10% today\)/);
+  assert.match(read("web/ecosystem.html"), /One step, 10% fee\./);
+  const home = read("web/index.html");
+  assert.match(home, /1:1 minus a 10% fee\./);
+  assert.match(home, /<b>10% fee:<\/b> 1 VHP gets you 0\.90 KOIN\./);
+  for (const f of ["web/swap.html", "web/get.html", "web/terms.html", "web/ecosystem.html", "web/index.html", "tools/page-box.json", "tools/site-seo.mjs"]) {
+    const t = read(f);
+    assert.doesNotMatch(t, /(small 3% fee|A small fee|a small fee|\(3% today\)|3% fee|minus 3%|0\.97 KOIN)/, `${f} still names the old fee`);
+  }
+  assert.match(src, /fee_bps \?\? 1000\)/, "swap.js: fallback fee is 10%");
+  assert.match(src, /config: \{ fee_bps: 1000,/, "swap.js: the ?demo config uses 10%");
+});

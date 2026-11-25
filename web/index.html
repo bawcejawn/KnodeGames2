@@ -40,6 +40,34 @@
   <link rel="stylesheet" href="vault-card.css">
   <link rel="stylesheet" href="board.css">
   <link rel="stylesheet" href="page-box.css">
+  <!-- Speed (Tue 24 Nov): start every script download now, all at once. The CSP tag above stops the browser looking
+       ahead, so without these lines the 23 scripts at the end of the page download one after another (~15 s on a slow
+       phone, ~5.5 s with them). These are only hints: the script tags at the end of the page still load and run each file in the same
+       order, so a missing or failed hint changes nothing but speed. Keep one line per script tag at the end of the page (tested by
+       tests/audit/site.speed-budget.test.mjs). PostHog last, at low priority. -->
+  <link rel="preload" as="script" href="data-source.js">
+  <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js" integrity="sha384-IAL9o3r4bQJvWhvszkorFINY2ct4LBA/LvyXE9NSOPCyYB25BsFV12JITA7Gxbk6" crossorigin="anonymous">
+  <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js" integrity="sha384-WOeNFfSdOron0s4x9jdzLtA7Ic7RSqZCXZAaeQd6HRL6WezQp0KAtIF2XSa+11TL" crossorigin="anonymous">
+  <link rel="preload" as="script" href="demo-data.js">
+  <link rel="preload" as="script" href="extras.js">
+  <link rel="preload" as="script" href="guest.js">
+  <link rel="preload" as="script" href="wallet.js">
+  <link rel="preload" as="script" href="names.js">
+  <link rel="preload" as="script" href="header-wallet.js">
+  <link rel="preload" as="script" href="nav.js">
+  <link rel="preload" as="script" href="stake-panel.js">
+  <link rel="preload" as="script" href="weeks.js">
+  <link rel="preload" as="script" href="app.js">
+  <link rel="preload" as="script" href="board.js">
+  <link rel="preload" as="script" href="leaders.js">
+  <link rel="preload" as="script" href="ruler-void.js">
+  <link rel="preload" as="script" href="race-math.js">
+  <link rel="preload" as="script" href="results.js">
+  <link rel="preload" as="script" href="stats.js">
+  <link rel="preload" as="script" href="vault-card.js">
+  <link rel="preload" as="script" href="start-sheet.js">
+  <link rel="preload" as="script" href="vendor/posthog-1.438.13.js" fetchpriority="low">
+  <link rel="preload" as="script" href="analytics.js" fetchpriority="low">
   <link rel="stylesheet" href="hub-ui.css">
 </head>
 <body class="play-wait">
@@ -150,7 +178,7 @@
           <a class="also-card gtile" href="lastnode.html" data-game="lastnode"><span class="gi acc-violet" aria-hidden="true">🏁</span><div><b>Last Node Standing</b><p>Every hour the unluckiest node is knocked out. Ride the last one standing.</p></div></a>
           <a class="also-card gtile" href="vs.html" data-game="vs"><span class="gi acc-mint" aria-hidden="true">🆚</span><div><b>Knode Games VS</b><p>Pick which producers beat our node. One call a day.</p></div></a>
           <a class="also-card gtile" href="overunder.html" data-game="overunder"><span class="gi acc-sun" aria-hidden="true">↕️</span><div><b>More or Fewer</b><p>Call whether a producer signs more or fewer blocks than the number shown. A new game every 30 minutes.</p></div></a>
-          <a class="also-card gtile" href="combo.html" data-game="combo"><span class="gi acc-hot" aria-hidden="true">🎟️</span><div><b>Combo Card</b><p><span class="tile-tag">Preview</span> Build a card of 2 to 10 calls. Every leg must hit. Opens Mon 7 Dec.</p></div></a>
+          <a class="also-card gtile" href="combo.html" data-game="combo"><span class="gi acc-hot" aria-hidden="true">🎟️</span><div><b>Combo Card</b><p><span class="tile-tag">Preview</span> Build a card of 2 to 10 calls. Every leg must hit. Practice from Wed 25 Nov.</p></div></a>
           <a class="also-card gtile" href="survivor.html" data-game="survivor"><span class="gi acc-blue" aria-hidden="true">🛡️</span><div><b>Survivor</b><p><span class="tile-tag">Practice</span> One producer a day, two lives. Season 1 starts Mon 30 Nov.</p></div></a>
           <a class="also-more" href="games.html">See every game and your standing →</a>
           <h2 class="game-head">More from Knode Games</h2>
@@ -422,14 +450,14 @@
         <p class="rules-cta"><a class="btn btn-primary btn-big" href="fantasy.html">Go to Fantasy Producers</a></p>
       </div>
       <div class="rules-panel" id="rp-swap" data-rules-panel="swap" role="tabpanel" aria-labelledby="rt-swap" hidden>
-        <div class="rules-short"><h2>In short</h2><p>Turn VHP back into KOIN right now. On its own, VHP only turns back into KOIN slowly as it produces blocks. Knode Games Swap pays you KOIN at once, 1:1 minus a 3% fee.</p></div>
+        <div class="rules-short"><h2>In short</h2><p>Turn VHP back into KOIN right now. On its own, VHP only turns back into KOIN slowly as it produces blocks. Knode Games Swap pays you KOIN at once, 1:1 minus a 10% fee.</p></div>
         <ol class="rules-steps">
           <li><span class="ri" aria-hidden="true">👛</span><div><b>Open Swap and connect</b><p>Kondor or KOIN Vault. You need nothing else: no account, no sign-up.</p></div></li>
           <li><span class="ri" aria-hidden="true">🔢</span><div><b>Enter how much VHP</b><p>From 1 VHP up to the largest swap the page shows.</p></div></li>
           <li><span class="ri" aria-hidden="true">✅</span><div><b>Approve once</b><p>You send VHP and get KOIN in the same transaction.</p></div></li>
         </ol>
         <div class="rules-good"><h3>Good to know</h3><ul>
-          <li><b>3% fee:</b> 1 VHP gets you 0.97 KOIN.</li>
+          <li><b>10% fee:</b> 1 VHP gets you 0.90 KOIN.</li>
           <li><b>Safe by design.</b> Both sides move together or nothing moves. The desk never holds anyone else's funds.</li>
           <li><b>Knode Games pays the Mana</b> for wallets that hold VHP, within daily limits.</li>
           <li><b>The largest swap</b> depends on the KOIN the desk holds right now, and it grows with every block the desk produces.</li>
@@ -540,7 +568,7 @@
   <script src="stats.js"></script>
   <script src="vault-card.js"></script>
   <script src="start-sheet.js"></script>
-  <script src="vendor/posthog-1.438.13.js"></script>
-  <script src="analytics.js"></script>
+  <script src="vendor/posthog-1.438.13.js" defer></script>
+  <script src="analytics.js" defer></script>
 </body>
 </html>
