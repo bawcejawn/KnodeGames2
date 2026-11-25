@@ -76,6 +76,13 @@ export function playFree(file) {
 const RULES_TAB = { "race.html": "race", "swap.html": "swap" };
 export const FOOT = [["New here? Quick tour", "#welcome"], ["Trust", "trust.html"], ["Fairness", "fairness.html"], ["Terms &amp; risks", "terms.html"], ["Install app", "install.html"], ["Source code", "https://github.com/bawcejawn/KnodeGames2"]];
 
+// One icon per game everywhere (D-748): a game's link in the Games drop-down and the More sheet shows that game's emoji
+// from web/games.json ("icon"), the same one as its Home tile and its All games card (tests/audit/site.game-icons.test.mjs).
+const GAMES = JSON.parse(fs.readFileSync(ROOT + "games.json", "utf8")).games;
+/** The menu link ("race.html", "#play") → the game's emoji, for every game in games.json. */
+export const GAME_ICON = new Map(GAMES.filter((g) => typeof g.icon === "string" && g.href)
+  .map((g) => [g.href === "index.html#play" ? "#play" : g.href, g.icon]));
+const mi = (link) => (GAME_ICON.has(link) ? `<span class="mi" aria-hidden="true">${GAME_ICON.get(link)}</span>` : "");
 const svg = (k) => `<svg aria-hidden="true" viewBox="0 0 24 24">${I[k]}</svg>`;
 function href(file, link) {
   if (!link.startsWith("#")) return `href="${link}"`;
@@ -85,7 +92,7 @@ function href(file, link) {
 /** The tab bar and More sheet for one page. */
 export function navBlock(file) {
   const tabs = TABS.map(([l, h, i]) => `    <a ${href(file, h)}>${svg(i)}${l}</a>`);
-  const more = MORE_GROUPS.flatMap(([g, links]) => [`      <p class="ms-h">${g}</p>`, ...links.map(([l, h, i]) => `      <a ${href(file, h)}>${svg(i)}<span>${l}</span></a>`)]);
+  const more = MORE_GROUPS.flatMap(([g, links]) => [`      <p class="ms-h">${g}</p>`, ...links.map(([l, h, i]) => `      <a ${href(file, h)}>${mi(h) || svg(i)}<span>${l}</span></a>`)]);
   return [
     '<nav class="tabbar" aria-label="Main">',
     ...tabs,
@@ -105,12 +112,12 @@ const cur = (file, link) => (!link.startsWith("#") && !link.startsWith("http") &
 
 /** The top menu for one page. */
 export function topBlock(file) {
-  const a = (l, h, cls) => `<a ${href(file, h === "#how" && RULES_TAB[file] ? `#how/${RULES_TAB[file]}` : h)}${cls ? ` class="${cls}"` : ""}${cur(file, h)}>${l}</a>`;
+  const a = (l, h, cls, icon = "") => `<a ${href(file, h === "#how" && RULES_TAB[file] ? `#how/${RULES_TAB[file]}` : h)}${cls ? ` class="${cls}"` : ""}${cur(file, h)}>${icon}${l}</a>`;
   const rows = TOP.map((t) => {
     if (!t.items) return `        ${a(t.label, t.link, t.cls)}`;
     const on = t.items.some(([, h]) => cur(file, h));
     return [`        <details class="dd${on ? " on" : ""}">`, `          <summary>${t.label}</summary>`, '          <div class="dd-menu">',
-      ...t.items.map(([l, h]) => `            ${a(l, h)}`), "          </div>", "        </details>"].join("\n");
+      ...t.items.map(([l, h]) => `            ${a(l, h, undefined, t.label === "Games" ? mi(h) : "")}`), "          </div>", "        </details>"].join("\n");
   });
   return ['<nav class="tabs" aria-label="Sections">', ...rows, "      </nav>", `      ${playFree(file)}`].join("\n");
 }

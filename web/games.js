@@ -14,20 +14,10 @@
   const PRIZE_URL = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/prize-settings/free-prizes.json";
   const RACE_DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/";
   const $ = (id) => document.getElementById(id);
-  const SVG = "http://www.w3.org/2000/svg";
 
-  // Card icons (fixed drawings, never from data).
-  const ICONS = {
-    race: ["M5 21V4", "M5 4h12l-2.5 4L17 12H5"],
-    questions: ["M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"],
-    blockx: ["M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z", "M9 12h6", "M12 9v6"],
-    survivor: ["M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z", "M9 12l2 2 4-4"],
-    fantasy: ["M12 5a3 3 0 1 1 0 6a3 3 0 1 1 0-6z", "M5 20c1-4 4-6 7-6s6 2 7 6"],
-    golf: ["M7 21V4l9 4-9 4", "M4 21h8"],
-    bracket: ["M4 5h5v4H4z", "M4 15h5v4H4z", "M15 10h5v4h-5z", "M9 7h3v10H9", "M12 12h3"],
-    overunder: ["M12 4v16", "M7 9l5-5 5 5", "M7 15l5 5 5-5"],
-    combo: ["M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z", "M14 5v14"],
-  };
+  // Card icons: the game's own emoji and tile colour from games.json ("icon", "accent"), the same as Home and the menus
+  // (D-748; tests/audit/site.game-icons.test.mjs). Checked in clean(); drawn with textContent only.
+  const ACCENTS = new Set(["blue", "violet", "mint", "sun", "hot"]);
   const KINDS = { free: "Free play", staked: "Staked" };
 
   function el(tag, attrs, ...kids) {
@@ -35,12 +25,6 @@
     for (const [k, v] of Object.entries(attrs || {})) { if (v == null) continue; if (k === "text") e.textContent = v; else e.setAttribute(k, v); }
     for (const c of kids) if (c) e.append(c);
     return e;
-  }
-  function icon(id) {
-    const s = document.createElementNS(SVG, "svg");
-    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true");
-    for (const d of ICONS[id] || ICONS.blockx) { const p = document.createElementNS(SVG, "path"); p.setAttribute("d", d); s.append(p); }
-    return s;
   }
   const dur = (ms) => {
     if (!(ms > 0)) return "now";
@@ -57,7 +41,9 @@
       && typeof g.line === "string" && g.line.length <= 200 && Array.isArray(g.kinds) && g.kinds.length && g.kinds.every((k) => k in KINDS)
       && (g.status === "live" || g.status === "soon" || g.status === "preview") && typeof g.href === "string"
       && (g.status === "soon" ? g.href === "" : /^[a-z0-9-]+\.html(#[a-z/]+)?$/.test(g.href))
-      && (g.opens === undefined || (typeof g.opens === "string" && g.opens.length <= 30));
+      && (g.opens === undefined || (typeof g.opens === "string" && g.opens.length <= 30))
+      && typeof g.icon === "string" && g.icon.length >= 1 && g.icon.length <= 8 && !/[<>&"'A-Za-z0-9\s]/.test(g.icon)
+      && typeof g.accent === "string" && ACCENTS.has(g.accent);
     return Array.isArray(list) ? list.filter(ok).slice(0, 40) : [];
   }
 
@@ -202,7 +188,7 @@
       el("span", { class: "g-line", text: typesLive() && typeof g.lineTypes === "string" && g.lineTypes.length <= 200 ? g.lineTypes : g.line }),
       live && status[g.id] ? el("span", { class: "g-st", "data-status": g.id }) : null,
       live && VAULT_IDS[g.id] ? el("span", { class: "g-stake", "data-stake": String(VAULT_IDS[g.id]), hidden: "" }) : null);
-    const ic = el("span", { class: "g-ic" }); ic.append(icon(g.id));
+    const ic = el("span", { class: `g-ic gi acc-${g.accent}`, "aria-hidden": "true", text: g.icon });
     return live || preview
       ? el("a", { class: "g" + (preview ? " preview" : ""), href: g.href, "data-game": g.id }, ic, body, el("span", { class: "g-go", "aria-hidden": "true", text: "›" }))
       : el("div", { class: "g soon", "data-game": g.id }, ic, body);
