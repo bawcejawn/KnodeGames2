@@ -523,11 +523,14 @@ function start() {
     } finally { sending = false; await loadMine(); }
   }
 
+  // "For the curious" shows only while one of its two boxes has something (Repo Lens #R3-30).
+  function syncCurious() { const c = $("curious"); if (c) c.hidden = $("mine-box").hidden && $("standings-box").hidden; }
+
   // ── my season, day by day ──
   function renderMine() {
     const box = $("mine-box"), mine = myRow();
-    if (!view || !me() || !mine) { box.hidden = true; return; }
-    box.hidden = false;
+    if (!view || !me() || !mine) { box.hidden = true; syncCurious(); return; }
+    box.hidden = false; syncCurious();
     const label = { safe: "Safe", life: "Lost a life", skip: "Didn't count (no ruler card)", pending: "Waiting for the result" };
     $("mine-rows").replaceChildren(...mine.log.map((x) => el("tr", { class: x.what === "life" ? "oz" : "" },
       el("td", { class: "num", text: String(x.n) }),
@@ -540,8 +543,8 @@ function start() {
   let board = "free";
   function setBoard(b) { board = b; $("board-free").setAttribute("aria-pressed", String(b === "free")); $("board-staked").setAttribute("aria-pressed", String(b === "staked")); renderStandings(); }
   function renderStandings() {
-    if (!view || !view.players.length) { $("standings-box").hidden = true; return; }
-    $("standings-box").hidden = false;
+    if (!view || !view.players.length) { $("standings-box").hidden = true; syncCurious(); return; }
+    $("standings-box").hidden = false; syncCurious();
     const who = me(), rows = placesOf(view.players, board);
     const inNow = view.players.filter((x) => x.outN === null).length;
     $("standings-title").textContent = `Season ${viewSeason} standings`;

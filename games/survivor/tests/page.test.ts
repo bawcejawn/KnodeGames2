@@ -149,4 +149,5 @@ test("page source: built with textContent (no HTML strings), the rules come from
   assert.ok(!/survivor-math\.js/.test(html) && /<script type="module" src="survivor\.js"><\/script>/.test(html));
   assert.ok(!/fields\.json|S0\d\d\.json/.test(js), "no reads of the old recorder's files");
   assert.ok(/https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//.test(html), "the CSP allows the games-data branch");
+  assert.ok(/<details class="fold" id="curious" hidden>/.test(html) && /c\.hidden = \$\("mine-box"\)\.hidden && \$\("standings-box"\)\.hidden/.test(js), "an empty For the curious row stays hidden (Repo Lens #R3-30)");
 });
