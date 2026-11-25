@@ -30,10 +30,10 @@ test("no Fantasy banner on any page, at any time (owner, Sat 21 Nov: the 'Fantas
 
 test("Fantasy page note and the games list say week 4 is a free test and every week is real from Sun 22 Nov 7 PM ET", () => {
   const h = fs.readFileSync(`${APP}/web/fantasy.html`, "utf8"), g = JSON.parse(fs.readFileSync(`${APP}/web/games.json`, "utf8"));
-  assert.match(h, /<b>Week 4 is a free test week\.<\/b>[^<]*test play starts with the Tue 17 Nov round \(first lock Mon 16 Nov, 6:55 PM ET\)\. Week 5 \(Sun 22 Nov, 7 PM ET to Sun 29 Nov, 7 PM ET\) is free play too: no stakes are taken\. Week 5 starts with no teams: pick yours before Sun 22 Nov, 6:55 PM ET\./);
+  assert.match(h, /<b>Week 4 is a free test week\.<\/b>[^<]*test play starts with the Tue 17 Nov round \(first lock Mon 16 Nov, 6:55 PM ET\)\. Week 5 \(Sun 22 Nov, 7 PM ET to Sun 29 Nov, 7 PM ET\) is free play too\. Week 5 starts with no teams: pick yours before Sun 22 Nov, 6:55 PM ET\. <b>Stake now: it counts from week 6 \(Sun 29 Nov, 7 PM ET\)\. Weeks 4 and 5 are free play\.<\/b>/);
   assert.doesNotMatch(h, /planned for Mon 30 Nov|Test weeks/);
   const f = (g.games || g).find((x) => x.id === "fantasy");
-  assert.match(f.line, /Weeks 4 and 5 are free play, with no stakes \(to Sun 29 Nov, 7 PM ET\)\.$/);
+  assert.match(f.line, /Weeks 4 and 5 are free play\. Stake now: it counts from week 6 \(Sun 29 Nov, 7 PM ET\)\.$/);
   assert.doesNotMatch(f.line, /Test weeks/);
   // The page hides its note from Mon 23 Nov 00:00 UTC (Sun 22 Nov 7 PM ET), the end of week 4.
   assert.match(fs.readFileSync(`${APP}/web/fantasy.js`, "utf8"), /TEST_WEEK_ENDS = Date\.UTC\(2026, 10, 30\);   \/\/ weeks 4 and 5 are free play \(D-238\)\n  if \(Date\.now\(\) >= TEST_WEEK_ENDS && \$\("fx-testweeks"\)\) \$\("fx-testweeks"\)\.hidden = true;/);

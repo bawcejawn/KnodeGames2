@@ -18,7 +18,7 @@ name: Combo Card recorder
 
 on:
   schedule:
-    - cron: "52 * * * *"     # every hour at minute 52, after the race (:37) and Block X (:47) recorders
+    - cron: "22 * * * *"     # every hour at minute 22, after the race (:37/:41) and Block X (:47/:51) recorders of the hour before; the Worker kg-dispatch-2 also starts it at :22 (AB-072)
   workflow_dispatch: {}
 
 concurrency:

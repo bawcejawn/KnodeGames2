@@ -306,10 +306,15 @@ import * as SP from "./js/lib/send-picks.js";
   /** The status line while an hour's ruler card is due (Last Node chat, 15 Nov 2026). The card usually lands within minutes;
    *  past 30 minutes the page says plainly that the ruler is late, and what the 48-hour fallback does (owner, 14 Nov). */
   const RULER_LATE = 30 * 60000, RULER_GRACE = 48 * 3600000;
-  function lateNote(late) {
+  // Live check, 24 Nov (M-570): when the recorder itself hasn't run (board.json's `updated` is old), the hour isn't late
+  // on the ruler: say that the page's results are behind, not that the ruler is late or that the event may be cancelled.
+  const DATA_STALE = 45 * 60000;
+  const agoText = (ms) => (ms < 90 * 60000 ? `${Math.round(ms / 60000)} minutes` : `about ${Math.round(ms / 3600000)} hours`);
+  function lateNote(late, stale) {
+    if (stale >= DATA_STALE) return ` · this page's results were last updated ${agoText(stale)} ago (normally every 20 minutes). Nothing is lost: the next update catches up.`;
     if (!(late >= RULER_LATE)) return " · waiting for the hour's ruler card (it decides the cut)";
-    const hrs = late / 3600000, left = Math.max(0, RULER_GRACE - late) / 3600000;
-    const ago = hrs < 1.5 ? `${Math.round(late / 60000)} minutes` : `about ${Math.round(hrs)} hours`;
+    const left = Math.max(0, RULER_GRACE - late) / 3600000;
+    const ago = agoText(late);
     return ` · the VHP ruler is running late (this hour's card is ${ago} overdue). The cut waits for it: nothing is decided without it.` +
       (left > 0 ? ` If it's still missing in about ${Math.max(1, Math.round(left))} hours, today's event is cancelled and no one scores.` : " Today's event is being cancelled: no one scores.");
   }
@@ -322,7 +327,7 @@ import * as SP from "./js/lib/send-picks.js";
     $("ev-clock-label").textContent = res.done ? "Last Node Standing" : now < ev.start ? "until the drop" : `until hour ${V.hour + 1}'s cut`;
     $("ev-sub").textContent = res.done ? `${res.cuts.length} nodes out over ${V.hour} hours, ${clock(ev.start)} to ${clock(df.start + V.hour * H)}.`
       : now < ev.start ? `${n} nodes. Picks close at ${clock(cutoff(ev.round))}, first cut at ${clock(ev.start + H)}.`
-      : `${V.standing.length} of ${n} still standing${now >= nextCut ? lateNote(now - nextCut) : V.live ? " · luck this hour is an estimate until the hour's card is in" : ""}`;
+      : `${V.standing.length} of ${n} still standing${now >= nextCut ? lateNote(now - nextCut, board && board.updated ? now - Date.parse(board.updated) : 0) : V.live ? " · luck this hour is an estimate until the hour's card is in" : ""}`;
     const mine = myState(ev, df, res);
     legendYou(ev, mine);
     const just = seen && seen.day === ev.day && res.cuts.length > seen.cuts ? res.cuts[res.cuts.length - 1] : null;

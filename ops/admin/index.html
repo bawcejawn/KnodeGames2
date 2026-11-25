@@ -66,6 +66,16 @@
   .card.emergency { border-left: 4px solid var(--bad); }
   .card-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
   .card-top h4 { margin: 0 6px 0 0; font-size: 15.5px; }
+  details.card { padding: 10px 16px; margin: 6px 0; } details.card[open] { padding-bottom: 14px; }
+  details.card > summary { cursor: pointer; list-style: none; margin: 0; } details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before { content: "▸"; color: var(--muted); margin-right: 2px; } details.card[open] > summary::before { content: "▾"; }
+  details.card[open] > summary { margin-bottom: 8px; }
+  .gist { flex: 1 1 100%; font-size: 13px; color: var(--muted); margin-left: 14px; } details.card[open] .gist { display: none; }
+  .jump { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; margin: 0 0 4px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .jump .spacer { flex: 1; }
+  .chip { font: 13px inherit; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .today { border-left: 4px solid var(--accent); }
   .where { font-size: 12.5px; color: var(--muted); margin: -2px 0 6px; }
   .info { display: grid; grid-template-columns: 110px 1fr; gap: 3px 10px; font-size: 14px; margin: 0 0 10px; }
   .info dt { color: var(--muted); }
@@ -99,6 +109,12 @@
   .copy { font: 12px inherit; padding: 2px 9px; margin-left: 8px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--accent); cursor: pointer; }
   .raw { margin: 8px 0; } .raw pre { max-height: 260px; overflow: auto; border-radius: 8px; }
   .swtable td:first-child { white-space: nowrap; }
+  .numtbl { margin-top: 12px; }
+  .st-ok { color: var(--ok); font-weight: 600; } .st-late, .st-error { color: var(--bad); font-weight: 600; } .st-none { color: var(--muted); }
+  .cal-day { margin: 18px 0 6px; font-size: 16px; } .cal-day.today { color: var(--accent); } .cal-day.past { color: var(--muted); }
+  .cal tr.past td { color: var(--muted); } .cal td.t { white-space: nowrap; width: 150px; } .cal td.k { width: 80px; } .cal .copy { margin: 4px 0 0; }
+  .kindtag { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .kindtag.chain { border-color: var(--bad); color: var(--bad); } .kindtag.freeze, .kindtag.away { border-color: var(--warn); color: var(--warn); } .kindtag.merge { border-color: var(--accent); color: var(--accent); }
 
   /* output */
   .out { position: sticky; top: 12px; align-self: start; }
@@ -195,7 +211,7 @@
 
   // `preset` fixes some values (the game's id, name and season on a game's own cards): those boxes are read-only, so a
   // card opened for one game cannot act on another by mistake. The server checks every value again.
-  function card(a, withWhere, preset = {}) {
+  function card(a, withWhere, preset = {}, open = false) {
     const area = CAT.areas.find((x) => x.id === a.area);
     const inputs = (a.params || []).map((p) => {
       const input = p.choices ? el("select", { name: p.name }, ...p.choices.map((c) => el("option", { value: c }, c))) : el("input", { name: p.name, placeholder: p.hint, autocomplete: "off", spellcheck: "false", value: preset[p.name] ?? p.value ?? null, readonly: p.name in preset });
@@ -228,12 +244,15 @@
     runBtn.addEventListener("click", () => go(false));
     if (sendBtn) sendBtn.addEventListener("click", () => go(true));
     const [effText, effCls] = EFFECT[a.effect];
-    return el("div", { class: "card" + (a.kind === "emergency" ? " emergency" : "") },
-      el("div", { class: "card-top" },
+    // Each card is one line until you open it (owner, 24 Nov: long pages are hard to search by eye).
+    const first = String(a.what).split(/(?<=\.)\s/)[0];
+    return el("details", { class: "card" + (a.kind === "emergency" ? " emergency" : ""), "data-card": a.id, open },
+      el("summary", { class: "card-top" },
         el("h4", {}, a.label),
         a.step ? el("span", { class: "tag step" }, `Step ${a.step}`) : null,
         el("span", { class: "tag " + effCls }, effText),
-        a.effect !== "chain" ? null : el("span", { class: "tag " + (a.testnet ? "testnet" : "mainnet") }, a.testnet ? "Testnet" : "Mainnet")),
+        a.effect !== "chain" ? null : el("span", { class: "tag " + (a.testnet ? "testnet" : "mainnet") }, a.testnet ? "Testnet" : "Mainnet"),
+        el("span", { class: "gist" }, first)),
       withWhere ? el("div", { class: "where" }, `${area.name} · ${CAT.kinds[a.kind].title}`) : null,
       el("dl", { class: "info" },
         el("dt", {}, "What it does"), el("dd", {}, a.what),
@@ -266,13 +285,22 @@
   const GUIDE_STEPS = ["Open GitHub's repository variables page with the button below.", "Press New repository variable (or the pencil to edit an existing one).", "Type the switch's name exactly as shown, and the value in the format shown. Press Add variable.", "Come back here and press the matching status check to see the platform pick it up (the next hourly run)."];
   const switchGuide = () => guide({ title: "How to set a switch on GitHub (this page never holds a GitHub token)", steps: GUIDE_STEPS, link: { label: "Open GitHub repository variables", url: CAT.variablesUrl } });
 
+  // An area's cards, grouped by kind: a jump bar with counts, open-all / close-all, and the cards each one line until
+  // opened, in the order actions.ts lists them (so a hand-over's step 1 and step 2 stay together). Cards marked done (a step already taken) go to one closed group at the bottom, kept for the record.
   function byKind(list) {
-    const out = [];
-    for (const k of Object.keys(CAT.kinds)) {
-      const items = list.filter((a) => a.kind === k).sort((x, y) => (x.step || 0) - (y.step || 0));
-      if (!items.length) continue;
-      out.push(el("div", { class: "kind " + k }, el("h3", {}, CAT.kinds[k].title), el("p", {}, CAT.kinds[k].blurb)), ...items.map((a) => card(a, false)));
-    }
+    const live = list.filter((a) => !a.done), done = list.filter((a) => a.done);
+    const groups = Object.keys(CAT.kinds).map((k) => [k, live.filter((a) => a.kind === k)]).filter(([, items]) => items.length);
+    if (!groups.length && !done.length) return [];
+    const toggle = (open) => () => { for (const d of document.querySelectorAll("#main details.card")) d.open = open; };
+    const bar = el("nav", { class: "jump", "aria-label": "Jump to a group" },
+      ...groups.map(([k, items]) => el("button", { type: "button", class: "chip", onclick: () => document.getElementById("kind-" + k).scrollIntoView({ block: "start" }) }, `${CAT.kinds[k].title} (${items.length})`)),
+      done.length ? el("button", { type: "button", class: "chip", onclick: () => { const d = document.getElementById("kind-done"); d.open = true; d.scrollIntoView({ block: "start" }); } }, `Done (${done.length})`) : null,
+      el("span", { class: "spacer" }),
+      el("button", { type: "button", class: "chip", onclick: toggle(true) }, "Open all"), el("button", { type: "button", class: "chip", onclick: toggle(false) }, "Close all"));
+    const out = [bar];
+    for (const [k, items] of groups) out.push(el("div", { class: "kind " + k, id: "kind-" + k }, el("h3", {}, `${CAT.kinds[k].title} (${items.length})`), el("p", {}, CAT.kinds[k].blurb)), ...items.map((a) => card(a, false)));
+    if (done.length) out.push(el("details", { class: "gbox", id: "kind-done" }, el("summary", {}, `Done, kept for the record (${done.length}): steps already taken; don't use them unless a chat asks`),
+      ...done.map((a) => el("div", {}, el("div", { class: "note" }, a.done), card(a, false)))));
     return out;
   }
 
@@ -313,6 +341,7 @@
           if (id === "glance-vault") { const m = line(r.output || "", /^\s*game\s+(\d+)\b\s*(.*)$/i); for (const g of CAT.games) { const c = cells[g.id].v; c.textContent = m[g.id] || (r.code === 0 ? "Not in the vault (or not shown): see the raw result" : "Could not read: see the raw result"); c.className = "live-val"; } }
           if (id === "glance-prizes") {
             const m = line(r.output || "", /^\s*(\d+)\s+(.*)$/);
+            for (const o of CAT.otherGames || []) { const c = otherCells[o.id]; if (c) { c.textContent = m[o.id] || (r.code === 0 ? "No switch set (see the raw result)" : "Could not read: see the raw result"); c.className = "live-val"; } }
             for (const g of CAT.games) {
               const c = cells[g.id].pz; c.textContent = m[g.id] || (r.code === 0 ? "See the raw result" : "Could not read: see the raw result"); c.className = "live-val";
               // Flag any game whose live switch (next week's, when it is shown) is not what the plan says. Best effort: when the line can't be read nothing is claimed.
@@ -324,11 +353,23 @@
         show("Checked everything. Nothing was changed.", "status-ok", "Read-only checks", "");
       } finally { running = false; checkBtn.disabled = false; }
     });
+    // Games not in the vault's list (Over Under until Vault adds it; VS never): their own rows and their prize cards.
+    const otherCells = {};
+    const otherRows = (CAT.otherGames || []).map((o) => {
+      const area = CAT.areas.find((x) => x.id === o.area), pz = el("td", { class: "live-val dim" }, "Press Check everything");
+      otherCells[o.id] = pz;
+      return el("tr", {}, el("td", {}, el("b", {}, o.name), el("br"), el("span", { class: "dim" }, `game ${o.id}${o.players ? ` · players see “${o.players}”` : ""}`)),
+        el("td", {}, area ? el("span", { class: "pill " + area.status }, STATUS[area.status]) : "", el("br"), el("span", { class: "dim" }, o.now)),
+        el("td", {}, o.vault), el("td", {}, el("span", { class: "dim" }, o.freePrize), el("br"), pz));
+    });
+    const otherBoxes = (CAT.otherGames || []).map((o) => el("details", { class: "gbox" }, el("summary", {}, `${o.name} (game ${o.id}): free-prize switch`),
+      el("div", { class: "note" }, o.vault),
+      ...["prizes-off", "prizes-on"].map((id) => card(CAT.actions.find((x) => x.id === id), false, { game: String(o.id) }))));
     const launch = (g) => (CAT.launch.find((l) => l.game === g.id) || { steps: [] });
     const boxes = CAT.games.map((g) => {
       const L = launch(g);
       return el("details", { class: "gbox" }, el("summary", {}, `${g.name} (game ${g.id}): staking, prize and launch`),
-        el("h4", {}, "Where it stands"), L.dates ? el("div", { class: "note" }, L.dates + " (taken from the project docs on 12 Nov: the status checks above are the truth.)") : null,
+        el("h4", {}, "Where it stands"), L.dates ? el("div", { class: "note" }, L.dates + ` (as of ${CAT.launchAsOf}: the status checks above are the truth.)`) : null,
         el("ol", { class: "steps" }, ...L.steps.map((t) => el("li", {}, t.text))),
         el("h4", {}, "Staking and free prize (preview first, then send)"), ...stakeCards(g),
         gameVars(g).length ? el("h4", {}, "Its switches on GitHub") : null, gameVars(g).length ? varTable(gameVars(g)) : null);
@@ -336,9 +377,11 @@
     return [
       el("div", { class: "btns" }, checkBtn),
       el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ...["Game", "Page", "In the vault", "Free prize (2 + 1 VHP)", "Its GitHub switches"].map((h) => el("th", {}, h)))), el("tbody", {}, ...rows)),
+      el("div", { class: "kind" }, el("h3", {}, "Not in the vault's list yet"), el("p", {}, "Over Under joins the table above once Vault adds it to the vault's list; Knode Games VS is never a vault game.")),
+      el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ...["Game", "Page", "Vault", "Free prize (2 + 1 VHP)"].map((h) => el("th", {}, h)))), el("tbody", {}, ...otherRows)),
       raw,
       el("div", { class: "kind" }, el("h3", {}, "Every game: staking, prize and launch steps"), el("p", {}, "Open a game to see its steps in order and its own cards. The cards are the Knode Vault's, with the game's id fixed so one cannot act on another.")),
-      ...boxes,
+      ...boxes, ...otherBoxes,
       el("div", { class: "kind" }, el("h3", {}, "Every staked game follows the same order")),
       el("ol", { class: "steps" }, ...CAT.standardSteps.map((t) => el("li", {}, t.text))),
     ];
@@ -354,6 +397,91 @@
       el("p", {}, "Each game's free 2 + 1 VHP prize switch lives in free-prizes.json on the prize-settings branch. They are the only switches the page sets itself: preview, then write the file, in Games at a glance or Knode Vault. A change takes effect from the next Monday 00:00 UTC, never this week."),
     ];
   }
+
+  // Health checks: the recorders' last publish and the site's boards, results and free-prize switches (read-only GETs).
+  const STATE = { ok: "OK", late: "LATE", none: "No file yet", error: "Could not read" };
+  const ago = (m) => m == null ? "" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ${m % 60} min ago`;
+  function healthView() {
+    const rec = el("div", {}, el("p", { class: "dim" }, "Reading…")), site = el("div", {}, el("p", { class: "dim" }, "Reading…"));
+    const loadRec = async () => {
+      rec.replaceChildren(el("p", { class: "dim" }, "Reading…"));
+      try {
+        const h = await api("/api/health");
+        const late = h.rows.filter((r) => r.state === "late");
+        rec.replaceChildren(...[
+          late.length ? el("div", { class: "banner bad" }, `Late: ${late.map((r) => r.name).join(", ")} last published more than 90 minutes ago. Open GitHub Actions and check its runs; if every recorder is late at once, check the Worker first.`) : null,
+          el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ...["Recorder", "Last published", "State", "Runs"].map((x) => el("th", {}, x)))),
+            el("tbody", {}, ...h.rows.map((r) => el("tr", {}, el("td", {}, el("b", {}, r.name), el("br"), el("code", { class: "dim" }, r.file)),
+              el("td", {}, r.updated ? `${new Date(r.updated).toLocaleString()} (${ago(r.ageMin)})` : "—"),
+              el("td", { class: "st-" + r.state }, STATE[r.state] || r.state), el("td", { class: "dim" }, r.runs))))),
+          el("p", { class: "note" }, "The Worker (Cloudflare, #103) starts the recorders at fixed times. The page can't see the Worker itself: when its recorders publish on time, it works. A file is rewritten when its recorder publishes, so a very quiet hour can also leave it older.")].filter(Boolean));
+      } catch (e) { rec.replaceChildren(el("div", { class: "banner bad" }, "Could not read the recorders: " + (e.message || e))); }
+    };
+    const loadSite = async () => {
+      site.replaceChildren(el("p", { class: "dim" }, "Reading…"));
+      try {
+        const d = await api("/api/site");
+        site.replaceChildren(...[
+          d.gamesError ? el("div", { class: "banner bad" }, d.gamesError) : null,
+          d.prizesRead ? null : el("div", { class: "banner bad" }, "The free-prize file (prize-settings branch) could not be read."),
+          el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ...["Game", "Leaderboard entry", "Results entry", `Free prize week ${d.week} (now)`, `Week ${d.week + 1} (next)`].map((x) => el("th", {}, x)))),
+            el("tbody", {}, ...d.rows.map((r) => el("tr", {}, el("td", {}, el("b", {}, r.name), el("br"), el("span", { class: "dim" }, r.game ? `game ${r.game}` : r.id)),
+              el("td", { class: r.board ? "st-ok" : "st-none" }, r.board ? "yes" : "no"), el("td", { class: r.results ? "st-ok" : "st-none" }, r.results ? "yes" : "no"),
+              el("td", {}, r.prizeThisWeek), el("td", {}, r.prizeNextWeek))))),
+          el("p", { class: "note" }, "The Leaderboard and Results pickers list a game only when it has an entry here (web/games.json on this PC: run git pull first). The free-prize switch is read from the public prize-settings file.")].filter(Boolean));
+      } catch (e) { site.replaceChildren(el("div", { class: "banner bad" }, "Could not read the site data: " + (e.message || e))); }
+    };
+    // Today and tomorrow from the calendar, at the very top, so the first screen says what's due.
+    const due = el("div", {});
+    (async () => {
+      try {
+        const r = await api("/api/calendar"); if (r.error || !r.calendar) return;
+        const d0 = new Date(), ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const today = ymd(d0), tomorrow = ymd(new Date(d0.getTime() + 86_400_000));
+        const items = r.calendar.items.filter((x) => x.date === today || x.date === tomorrow);
+        due.replaceChildren(el("div", { class: "card today" }, el("h4", {}, items.length ? "Due today and tomorrow" : "Nothing in the calendar for today or tomorrow"),
+          ...items.map((x) => el("div", {}, el("b", {}, `${x.date === today ? "Today" : "Tomorrow"}, ${x.time}: `), x.what)),
+          el("div", { class: "btns" }, el("button", { type: "button", class: "chip", onclick: () => openArea("thisweek") }, "The whole week"))));
+      } catch { /* the calendar has its own screen; nothing to add here */ }
+    })();
+    loadRec(); loadSite();
+    return [due,
+      el("div", { class: "kind" }, el("h3", {}, "Recorders: when each last published"), el("p", {}, "Read-only, from the public data branches. LATE means more than 90 minutes ago.")),
+      el("div", { class: "btns" }, el("button", { type: "button", class: "btn", onclick: loadRec }, "Read again")), rec,
+      el("div", { class: "kind" }, el("h3", {}, "Site data: boards, results and free prizes")),
+      el("div", { class: "btns" }, el("button", { type: "button", class: "btn", onclick: loadSite }, "Read again")), site,
+    ];
+  }
+  // This week: the calendar file, by day; past lines dimmed, today's day highlighted. Each line can open its card.
+  function calendarView() {
+    const box = el("div", {}, el("p", { class: "dim" }, "Reading…"));
+    const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    (async () => {
+      try {
+        const r = await api("/api/calendar");
+        if (r.error) return box.replaceChildren(el("div", { class: "banner bad" }, r.error));
+        const c = r.calendar, today = ymd(new Date()), days = [...new Set(c.items.map((x) => x.date))].sort();
+        const label = (d) => new Date(d + "T12:00:00").toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" });
+        box.replaceChildren(el("p", { class: "note" }, `${c.updated} ${c.note || ""}`),
+          ...days.flatMap((d) => [
+            el("h3", { class: "cal-day" + (d === today ? " today" : d < today ? " past" : "") }, label(d) + (d === today ? " (today)" : "")),
+            el("table", { class: "tbl cal" }, el("tbody", {}, ...c.items.filter((x) => x.date === d).map((x) => {
+              const a = x.card && CAT.actions.find((y) => y.id === x.card);
+              return el("tr", { class: d < today ? "past" : "" }, el("td", { class: "t" }, x.time), el("td", { class: "k" }, el("span", { class: "kindtag " + x.kind }, x.kind)),
+                el("td", {}, x.what, a ? el("div", {}, el("button", { type: "button", class: "copy", onclick: () => openCard(a) }, `Open the card: ${a.label}`)) : null));
+            }))),
+          ]));
+      } catch (e) { box.replaceChildren(el("div", { class: "banner bad" }, String(e.message || e))); }
+    })();
+    return [box];
+  }
+  function openCard(a) {
+    openArea(a.area);
+    const c = document.querySelector(`[data-card="${a.id}"]`);
+    if (c) { c.open = true; const g = c.closest("#kind-done"); if (g) g.open = true; c.scrollIntoView({ block: "start" }); c.style.outline = "2px solid var(--accent)"; setTimeout(() => { c.style.outline = ""; }, 2500); }
+  }
+  const numbersTable = (rows) => el("table", { class: "tbl numtbl" }, el("thead", {}, el("tr", {}, ...["Setting", "Agreed value", "Where it comes from"].map((x) => el("th", {}, x)))),
+    el("tbody", {}, ...rows.map((n) => el("tr", {}, el("td", {}, n.label), el("td", {}, el("b", {}, n.value)), el("td", { class: "dim" }, n.note || "")))));
 
   function openArea(id) {
     const area = CAT.areas.find((x) => x.id === id) || CAT.areas[0];
@@ -371,8 +499,11 @@
         el("p", {}, area.what),
         facts.length ? el("dl", { class: "facts" }, ...facts) : null,
         area.later ? el("div", { class: "later" }, area.later) : null,
+        area.numbers ? numbersTable(area.numbers) : null,
         ...(area.guides || []).map(guide),
-        !list.length && !area.later ? el("div", { class: "later" }, "No controls here yet.") : null),
+        !list.length && !area.later && area.id !== "thisweek" ? el("div", { class: "later" }, "No controls here yet.") : null),
+      ...(area.id === "overview" ? healthView() : []),
+      ...(area.id === "thisweek" ? calendarView() : []),
       ...(area.id === "glance" ? glanceView() : []),
       ...(area.id === "switches" ? switchesView() : []),
       ...(area.gameId && CAT.games.some((g) => g.id === area.gameId) && gameVars(CAT.games.find((g) => g.id === area.gameId)).length
@@ -386,10 +517,13 @@
     const sections = [...new Set(CAT.areas.map((a) => a.section))];
     for (const s of sections) {
       nav.append(el("div", { class: "side-sec" }, s));
-      for (const a of CAT.areas.filter((x) => x.section === s)) {
+      const rank = { live: 0, launching: 1, planned: 2, testnet: 3 };   // in Games: live first, then launching, then not live yet
+      const inSec = CAT.areas.filter((x) => x.section === s);
+      if (s === "Games") inSec.sort((x, y) => rank[x.status] - rank[y.status]);
+      for (const a of inSec) {
         const n = CAT.actions.filter((x) => x.area === a.id).length;
         const b = el("button", { type: "button", class: "area-btn" + (a.status === "planned" ? " planned" : ""), onclick: () => openArea(a.id) },
-          el("span", {}, a.name, el("br"), el("span", { class: "n" }, a.status === "planned" ? "no controls yet" : `${n} control${n === 1 ? "" : "s"}`)),
+          el("span", {}, a.name, el("br"), el("span", { class: "n" }, a.id === "thisweek" ? "dates and times" : a.status === "planned" ? "no controls yet" : `${n} control${n === 1 ? "" : "s"}`)),
           el("span", { class: "pill " + a.status }, STATUS[a.status]));
         b.dataset.id = a.id;
         nav.append(b);
@@ -408,7 +542,7 @@
     const vhits = CAT.variables.filter((v) => [v.name, v.what, v.when, v.note || "", v.format].join(" ").toLowerCase().includes(q));
     $("#main").replaceChildren(el("div", { class: "area-head" }, el("h2", {}, `Search: “${$("#search").value.trim()}”`), el("p", {}, `${hits.length} control${hits.length === 1 ? "" : "s"} and ${vhits.length} GitHub switch${vhits.length === 1 ? "" : "es"} across the platform.`)),
       ...(vhits.length ? [el("div", { class: "kind" }, el("h3", {}, "Switches on GitHub")), varTable(vhits)] : []),
-      ...(hits.length ? hits.map((a) => card(a, true)) : vhits.length ? [] : [el("p", { class: "empty" }, "Nothing matches. Try another word.")]));
+      ...(hits.length ? hits.map((a) => card(a, true, {}, hits.length <= 3)) : vhits.length ? [] : [el("p", { class: "empty" }, "Nothing matches. Try another word.")]));
   });
 
   (async () => {
@@ -416,7 +550,7 @@
     try { CAT = await api("/api/actions"); } catch (e) { return banner(String(e.message || e), true); }
     const v = CAT.version || {};
     $("#ver").textContent = `Version ${v.commit || "?"} on branch ${v.branch || "?"}${v.date ? ` (${v.date})` : ""}.`;
-    if (v.branch && v.branch !== "picks" && v.branch !== "main") banner(`This copy is on branch “${v.branch}”. The admin page is kept on picks: run git checkout picks, git pull, then npm run admin again.`, true);
+    if (v.branch && v.branch !== "main") banner(`This copy is on branch “${v.branch}”, not main. Close this window, then in PowerShell: git checkout main, git pull, npm ci, npm run admin.`, true);
     sidebar();
     openArea(store.get("kg-admin-area") || "overview");
   })();

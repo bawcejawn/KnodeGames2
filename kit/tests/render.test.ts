@@ -215,3 +215,29 @@ test("render: the run blocks are valid bash", { skip: NO_BASH }, () => {
   assert.ok(blocks.length >= 8);
   for (const b of blocks) { const r = spawnSync("bash", ["-n"], { input: b.replace(/\$\{\{[^}]*\}\}/g, "X"), encoding: "utf8" }); assert.equal(r.status, 0, r.stderr + "\n" + b.slice(0, 300)); }
 });
+
+// M-538: a game whose recorder wrote 0 files has no artifact: publish-kit says so as a notice, and downloads only when
+// the record job handed over files, so a real missing artifact stays an error.
+test("render: no files from a game -> a notice, not a download error (M-538)", () => {
+  const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
+  for (const g of ["fantasy", "vs", "overunder", "survivor"]) {
+    if (!kit.includes(`record-${g}:`)) continue;
+    assert.ok(kit.includes(`        if: \${{ needs.record-${g}.outputs.files == '0' }}\n        run: echo "::notice title=${g}::nothing to publish this run (its recorder wrote 0 files)"`), `${g}: the notice`);
+    assert.ok(kit.includes(`        if: \${{ needs.record-${g}.outputs.files != '0' && needs.record-${g}.outputs.files != '' }}\n        continue-on-error: true\n        with:\n          name: kit-games-data-${g}`), `${g}: the download only with files`);
+  }
+  assert.ok(kit.includes(`      files: \${{ steps.rec.outputs.files }}`));
+  assert.ok(kit.includes(`echo "files=$(find "$O" -type f | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"`));
+});
+
+// #R5-10-2 (B2 (2), L5): the publish job's push rule takes <slug>/live.json and nothing else named live.
+test("render: the publish push rule accepts <slug>/live.json and rejects other live.json paths (B2, #R5-10-2)", () => {
+  const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
+  const line = kit.split("\n").find((l) => l.includes('[[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|live|alltime|'));
+  assert.ok(line, "kit-games.yml has the push rule with live");
+  const m = line!.match(/=~ (\^.*\$) \]\]/);
+  assert.ok(m, "the rule's pattern is readable");
+  const re = new RegExp(m![1]);   // the rendered bash ERE is also a valid JS pattern here
+  assert.ok(re.test("fantasy/live.json"), "fantasy/live.json is pushed");
+  for (const bad of ["fantasy/W005/live.json", "fantasy/vault/live.json", "fantasy/lives.json", "live.json", "fantasy/live.json.x"]) assert.ok(!re.test(bad), `${bad} is refused`);
+  assert.ok(re.test("fantasy/board.json") && re.test("fantasy/W005.json"), "the old names still pass");
+});

@@ -1,10 +1,11 @@
 /* Fantasy Producers: the game's own look (the live page and the testnet practice page), on the site tokens in
  * styles.css. Matchday language: a stadium scoreboard up top (navy, a gold clock), and the signature piece, your five
- * producers as kits on a striped pitch in formation, captain up front with the gold armband. Everything else stays
+ * producers in jerseys on a basketball court (owner, Nov 2026), captain at the hoop with the gold "C". Everything else stays
  * quiet: plain cards, a draft board, a fixture strip. Producers keep one colour everywhere (a hash of the address). */
 
 .fx {
-  --pitch: #2F6B4F; --pitch-2: #2A6147; --chalk: rgba(255, 248, 241, .34);
+  --wood: #C98B4E; --wood-2: #B97A40; --wood-3: #D69B5F; --chalk: rgba(255, 255, 255, .82); --paint: rgba(242, 92, 193, .30);
+  --pitch: var(--wood); --pitch-2: var(--wood-2);
   --stadium: #101B33; --gold: var(--sun); --kick: var(--tang);
   --wide: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   max-width: 1180px; margin: 0 auto; padding: 18px 16px 72px;
@@ -92,12 +93,19 @@
 .fx-dotsaved { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
 
 .fx-pitch { position: relative; margin-top: 14px; border-radius: 20px; overflow: hidden; padding: 26px 14px 22px;
-  background: repeating-linear-gradient(180deg, var(--pitch) 0 54px, var(--pitch-2) 54px 108px); box-shadow: inset 0 0 0 2px var(--chalk), inset 0 18px 40px rgba(0, 0, 0, .18); }
+  /* the court: maple planks (thin seams every 22px over three soft tones), chalk lines, the paint in Fantasy's pink */
+  background:
+    repeating-linear-gradient(90deg, rgba(60, 30, 8, .16) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, var(--wood) 0 66px, var(--wood-3) 66px 132px, var(--wood-2) 132px 198px);
+  box-shadow: inset 0 0 0 3px var(--chalk), inset 0 18px 40px rgba(40, 18, 4, .22); }
 .fx-lines i { position: absolute; border: 2px solid var(--chalk); pointer-events: none; }
-.fx-lines .box { left: 28%; right: 28%; top: -2px; height: 15%; border-top: 0; border-radius: 0 0 6px 6px; }
-.fx-lines .arc { left: 41%; right: 41%; top: calc(15% - 2px); height: 28px; border-top: 0; border-radius: 0 0 99px 99px; }
-.fx-lines .half { left: -2px; right: -2px; top: 66%; height: 0; border-width: 2px 0 0; }
-.fx-lines .circle { left: 50%; top: 66%; width: 120px; height: 120px; transform: translate(-50%, -50%); border-radius: 50%; }
+.fx-lines .backboard { left: 42%; right: 42%; top: 10px; height: 0; border-width: 3px 0 0; }
+.fx-lines .rim { left: 50%; top: 14px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 50%; border-color: #F47B20; }
+.fx-lines .box { left: 33%; right: 33%; top: -3px; height: 34%; border-top: 0; background: var(--paint); }
+.fx-lines .arc { left: 50%; top: calc(34% - 3px); width: 34%; aspect-ratio: 1; max-width: 140px; transform: translate(-50%, -50%); border-radius: 50%; }
+.fx-lines .three { left: 7%; right: 7%; top: -3px; height: 58%; border-top: 0; border-radius: 0 0 50% 50% / 0 0 100% 100%; }
+.fx-lines .half { left: -2px; right: -2px; top: 93%; height: 0; border-width: 2px 0 0; }
+.fx-lines .circle { left: 50%; top: 93%; width: 120px; height: 120px; transform: translate(-50%, -50%); border-radius: 50%; }
 .fx-slots { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: ". c c ." "a a b b" "d d e e"; gap: 18px 10px; justify-items: center; }
 .fx-slot { width: min(200px, 100%); display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
 .fx-slot.p0 { grid-area: c; } .fx-slot.p1 { grid-area: a; } .fx-slot.p2 { grid-area: b; } .fx-slot.p3 { grid-area: d; } .fx-slot.p4 { grid-area: e; }
@@ -114,13 +122,16 @@
 .fx-slot .acts button { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .34); background: rgba(10, 18, 36, .35); color: var(--navy-ink); }
 .fx-slot .acts button:hover { background: rgba(10, 18, 36, .6); }
 .fx-slot .acts .x { width: 26px; height: 26px; padding: 0; display: grid; place-items: center; font-size: 11px; }
-.fx-capt { font-size: 12px; font-weight: 800; color: var(--gold); padding: 4px 2px; }
+.fx-capt { font-size: 12px; font-weight: 800; color: var(--gold); background: rgba(10, 18, 36, .72); border-radius: 99px; padding: 3px 9px; }
 .fx-open { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; border: 0; background: transparent; color: var(--navy-ink); padding: 0; }
-.fx-open .fx-kit.ghost { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-family: var(--wide); font-size: 30px; font-weight: 700; color: var(--navy-ink); border: 2px dashed rgba(255, 248, 241, .6); background: rgba(10, 18, 36, .18); }
+.fx-open .fx-kit.ghost { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-family: var(--wide); font-size: 30px; font-weight: 700; color: #fff; border: 2px dashed rgba(255, 255, 255, .85); background: rgba(40, 18, 4, .42); }
 .fx-slot.p0 .fx-open .fx-kit.ghost { border-color: var(--gold); color: var(--gold); width: 74px; height: 74px; }
 .fx-open .who { background: rgba(255, 248, 241, .92); }
-.fx-open:hover .fx-kit.ghost { background: rgba(10, 18, 36, .35); }
+.fx-open:hover .fx-kit.ghost { background: rgba(40, 18, 4, .6); }
 .fx-open[disabled] { opacity: .55; }
+/* dark theme: the same court, in darker wood so it doesn't glare */
+:root[data-theme="dark"] .fx { --wood: #8A5A2F; --wood-2: #7C4F28; --wood-3: #956336; --chalk: rgba(255, 255, 255, .7); --paint: rgba(242, 92, 193, .26); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fx { --wood: #8A5A2F; --wood-2: #7C4F28; --wood-3: #956336; --chalk: rgba(255, 255, 255, .7); --paint: rgba(242, 92, 193, .26); } }
 @media (max-width: 520px) {
   .fx-pitch { padding: 20px 6px 16px; }
   .fx-slots { gap: 14px 6px; }
