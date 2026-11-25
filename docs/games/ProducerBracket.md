@@ -1,61 +1,68 @@
 # Producer Bracket (game 9)
 
-> **Sources:** `claude/repo-history/CHAT_KNOWLEDGE.md` (Claude project, private) (Producer Bracket chat), `DECISIONS.md` (D-019, D-057, D-058, D-062), the repo (branch `kg-09-bracket`). **Last updated:** 5 Nov 2026; previous version `../archive/2026-11-04b/games/ProducerBracket.md`.
-> **Legend:** ✅ verified · 💬 from a chat · 👤 owner · ❓ unknown
-
-> **Owner, 5 Nov (D-138):** reactivated as one of the next three games (D-142): "like the March madness with nodes head to head". **Shape (D-141, D-153; built on `kg-09-bracket` @ `ef146b2a`, PR #186):** up to **32** producers (5 rounds Tue–Sat; 16: Wed–Sat; 8: Thu–Sat; no byes), one round a day (a 24-hour sprint per matchup); seeding Sun 00:00 UTC, picks lock Mon 23:55; final Saturday; results final from Monday 00:00 after two agreeing runs; backstop Thu 00:00. Every Repo Lens #E-3 Critical / High / Medium fixed; fix-check next. Matchups use today's index until the ruler v2.1 percentile is ready (D-154; owner to confirm launching before it).
+> **Sources:** the code on `main` (`web/bracket-math.js`, `web/bracket.js`, `bot/games/bracket.ts`, `bot/games/bracket-ruler.ts`, the `record_bracket` job and the publish job's Bracket check in `.github/workflows/games.yml`), the live `games-data:bracket/` files, `DECISIONS.md` (D-019, D-058, D-062, D-086, D-087, D-125, D-141), and the Bracket chat's notes in the Claude project (`claude/bracket/`). **Last updated:** Wed 25 Nov 2026 (Bracket chat). It replaces the 5 Nov version, which described the pre-launch schedule (Saturday seeding, Sunday lock, rounds from Monday).
+> **Legend:** ✅ verified in the code or live data · 💬 from a chat · 👤 owner
 
 ## Purpose
-A weekly knockout tournament of Koinos block producers, like a March Madness bracket: predict who wins each head-to-head matchup, one round a day. This chat also built the platform-wide **VHP standard** every game uses to measure VHP the same way (D-058).
+A weekly knockout of Koinos block producers, like a March Madness bracket. A player picks the winner of every matchup before the week starts; one round is played each day on real blocks. This chat also built the platform-wide **VHP standard** that every game uses to measure VHP the same way (D-058).
 
-## Gameplay
-- **Weekly cycle (as built):** seeding Saturday 12:00 UTC; picks lock Sunday 23:55 UTC (~36 h to pick); one round per UTC day from Monday. 💬 This schedule needs a new shape for the shared rhythm (D-125) before launch.
-- **Size:** under 8 producers → no bracket; 8–11 → 8 (Mon–Wed); 12–15 → 16 with byes; 16–31 → top 16 (Mon–Thu); 32+ → 32 (Mon–Fri). 💬
-- **Seeding:** average VHP over 28,800 blocks on two agreeing nodes; biggest = seed 1; not seeded within 24 h → the week is void. 💬
-- **A pick is one number:** bit n = "the lower seed wins matchup n" (bye bits 0). Picks game: NUMBER kind, weekly rounds, ahead ≤ 36 h, 20 picks a day, 20 changes. 💬
-- **Matchups:** baseline + credit; index = blocks credited ÷ blocks expected; an exact tie goes to the lower seed. **Forfeit:** a seed whose baseline is under 0.5 × its seeding VHP loses; if both forfeit, the index decides. No producer is left out unless below minimum production; Knode's own nodes play. The vault never forfeits (its VHP is players' stakes, recorded as `pooled`). 💬
-- **To build (owner decisions 3 Nov, R-BR-2):** the Knode Games Pool stays in the field, protected: pooled producers are judged on the day's average or minimum effective VHP, not one block (D-086); forfeits are judged on the day's time-weighted average (H-5); same-block ties share the place, and the comment and page text are fixed (D-087, H-6). 👤
+## The week (all times UTC; ET in brackets) ✅ `bracket-math.js`, `bracket.js`
+| When | What |
+|---|---|
+| **Sun 00:00** (Sat 7 PM) | **Seeding**, once that block is irreversible, read on two nodes that must agree. Never changed afterwards (it is stored with a sha256). Not seeded within 24 h → the week is **void**. |
+| **Sun 02:00** (Sat 9 PM) | **Picks open.** Picks game 9's `ahead` is 46 h before Tue 00:00 UTC, so picks open 2 h after the seeding. |
+| **Mon 23:55** (Mon 6:55 PM) | **Picks lock** for every size (the Picks game's 5-minute `lead` before Tuesday). |
+| **Tue–Sat** | One round per UTC day. The final is always on **Saturday**: 32 producers → 5 rounds Tue–Sat; 16 → 4 rounds Wed–Sat; 8 → 3 rounds Thu–Sat. |
+| Sun | Review day: nothing is played. |
+| **Mon 00:00 after the week** at the earliest | **Final**, once every hour has been read twice and the end-of-week stakes are in. Then the Vault file is written. |
+| **Thu 00:00 after the week** (Wed 7 PM) | The Vault's **backstop**. Not final by then → closed without a Vault file (`vault: "missed"`), or void if its results could never be completed. |
 
-## Scoring
-- **Points:** 1 / 2 / 4 / 8 / 16 by round, +2 for the champion (max 14 / 34 / 82 for 8 / 16 / 32). Byes score nothing. 💬
-- **Tie-break:** points → a right champion → more right winners → who submitted first (last-change time); brackets in the same block share. 💬
-- **Vault rows:** dense-ranked onto 1–255; past 255 distinct places the best 254 stay exact and the rest share 1. 💬
-- **Timing:** `../standards/WEEK_CYCLE.md` (the one home for game timing; built as "final 12 h after the last round"). Final only once the close stake read is in; still unreadable 3 days after the week → final as `vault: "missed"`, no file. 💬
+## The field and seeding ✅ `bracket-math.js`
+- **Seeding VHP:** each producer's exact effective VHP, averaged over the 28,800 blocks (about a day) before the seeding. It counts at the **lower** of that average and its average at last week's seeding, so VHP lent for one day buys nothing (Repo Lens #E-3 M-6).
+- **Field:** producers that signed in that day and would expect at least 10 blocks in a 6-hour race, biggest first (equal: address order). Every producer that meets the rule plays, Knode Games' own nodes included (D-086). The page shows a disclosure line when a Knode Games node is in the bracket.
+- **Size:** the largest power of two that fits: 32 or more → 32; 16–31 → the top 16; 8–15 → the top 8; under 8 → no bracket that week. **No byes.**
 
-## Rewards
-- **Staked:** at least the vault minimum (1 VHP) staked in game 9; staked at the week's start stays staked that week. 💬
-- **Free play prize ON from Week 2 (vault week 5).** Owner 14 Nov: the free-prize switch for game 9 is **ON** (`npm run prizes -- on 9 --send --from 5`, during vault week 4; it was OFF from 11 Nov). The rule: **2 VHP for 1st, 1 VHP for 2nd** (D-019, D-062). Tied for 1st share all 3 VHP; a single 1st → tied 2nd share 1 VHP; at most 10 per place (more than 10 tied → that place and below stay empty). Minimum play: one bracket with ≥ 1 point. Guests eligible. 1-week seasons. 💬 **⚠ This is today's code, not the rule: D-159 pays exactly 10 by earlier score time, then address, never zero for the cap (I-103, fixed in code separately).**
+## Matchups
+- **From vault week 5 (the week of Mon 23 Nov), the VHP ruler decides** ✅ (`BRACKET_RULER_FROM_WEEK` = 5; `bracket-ruler.ts`, phase 2 #285). Week 4 was the shadow week.
+  - One ruler card per matchup day, with every producer on one card, scored over that day's own blocks. The card moment is drawn by the ruler in the 6 hours before the day. Settings: `ownRule "spot"`, `minK 10`, `poolRule "min"`, `c 500000`, the Knode Games Pool as `pooled`, `paying: true`.
+  - **The higher luck percentile (`fpct`) wins.** An exact tie goes to the lower seed (the underdog).
+  - **Void:** a producer whose VHP moves outside −12% / +50% of its card size during the day, or that signs no block all day, or that isn't in the card's field, loses that matchup (a pick on it counts as a loss). If both are void, the day index decides.
+  - A day whose card isn't made yet **waits**, never falling back to the day index. Alerts start 3 h after the day; the week waits up to its backstop.
+  - The publish job rebuilds every card from `vhp-data` with the embedded `vhp_ruler.py` and holds the week if anything differs (held weeks stay unpaid; owner accepted).
+- **Forfeits still come first** (D-086, Repo Lens #E-3 H-5): a seed whose effective VHP **averaged over its round's day** is under half its seeding VHP loses, whatever the ruler says. If both forfeit, the day index decides. Pooled producers (the Knode Games Pool, whose VHP is players' stakes) never forfeit.
+- **The day index** (the rule before week 5, and still the tie-breaker when both seeds are void or both forfeit): credited blocks ÷ expected blocks on the VHP standard; pooled producers use a rate index that no deposit or withdrawal can move (Repo Lens #E-3 H-4).
+- **Scoring mode (A–D) and rule version:** `BRACKET_RULER_MODE` is **unset**, so the cards carry no mode and are rule version 4. The all-games `RULER_MODE` / `RULER_VERSION` wiring is **not built yet** (see Open items). Leave every `*_RULER_MODE` / `*_RULER_VERSION` variable unset until it is. Never unset or move `BRACKET_RULER_FROM_WEEK`.
 
-## Dependencies
-- **Picks contract:** announce game 9 (48 h). **Vault:** `game-add 9 "Producer Bracket" --staked --free --season 1` (48 h; `--free` keeps a free prize possible), free-prize switch **ON from vault week 5** (owner 14 Nov; OFF from 11 Nov; ON under D-082); results `games-data:bracket/vault/W<week>.json` ✅ `vaultGames`.
-- A **sponsor allowlist row** for game 9 picks. 💬
-- The VHP standard (`vhp-standard.js`, `bot/vhp-chain.ts`) and the VHP contract's `effective_balance_of`. 💬
-- Recorder `bot/games/bracket.ts` in `games.yml`; data branch `bracket-history` (keep) ✅.
+## The pick ✅ `bracket-math.js`, `bracket.js`
+- **One number for the whole bracket**, sent as one Picks operation in **one transaction** (one wallet approval a week). Bit n says who wins matchup n in the player's own bracket: 0 = the better (smaller) seed, 1 = the other. Every number below 2^(size − 1) is a whole, consistent bracket.
+- Picks game 9: NUMBER kind, weekly rounds, `ahead` 46 h, 5-minute `lead`, 20 picks a day, **20 changes a week**.
+- **Changes (D-278):** a change is paid with the player's own Mana, and a guest wallet can't change a bracket. This applies once the page moves to the shared send code (P3); today's page still sends changes like a first bracket.
 
-## Current status (5 Nov)
-- **▶ Reactivated 5 Nov (D-142): one of the next three games to launch. Its chat starts with `../platform/CHAT_REQUESTS.md` → R-ALL-9 (the catch-up on the 4–5 Nov standards), then its own section.**
-- **Branch `kg-09-bracket` @ `3b46546f`, draft PR #186 (6 Nov):** Repo Lens fix-check 2 (at `8d3d942f`) was NO-GO; every finding fixed (PK-1 High, PK-2, R-1, F9-1, S-1, W-1, FL-1, P-2, I-1, T-1). Full `npm run test:audit` 1,135 pass, 0 fail; 6 of 6 mutations caught; the reviewer's 14 tests added (`tests/audit/repolens-e3fc2-*`). **Not merged, nothing deployed.** Next: fix-check 3 (`claude/bracket/REPOLENS-E3-FIXCHECK3-PROMPT.md`), then the port onto the kit before launch (D-158, D-160, R-ALL-11).
-  - **Picks follow the two-run rule** (`picks.re`), like hours; stakes, final and the vault file need it. Picks still unconfirmed at the backstop → void.
-  - **Late picks:** never after round 1's first hour, even under `BRACKET_RELEASE`.
-  - **`BRACKET_RELEASE`:** set it only to correct a week; a week named in it can't go final, so the owner clears it after the correction. Picks can be corrected only until round 1's first hour, a seeding only within its 24 h.
-  - **Per-week hold:** a bad Bracket week file is held on its own (with its vault file and board), not the whole game; the publish job downloads the Bracket artifact to its own folder.
-  - **Page:** the KOIN Vault open-request lock is kept per account and week until KOIN Vault's expiry (else 30 min), and on a lost network answer. Shared `wallet.js` gained `openUntil` on three KOIN Vault errors (no behaviour change; Hub chat told).
-  - Picks announce: `ahead` 46 h (RC-6). Waiting on other chats: Vault F8; Block X the sponsor row for game 9; Ruler v2.1 pct.
-- **Repo Lens #E-3 (3 Nov), audited tip `5b2492e`:** 2 Critical, 6 High, 10 Medium, plus Low/Info — fixed on the branch, fix-check pending. Report and failing tests are private, in the Claude project (`claude/bracket/AUDIT-2026-11-03-E3.md`, `claude/bracket/repolens-e3-tests/`). No launch date (D-088).
-- Evidence before the audit: the VHP rebuild matched all 780 race-card readings; over 100 days the better seed won 54% of 113 matchups, and a "last week's form" bracket averaged 14.8 points vs 4.8 for random. The sampling branches are already deleted ✅.
-- Work list: `../platform/CHAT_REQUESTS.md` → Producer Bracket.
+## Scoring and ranking ✅
+- **Points:** 1 / 2 / 4 / 8 / 16 by round, +2 for the right champion (at most 14 / 34 / 82 for 8 / 16 / 32 producers).
+- **Ranking:** points, then a right champion, then more right winners, then the **earlier** bracket (the time of its last change). Identical brackets sent in the same block share the place (D-087, Repo Lens #E-3 H-6). All-time boards have no pick time: ties share there.
 
-## Known issues (I-061)
-- **Repo Lens #E-3 findings (fix first):**
-  - **Critical:** C-1 vault values past 255 places; C-2 the page can show a different bracket than it signs.
-  - **High:** H-1 the page rejects the recorder's v4 week files, so nobody can play yet; H-2 points aren't recomputed by the publish job; H-3 no clock checks on new history; H-4 and H-5 matchup manipulation (the Pool; one-block forfeits); H-6 same-block ties.
-  - **Sound:** the one-number pick (3.36 M numbers, 0 failures), the effective-VHP rebuild, the vault-file rules, the publish job running no repo code, honest runs never held.
-  - Fix order and decisions: R-BR-1, R-BR-2 (D-086, D-087).
-- `effective_balance_of` has never been seen live — pin the block it uses after the first real run (R-BR-6).
-- F-2 (accepted): hiding VHP on seeding day lowers a producer's forfeit bar.
-- F-10: final weeks are re-scored on every load, so rule changes must apply only from a stated week; stake reads aren't pinned to a block.
-- A whale withdrawing mid-day can sink the vault's matchup index (inherent, disclosed).
-- A flaky test (`bot.vhp-read-failure.test.ts`).
+## Rewards ✅
+- **Staked board:** players with at least the week's minimum (1 VHP) staked in game 9 share the game's weekly bucket. The Vault file's rows are the staked players with at least 1 point, valued so the Vault's top-30% cutoff pays exactly the earners (#E-3 C-1).
+- **Free play board:** **ON from vault week 5** 👤 (owner 14 Nov; switch sent 15 Nov). 1st and 2nd at the end of the week win 2 and 1 VHP, with at least 1 point; ties share the place (D-019, D-062). Guests are eligible. Players the Vault counts as staked (`held`) can't take a free prize.
+- **Practice weeks:** vault weeks 3–4 counted for nothing (`BRACKET_PRIZES_FROM_WEEK` = 5).
 
-## Future plans
-Launch path: `../platform/ROADMAP.md` (fixes and fix-check → update the branch from `main` → announce in Picks and the vault → sponsor row → `games.json` live). Then help move the Race and Block X onto the one VHP ruler (D-090; the VHP standard is this chat's work, D-058). Block Golf will read the Bracket's weekly file (not the board, which is capped at 1,000 rows, `MAX_BOARD_ROWS` ✅).
+## Data and pages ✅
+- **Data branch `games-data`, folder `bracket/`:** `index.json` (weeks, `rulerFrom`, `prizesFromWeek`), `W<week>.json` (the week file: seeding, picks, hours, results, points, stakes), `board.json` (Staked and Free play boards), `ruler/` (the day cards and each week's summary), `vault/W<week>.json` (read by the Vault).
+- **Readers:** the Vault (`vault/`), Block Golf (`W<week>.json`, never `board.json`), the Leaderboard and Results pages, and Hub's Producer lookup 💬.
+- **Page `bracket.html`** (game page standard, PR #128): the box, the bracket, two closed rows ("For the curious", "Rules and how points work"), a links row (Leaderboard, Results) and one stake line.
+- **Jobs:** the hourly `record_bracket` job (read-only on the chain, holds no key) and the publish job's Bracket check.
+
+## Open items (25 Nov) 💬 `claude/bracket/REMAINING-BRACKET-2026-11-25.md`
+- **P3:** the page on the shared send code (D-278), short round labels, the sticky-bar overlap, the stats line hidden on phones. Merge after Mon 30 Nov 6:55 PM ET.
+- **Results page:** the Bracket tab (Hub, week of Mon 30 Nov).
+- **The all-games ruler mode/version wiring,** or its replacement by the move onto the kit.
+- **Moving onto the kit** (HANDOFF item 5: replay, then two shadow weeks).
+- **Block Golf:** `golf.ts` has the Bracket joining from vault week 6 (Mon 30 Nov), "owner to confirm".
+
+## Known risks
+- **Few players:** week 4 had 2 brackets. That's a marketing point, not a fault.
+- **Late ruler data:** cards wait (alerts after 3 h); the week can wait up to its backstop.
+- **A file refused by the publish allowlist** holds every Bracket file ("files held" in the run). The fix is matching the new name in `games.yml`'s publish patterns.
+- **A whale withdrawing mid-day** can sink the Knode Games Pool's matchup (inherent, disclosed).
+- **F-2 (accepted):** hiding VHP on seeding day lowers a producer's forfeit bar.
