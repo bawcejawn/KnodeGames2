@@ -81,13 +81,13 @@ test("every game card offers Free play; live cards carry a prize/practice label 
   assert.match(read("web/games.html"), /<script src="weeks\.js"><\/script>\s*<script src="games\.js">/);
 });
 
-// Combo chat, 15 Nov: Combo Card is on main as a preview (cards can be built and shared, not sent until Mon 7 Dec).
+// Combo chat, 15 Nov: Combo Card is on main as a preview (cards can be built and shared, not sent until practice play opens).
 test("Combo Card preview: linked from the home tile, the games list and the menus, marked Preview, never live", () => {
   const c = games.find((g) => g.id === "combo");
-  assert.equal(c.status, "preview"); assert.equal(c.href, "combo.html"); assert.equal(c.opens, "Opens Mon 7 Dec");
-  assert.match(c.line, /Preview: build and share cards now; sending opens Mon 7 Dec\.$/);
+  assert.equal(c.status, "preview"); assert.equal(c.href, "combo.html"); assert.equal(c.opens, "Practice from Wed 25 Nov");
+  assert.match(c.line, /Preview: build and share cards now; practice play from Wed 25 Nov, staking from Sun 6 Dec, 7 PM ET\.$/);
   const h = read("web/index.html");
-  assert.match(h, /<a class="also-card gtile" href="combo\.html"( data-game="combo")?>[^]*?<b>Combo Card<\/b><p><span class="tile-tag">Preview<\/span>[^<]*Opens Mon 7 Dec\./);
+  assert.match(h, /<a class="also-card gtile" href="combo\.html"( data-game="combo")?>[^]*?<b>Combo Card<\/b><p><span class="tile-tag">Preview<\/span>[^<]*Practice from Wed 25 Nov\./);
   assert.doesNotMatch(h, /gtile soon" aria-disabled="true"><span aria-hidden="true">🎟️/);
   const nav = read("tools/site-nav.mjs");
   assert.equal((nav.match(/\["Combo Card · Preview", "combo\.html"/g) || []).length, 2, "Play group and Games menu");
@@ -159,4 +159,13 @@ test("the All games \"Staked\" tag follows the vault's list_games, the same list
   assert.doesNotMatch(page + panel, /VHP per 100/, "no per-100 wording on the stake pages");
   // games.json's kinds still drive the Rules text
   assert.ok(games.every((g) => Array.isArray(g.kinds)));
+});
+
+test("the Leaderboards picker has Knode Games VS and More or Fewer, with their 'soon' lines until data exists", () => {
+  const vs = games.find((g) => g.id === "vs"), ou = games.find((g) => g.id === "overunder");
+  assert.equal(vs.board.data, "games-data/vs/board.json");
+  assert.equal(vs.board.soon, "Producer lists from Mon 30 Nov (picks open Fri 27, 7 PM ET).");
+  assert.equal(ou.board.soon, "First results Mon 30 Nov.");
+  assert.match(read("web/leaders.js"), /cfg\.soon \|\| "Couldn't load this leaderboard/);
+  assert.match(read("web/leaders.js"), /soon: typeof b\.soon === "string" && b\.soon\.length <= 100 \? b\.soon : "",/);
 });

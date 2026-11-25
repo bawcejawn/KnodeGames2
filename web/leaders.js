@@ -37,6 +37,8 @@
       url: RAW + b.data,
       columns: cols.map((c) => ({ key: c.key, label: c.label, wide: c.wide === true })),
       unit: typeof b.unit === "string" && b.unit.length <= 12 ? b.unit : "pts",
+      // `soon`: a line shown instead of a load error while the game's data file doesn't exist yet (remove it once the game is live).
+      soon: typeof b.soon === "string" && b.soon.length <= 100 ? b.soon : "",
       unranked: typeof b.unranked === "string" && b.unranked.length <= 160 ? b.unranked : "",
       // `scale`: the recorder stores the points column in whole hundredths (Block X: pts 179 = 1.79 points). Only 100 is
       // allowed; the points column (the first) is divided by it and shown with 2 decimals. Count columns stay as they are.
@@ -164,7 +166,7 @@
     panel.replaceChildren(b.note, b.box);
     b.lb.setMe(me());
     try { const d = await fetchJson(cfg.url); if (d && d.v === 1) { b.data = d; b.lb.set(scaled(d, cfg)); } }
-    catch { if (!b.data) b.note.textContent = "Couldn't load this leaderboard right now. Trying again when you come back to it."; }
+    catch { if (!b.data) b.note.textContent = cfg.soon || "Couldn't load this leaderboard right now. Trying again when you come back to it."; }
   }
 
   function route() {

@@ -83,16 +83,29 @@ const SUNDAY = BM.seedTime(4) + 3 * 3600000;
 const GAME = { enabled: true };
 const page = read("web/bracket.html");
 
-test("top of the page: the game in one line and three steps; the long rules are in the rules book at the bottom", () => {
+test("standard page (GAME-PAGE-STANDARD.md): box, a short hero with its links, the play area, then two closed rows, a links row and a stake line", () => {
   const main = page.slice(page.indexOf("<main"), page.indexOf("</main>"));
-  const hero = main.slice(main.indexOf('class="bk-hero"'), main.indexOf("</section>"));
-  assert.match(hero, /Pick who wins every matchup\./);
-  assert.equal((hero.match(/<li>/g) || []).length, 3);
-  assert.ok(hero.replace(/<[^>]+>/g, "").length < 330, "short");
-  const rules = main.slice(main.indexOf('id="how"'));
-  for (const t of ["The week", "The field", "Your pick", "A matchup", "Forfeits", "The Knode Games Pool", "Points", "Fair checks", "The leaderboard", "Reading the bracket"]) assert.match(rules, new RegExp(`<summary>${t}</summary>`));
-  assert.ok(main.indexOf('id="how"') > main.indexOf('id="board-box"'), "rules after the leaderboard");
-  assert.ok(rules.includes('id="bk-ruler"'), "the ruler note lives in the rules book");
+  const at = (x) => { const i = main.indexOf(x); assert.ok(i >= 0, x); return i; };
+  // order: box → hero → week → bracket → For the curious → Rules → links row → stake line
+  const order = ['class="page-box"', 'class="bk-hero"', 'id="week-box"', 'id="bracket-box"', 'id="curious"', 'id="rules"', 'class="bk-more"', 'href="stake.html#g9"'].map(at);
+  assert.deepEqual(order, [...order].sort((x, y) => x - y), "blocks in the standard order");
+  assert.equal(main.indexOf('<aside class="page-box"'), main.search(/<(aside|section|div|details|nav|p)\b/), "the box is the first thing in <main>");
+  // the hero: the title and one line of links, no intro paragraph, no step strip
+  const hero = main.slice(at('class="bk-hero"'), main.indexOf("</section>", at('class="bk-hero"')));
+  assert.doesNotMatch(hero, /<li>|class="lede"|bk-steps/);
+  for (const h of ["#rules", "index.html#results/bracket", "index.html#leaderboard/bracket", "ruler.html#bracket"]) assert.ok(hero.includes(`href="${h}"`), h);
+  // no stake box above the hero, no stake panel, no copy of the board, no "On this page" chips
+  for (const gone of ['id="stake-badge"', 'id="bracket-stake"', 'id="board-box"', 'id="bk-board"', 'class="tools"', 'id="how"']) assert.ok(!main.includes(gone), gone);
+  // exactly two fold-outs, both closed on load
+  const folds = main.match(/<details[^>]*>/g) || [];
+  assert.deepEqual(folds, ['<details class="fold" id="curious">', '<details class="fold bk-rules" id="rules">']);
+  const curious = main.slice(at('id="curious"'), at('id="rules"')), rules = main.slice(at('id="rules"'), at('class="bk-more"'));
+  assert.match(curious, /<summary>For the curious<\/summary>/); assert.match(curious, /<h3>Reading the bracket<\/h3>/);
+  assert.match(rules, /<summary>Rules and how points work<\/summary>/);
+  for (const t of ["How to play", "The leaderboard", "The week", "The field", "Your pick", "A matchup", "Forfeits", "The Knode Games Pool", "Points", "Fair checks"]) assert.match(rules, new RegExp(`<h3>${t}</h3>`));
+  assert.match(rules, /Pick every winner<\/b> by Monday night/, "the step strip lives in Rules");
+  assert.ok(rules.includes('id="bk-ruler"'), "the ruler note lives in the Rules row");
+  assert.ok(main.slice(at('id="week-box"')).indexOf('id="bk-practice"') < at('id="bracket-box"') - at('id="week-box"'), "the practice note sits in the week card (status), above the bracket");
 });
 
 test("phones: a round stepper with counts; picking the whole round moves on to the next; the Final shows the champion card", async () => {
