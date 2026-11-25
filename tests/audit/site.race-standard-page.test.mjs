@@ -43,9 +43,31 @@ test("long lists: 6 lanes per board (plus your pick) and 3 races in Results, the
 
 test("M-768 (Ruler M-739): 'No handicap this hour' is explained once under the typed board, and such a producer's Pick is grey 'Sits out'", () => {
   assert.ok(js.includes('const SITS_OUT = "No handicap this hour: this producer is expected to sign fewer than 10 blocks in this race. With so few blocks one lucky block decides the race, so no handicap can make it fair, and it races without one. It can also mean the producer signed no block in the 6 hours before this hour\'s card; it gets a handicap again at the next card after it signs.";'));
-  assert.match(js, /const any = order\.some\(\(a\) => !hm\.has\(a\)\); n\.hidden = !any; n\.textContent = any \? SITS_OUT : "";/);
-  assert.match(js, /if \(!hm\.has\(a\) && !chosen\) return el\("button", \{ type: "button", class: "rt-pk out", disabled: "",/);
+  assert.match(js, /const any = !!card && order\.some\(\(a\) => !hm\.has\(a\)\); n\.hidden = !any; n\.textContent = any \? SITS_OUT : "";/);
+  assert.match(js, /if \(card && !hm\.has\(a\) && !chosen\) return el\("button", \{ type: "button", class: "rt-pk out", disabled: "",/);
+  assert.match(js, /if \(upc\.some\(\(u\) => \{ const k = `\$\{rtype\}:\$\{u\.index\}`; return \(rtDrafts\.get\(k\) \|\| rtPicks\.get\(k\)\) === a; \}\)\) lane\.classList\.add\("mine"\);/, "R4-60 L-1");
   assert.match(js, /el\("span", \{ text: "Sits out" \}\)/);
   assert.match(html, /<div class="pr-track rt-board" id="rt-track"><\/div>\n\s*<p class="note" id="rt-sitsout" hidden><\/p>/);
   assert.match(js, /: "No handicap this hour"\}/);
+});
+
+test("R4-60 M-1: with no handicap card, nothing says 'Sits out' and the Ruler's note stays hidden; with a card, buttons are Pick / Play free to pick", async () => {
+  const H = await import("./race-dom-harness.mjs");
+  const APP = new URL("../../", import.meta.url).pathname;
+  const { A, Bp, C } = H;
+  const now = Date.parse("2026-11-23T06:20:00Z"), ws = Date.parse("2026-11-23T00:00:00Z");
+  const hours = []; for (let t = ws; t < Date.parse("2026-11-23T06:00:00Z"); t += 3600000) hours.push({ t, n: { [A]: 12, [Bp]: 6, [C]: 2 }, l: { [A]: t + 1000, [Bp]: t + 2000, [C]: t + 3000 }, c: [1, 1, 1, 1] });
+  const blocks = (T) => { const ts = [], sig = []; for (let t = T - 7 * 3600000, i = 0; t <= T; t += 20000, i++) { ts.push(t); sig.push(i % 10 < 6 ? 0 : i % 10 < 9 ? 1 : 2); } return { ts, sig, signers: [A, Bp, C], from: 1, top: ts.length }; };
+  const wf = H.weekFile(5, "2026-11-23T00", "2026-11-23T06", [], [[A, 300, 1], [Bp, 200, 1.5], [C, 100, 3]]);
+  wf.races[1].cards = null;   // the live 6-hour race has no stored card
+  const files = { "W005.json": wf, "T005.json": { v: 1, week: 5, races: [], hours }, "R004.json": H.rulerFile(4, "on", 4, []), "R005.json": H.rulerFile(5, "on", 4, []) };
+  for (const [vhp, hasCard] of [[{}, false], [{ [A]: 100, [Bp]: 300, [C]: 200 }, true]]) {
+    const p = await H.boot({ app: APP, now, files, vhp, blocks, type: 3, race: { wallet: null, picks: {} } });
+    await p.tick(6000); await p.settle();
+    const btns = [...p.doc.querySelectorAll("#rt-track .rt-pk")];
+    assert.equal(btns.filter((b) => /Sits out/.test(b.textContent)).length, 0, `no 'Sits out' (card: ${hasCard})`);
+    assert.ok(p.doc.getElementById("rt-sitsout").hidden, "the note stays hidden");
+    if (hasCard) { assert.ok(btns.length > 0); for (const b of btns) assert.match(b.textContent, /^Play free to pick/); }
+    assert.deepEqual(p.errors, []);
+  }
 });

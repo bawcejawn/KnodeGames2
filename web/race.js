@@ -896,7 +896,7 @@
         const k = `${rtype}:${u.index}`, mine = rtPicks.get(k), draft = rtDrafts.get(k), chosen = (draft || mine) === a, used = !chosen && mine && !changesLeft(rtype, u.index);   // D-745
         // M-768 (Ruler M-739): a producer with no handicap on the card in force sits out: a pick on it can't score unless
         // its VHP grows before that race, so the button is grey "Sits out" (a pick already made still shows as such).
-        if (!hm.has(a) && !chosen) return el("button", { type: "button", class: "rt-pk out", disabled: "", "aria-label": `${nameOf(a)} sits out this hour: no pick` }, el("span", { text: "Sits out" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));
+        if (card && !hm.has(a) && !chosen) return el("button", { type: "button", class: "rt-pk out", disabled: "", "aria-label": `${nameOf(a)} sits out this hour: no pick` }, el("span", { text: "Sits out" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));
         const free = !who;   // M-696: without a wallet the button says "Play free to pick" and starts the guest
         const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}${free ? " free" : ""}`, "aria-pressed": String(chosen), "aria-label": free ? `Play free to pick ${nameOf(a)} for the race at ${dayTime(u.start)}` : `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
           el("span", { text: free ? "Play free to pick" : chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
@@ -916,11 +916,13 @@
           el("img", { class: "pr-horse rt-animal", alt: "", "aria-hidden": "true", src: `media/animals/${ANIMAL[rtype]}.png`, width: "40", height: "40", style: `left:calc(${POS(x / 100)} - 20px)` }), el("div", { class: "pr-nowline", style: `left:${POS(frac)}` })),
         el("div", { class: "pr-gap" }, r ? ((() => { const L = ended ? endLabel(ROt, a, rk - 1) : { text: rk === 1 ? "Leading" : null }; return L.text ? el("b", { text: L.text }) : `${fmt(r.behind, 1)} behind`; })()) : "–", el("br"), el("span", { class: "ago", text: `${fmt(r ? r.steps : 0, 1)} steps` })),
         ...cells);
+      // R4-60 L-1: a lane holding your pick or draft for any upcoming race stays visible under the "Show all" cap.
+      if (upc.some((u) => { const k = `${rtype}:${u.index}`; return (rtDrafts.get(k) || rtPicks.get(k)) === a; })) lane.classList.add("mine");
       return lane;
     });
     $("rt-track").replaceChildren(head, ...capLanes(lanes, String(rtype), () => rtRender(true)));
     // M-768: the Ruler's words (M-739) for "No handicap this hour", once under the board when a lane shows it.
-    { const n = $("rt-sitsout"); if (n) { const any = order.some((a) => !hm.has(a)); n.hidden = !any; n.textContent = any ? SITS_OUT : ""; } }
+    { const n = $("rt-sitsout"); if (n) { const any = !!card && order.some((a) => !hm.has(a)); n.hidden = !any; n.textContent = any ? SITS_OUT : ""; } }
   }
   function rtTabs() {
     const nav = $("race-types");
