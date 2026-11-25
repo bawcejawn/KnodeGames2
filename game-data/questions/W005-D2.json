@@ -153,9 +153,17 @@
             "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "2087870656107"
           },
           "seal": "07d190135f014b25c5e95665926b5720d61ae89ac6498ac3a7cc10b8b67f811e"
+        },
+        {
+          "height": 41374246,
+          "readAt": "2026-11-25T10:38:39.278Z",
+          "values": {
+            "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "2087461184209"
+          },
+          "seal": "2b65ab1cd2de1230b6215ebff9c17423b4310b4f6d912a42ab869eba5f03a9b7"
         }
       ],
-      "vhpSeal": "e12a0781cfb70e739f3a700cd34e5af9ac9ece5a52faa7c14d9a4a5ea219c73a"
+      "vhpSeal": "bb723a049f67f808d8c05015210c9fe82e9ecec4936b2ef8b4bbbc1a881cbec5"
     },
     {
       "id": "W005-D2-2",
@@ -318,7 +326,46 @@
           "seal": "cbdaa79fa4f0b229fe7224ce4471ba6d3764a6c70d45a4e21b96df2b506f66b9"
         }
       ],
-      "vhpSeal": "9f3e0500bedf358119c82fa0f396c74aa3c6881f26cd3fd74536adb86bd9a1fd"
+      "vhpSeal": "9f3e0500bedf358119c82fa0f396c74aa3c6881f26cd3fd74536adb86bd9a1fd",
+      "result": {
+        "void": false,
+        "option": 0,
+        "value": "300",
+        "dataHash": "b106a292ef1bbf68c54ab33d83caa46f63a57c2de85f781f84157c7bd4fce0a7",
+        "resolvedAt": "2026-11-25T09:49:20.140Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41347876,
+          "decidedHeight": 41373071,
+          "readings": [
+            41363753,
+            41364933,
+            41366094,
+            41367256,
+            41368368,
+            41368440,
+            41369543,
+            41370723,
+            41371910,
+            41373066
+          ],
+          "readingsInWindow": 11,
+          "values": {
+            "15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ": {
+              "release": "161502727986308",
+              "end": "161062689425262",
+              "change": "−0.27%",
+              "height": 41373066
+            },
+            "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu": {
+              "release": "115302563605200",
+              "end": "119357369309618",
+              "change": "+3.52%",
+              "height": 41363753
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D2-3",
@@ -470,7 +517,39 @@
           "seal": "82fde8405fba935e7b7bebb9c5df11206bebc2064c7ca098220ce8131ce7dfd7"
         }
       ],
-      "vhpSeal": "f4be953f0b5f41b107ae4fcada59a215fcba109672044da0092f6083b576e47e"
+      "vhpSeal": "f4be953f0b5f41b107ae4fcada59a215fcba109672044da0092f6083b576e47e",
+      "result": {
+        "void": false,
+        "option": 1,
+        "value": "1,884",
+        "dataHash": "b106a292ef1bbf68c54ab33d83caa46f63a57c2de85f781f84157c7bd4fce0a7",
+        "resolvedAt": "2026-11-25T09:49:20.140Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41347876,
+          "decidedHeight": 41373018,
+          "readings": [
+            41363753,
+            41364933,
+            41366094,
+            41367256,
+            41368368,
+            41368440,
+            41369543,
+            41370723,
+            41371910
+          ],
+          "readingsInWindow": 11,
+          "values": {
+            "1UG4UUn7Da9JqE4PKbYUWgjbNwE5F9531": {
+              "release": "223139170957317",
+              "end": "230767838335183",
+              "change": "+3.42%",
+              "height": 41363753
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D2-4",
@@ -620,9 +699,17 @@
             "1JrsQXbrDqkT9yUH6gtj4yhQi1kgWwsohh": "11834694948559"
           },
           "seal": "915cefcd048e54dcbfca104345166f87064fa54c3a18f688a233c844f4171d13"
+        },
+        {
+          "height": 41374246,
+          "readAt": "2026-11-25T10:38:39.278Z",
+          "values": {
+            "1JrsQXbrDqkT9yUH6gtj4yhQi1kgWwsohh": "11829781292042"
+          },
+          "seal": "cf3ef9dc7fc4e6ca2997322c69e837b4d28b13dd8fe5b28ee30e02d4f3b79258"
         }
       ],
-      "vhpSeal": "dfbe4410b6983d1a3306f11c3921fc75b474defdaeb3e42bd78d6e0ebf81084c"
+      "vhpSeal": "7c14b8373c3274d06c48f71e2f807048bcedb5c72196350ba62e3e3325912786"
     }
   ],
   "daySeal": "c2a7e976cd34b28dc965e70148f697d98b4ef04fa9d5a8dee2dda64c0ab0ae78"
