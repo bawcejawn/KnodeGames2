@@ -3,6 +3,7 @@
 // Writes dist-site/ (gitignored) unless an output folder is given; the site tests give each their own temp folder.
 import fs from "node:fs";
 import path from "node:path";
+import { addHints } from "./preload-hints.mjs";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
 const out = process.argv[2] ? path.resolve(process.argv[2]) : path.join(root, "dist-site");
@@ -35,6 +36,12 @@ for (const f of fs.readdirSync(path.join(root, "web")).filter((n) => n.endsWith(
 for (const name of ["deployment.json", "game.json"]) {
   const src = path.join(root, "game-data", name);
   if (fs.existsSync(src)) copy(src, path.join(out, "game-data", name));
+}
+
+// Speed: one preload hint per script on every published page (the CSP <meta> makes scripts load one by one without them).
+for (const name of fs.readdirSync(out).filter((n) => n.endsWith(".html"))) {
+  const p = path.join(out, name), html = fs.readFileSync(p, "utf8"), withHints = addHints(html);
+  if (withHints !== html) fs.writeFileSync(p, withHints);
 }
 
 const banned = [];
