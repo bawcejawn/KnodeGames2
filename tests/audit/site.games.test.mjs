@@ -132,3 +132,16 @@ test("every menu page has the one short box at the top, from tools/page-box.json
     assert.match(h, /href="page-box\.css"/, `${f}: box styles`);
   }
 });
+
+test("the All games \"Staked\" tag follows the vault's list_games, the same list as the Stake page (D-768)", () => {
+  const js = read("web/games.js"), panel = read("web/stake-panel.js"), page = read("web/stake-page.js");
+  assert.match(js, /K\.stakeable\(\)/, "games.js asks the vault");
+  assert.match(js, /data-staked-pill/, "each Staked tag can be taken away or added");
+  assert.match(panel, /async function stakeable\(\)[\s\S]{0,400}g\.staked && \(g\.active \|\| big\(g\.stake\) > 0n\)/, "the same filter as the Stake page");
+  assert.match(panel, /window\.KStake = \{[^}]*stakeable/, "stake-panel.js offers it");
+  // read only: no send in that path
+  assert.doesNotMatch(panel.match(/async function stakeable\(\)[\s\S]*?\n  }/)[0], /send|sign/i);
+  assert.doesNotMatch(page + panel, /VHP per 100/, "no per-100 wording on the stake pages");
+  // games.json's kinds still drive the Rules text
+  assert.ok(games.every((g) => Array.isArray(g.kinds)));
+});
