@@ -145,6 +145,9 @@ if (typeof document !== "undefined" && $("days")) start();
 
 function start() {
   "use strict";
+  // The Rules link opens the closed Rules row and scrolls to it (same as Block X).
+  const rulesLink = $("rules-link");
+  if (rulesLink) rulesLink.addEventListener("click", (e) => { const d = $("rules"); if (!d) return; e.preventDefault(); d.open = true; d.scrollIntoView({ block: "start" }); });
   const lib = window.koilib || window.koinos || window;
   const ROOT = new URL("./", location.href);
   const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/survivor/";
