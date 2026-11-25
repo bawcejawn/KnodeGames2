@@ -38,7 +38,8 @@ test("every control names its area, kind, purpose, signer and effect; areas are 
   for (const ar of AREAS) {
     assert.ok(ar.what.length > 10, `${ar.id}: what`);
     if (ar.status === "planned") assert.ok(ar.later, `${ar.id}: a planned area says what comes later`);
-    else assert.ok(ACTIONS.some((a) => a.area === ar.id), `${ar.id}: a live area has controls`);
+    // "This week" is a calendar screen (ops/admin/calendar.json, M-593): it holds dates, not controls.
+    else if (ar.id !== "thisweek") assert.ok(ACTIONS.some((a) => a.area === ar.id), `${ar.id}: a live area has controls`);
   }
 });
 
