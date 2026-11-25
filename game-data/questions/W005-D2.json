@@ -225,9 +225,17 @@
             "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "2084856271679"
           },
           "seal": "9b8e36563e1107f3c8dceb30f1d851b8cf628e60ac085b32307f8c6397bbef17"
+        },
+        {
+          "height": 41384172,
+          "readAt": "2026-11-25T19:08:27.188Z",
+          "values": {
+            "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr": "2084856271679"
+          },
+          "seal": "f191fa151a990f104add987a5baa8c46c10fc8fafd3829f9d2c3715069afbced"
         }
       ],
-      "vhpSeal": "9c9b74be4e57bd57ab8fadb11d796f8eb6b3e7482be7683cf3830326658dcf5e"
+      "vhpSeal": "7522f88bf098f6aa7291183d493e878ce16ca035544f8cdd6510c08e39696c4e"
     },
     {
       "id": "W005-D2-2",
@@ -841,7 +849,50 @@
           "seal": "2458eb084ccc22f9cbca6a912bbb7f9cd69ecb8059fa97ad5037634150014c75"
         }
       ],
-      "vhpSeal": "f1a6f6dcead9e5264f376a91d3d45c7b3ade58fd29477682ce0f2ec5861dc82c"
+      "vhpSeal": "f1a6f6dcead9e5264f376a91d3d45c7b3ade58fd29477682ce0f2ec5861dc82c",
+      "result": {
+        "void": false,
+        "option": 0,
+        "value": "193",
+        "dataHash": "ef8b69136bcd76a4b7468616487d3aa4cb2fa76bd966eb6aacd82a5d95bce8cf",
+        "resolvedAt": "2026-11-25T18:24:45.860Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41347876,
+          "decidedHeight": 41383235,
+          "readings": [
+            41363753,
+            41364933,
+            41366094,
+            41367256,
+            41368368,
+            41368440,
+            41369543,
+            41370723,
+            41371910,
+            41373066,
+            41373199,
+            41374246,
+            41375433,
+            41375682,
+            41377208,
+            41378341,
+            41379506,
+            41380641,
+            41381794,
+            41382950
+          ],
+          "readingsInWindow": 20,
+          "values": {
+            "1JrsQXbrDqkT9yUH6gtj4yhQi1kgWwsohh": {
+              "release": "11939514445367",
+              "end": "11799070373609",
+              "change": "−1.18%",
+              "height": 41382950
+            }
+          }
+        }
+      }
     }
   ],
   "daySeal": "c2a7e976cd34b28dc965e70148f697d98b4ef04fa9d5a8dee2dda64c0ab0ae78"
