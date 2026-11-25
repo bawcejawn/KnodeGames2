@@ -930,6 +930,9 @@
   }
 
   window.KWallet = {
+    /** Growth change 3 (M-632): a page's own "Play free: lock in" starts the guest in one tap (the same connectGuest the wallet
+     *  sheet's "Play as a guest" runs). Only while guest play is ready (the sponsor pays); otherwise null and nothing happens. */
+    guestReady: () => guestReady(), playGuest: () => (guestReady() ? connectGuest() : Promise.resolve(null)),
     init, setGuestConfig, connect, disconnect, send, sendBatch, batchReady: batchReady, isPhone, manageGuest, guestInfo: () => { guestCant([]); }, switchTo, forget,
     accounts: () => remembered(), subscribe: (f) => { listeners.add(f); return () => listeners.delete(f); },
     get address() { return W.address; }, get kind() { return W.kind; },

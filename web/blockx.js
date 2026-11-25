@@ -298,8 +298,10 @@
           dot(p.a), el("span", { class: "bx-name", text: nameOf(p.a) }), el("span", { class: "bx-share", text: shareText(p.share) }), el("span", { class: "bx-mult", text: multText(card ? X.multiplier(card, p.a, about(h)) : p.mult) }))));
       if (!ps.length) chips.append(el("div", { class: "bx-empty", text: "Loading producers…" }));
       const changed = choice && choice !== mineP;
-      const btn = el("button", { type: "button", class: "bx-lockin", onclick: () => (who ? sendPick(r, choice) : startPlaying()) },
-        !who ? (TESTNET ? "Play free to pick" : "Connect to pick") : mineP && !changed ? "Picked" : mineP ? "Change pick" : "Lock in pick");
+      const tap = !who && oneTap();
+      const btn = el("button", { type: "button", class: "bx-lockin", onclick: () => (who ? sendPick(r, choice) : tap ? lockInAsGuest(r, choice) : startPlaying()) },
+        !who ? (tap ? "Play free: lock in" : TESTNET ? "Play free to pick" : "Connect to pick") : mineP && !changed ? "Picked" : mineP ? "Change pick" : "Lock in pick");
+      if (tap && (sending || !choice)) btn.disabled = true;
       if (who && (sending || !changed || used >= max || noChanges)) btn.disabled = true;
       const foot = el("div", { class: "bx-t-foot" },
         mineP ? el("span", { class: "bx-yours", text: `Yours: ${nameOf(mineP)}${noChanges ? " (no changes left)" : ""}` }) : el("span", { text: who && used >= max ? "Today's picks are used up" : choice ? `${nameOf(choice)} · about ${multText(card ? X.multiplier(card, choice, about(h)) : ps.find((p) => p.a === choice)?.mult)} if right` : "Choose a producer", title: "By the current handicap card. The card taken at or before the lock decides the score." }), btn);
@@ -322,7 +324,18 @@
   const etaText = (r) => `about ${clock(about(G.target(r)))} · locks in ${dur(secsTo(G.lockHeight(r)) * 1000)}`;
   // Owner, 5 Nov: "after they select the producer it gives a pop up to pick them or x out and select another".
   // Tapping a producer opens one small box: the pick, what it scores, and two buttons (Pick / Choose another).
+  /** Growth change 3: a new visitor on mainnet picks first and plays free in one tap (no wallet sheet first). */
+  const oneTap = () => !TESTNET && !me() && !!(W && typeof W.playGuest === "function" && typeof W.guestReady === "function" && W.guestReady());
+  async function lockInAsGuest(r, producer) {
+    if (!producer || sending) return;
+    let a = null;
+    try { a = await W.playGuest(); } catch (e) { return pickModal("bad", "Couldn't start free play", [String((e && e.message) || e)], [okBtn("OK")]); }
+    if (!a || !me()) return;   // cancelled (for example a missing guest the player chose not to replace): nothing sent
+    await loadMine();
+    sendPick(r, producer);
+  }
   function choose(r, a) {
+    if (!me() && oneTap()) { drafts.set(r, a); renderTargets(true); const c = document.querySelector(`[data-chip="${r}:${a}"]`); if (c) c.focus(); return; }
     if (!me()) { drafts.set(r, a); startPlaying(); return; }
     drafts.set(r, a); renderTargets(true);
     const chip = document.querySelector(`[data-chip="${r}:${a}"]`); if (chip) chip.focus();   // the box returns focus here
@@ -542,6 +555,49 @@
     ], [el("button", { class: "btn ghost", type: "button", "data-cancel": "", onclick: () => { closeModal(); done(false); } }, "Cancel"),
       el("button", { class: "btn", type: "button", onclick: () => { closeModal(); done(true); } }, "Confirm change")]));
   }
+  // ── after a pick: when the result comes, a reminder, a share (Growth change 3; RETURN-HOOKS #2). No server, no address. ──
+  const PAGE_URL = () => new URL("blockx.html", location.href).href;
+  const icsStamp = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const icsEsc = (s) => String(s).replace(/([,;\\])/g, "\\$1");
+  /** One calendar event (the result) or a repeating one (every morning at 7 AM, floating local time: no time zone in the file). */
+  function buildIcs(kind, h) {
+    const now = new Date(), uid = `${kind}-${now.getTime()}@knodegames`;
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Knode Games//Block X//EN", "BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${icsStamp(now)}`];
+    if (kind === "result") {
+      const at = new Date(about(h));
+      lines.push(`DTSTART:${icsStamp(at)}`, `DTEND:${icsStamp(new Date(at.getTime() + 10 * 60000))}`, `SUMMARY:${icsEsc(`Knode Games: your Block ${h} result`)}`);
+    } else {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), p2 = (n) => String(n).padStart(2, "0");
+      const day = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}`;
+      lines.push(`DTSTART:${day}T070000`, `DTEND:${day}T071000`, "RRULE:FREQ=DAILY", `SUMMARY:${icsEsc("Knode Games: today's picks are open")}`);
+    }
+    lines.push(`DESCRIPTION:${icsEsc(PAGE_URL())}`, `URL:${PAGE_URL()}`, "BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:PT0M", "DESCRIPTION:Knode Games", "END:VALARM", "END:VEVENT", "END:VCALENDAR");
+    return lines.join("\r\n") + "\r\n";
+  }
+  function saveIcs(text, name) {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/calendar" }));
+    const a = el("a", { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+  function remindButtons(h) {
+    return el("div", { class: "bx-remind" }, el("span", { text: "Remind me:" }),
+      el("button", { class: "btn ghost", type: "button", onclick: () => {
+        saveIcs(buildIcs("result", h), `knode-block-${h}.ics`);
+        try { document.dispatchEvent(new CustomEvent("kg:remind", { detail: { reminder: "result" } })); } catch { /* never block the page */ }
+      } }, "When my result is in"),
+      el("button", { class: "btn ghost", type: "button", onclick: () => {
+        saveIcs(buildIcs("daily", h), "knode-games-every-morning.ics");
+        try { document.dispatchEvent(new CustomEvent("kg:remind", { detail: { reminder: "daily" } })); } catch { /* never block the page */ }
+      } }, "Every morning at 7 AM"));
+  }
+  function shareButton(h) {
+    const text = `I picked who signs block ${fmt(h)} on Knode Games. Your turn.`;
+    return el("button", { class: "btn ghost", type: "button", onclick: async () => {
+      const url = PAGE_URL() + "?utm_source=share";   // Growth's plan: a shared link is counted as a share, nothing else in it
+      try { if (navigator.share) { await navigator.share({ title: "Who Signs Block X", text, url }); return; } } catch { return; }
+      copy(`${text} ${url}`);
+    } }, "Share");
+  }
   async function sendPick(r, producer) {
     const who = me();
     if (!who || !picksContract || sending) return;
@@ -586,6 +642,8 @@
       }
       drafts.delete(r);
       if (onChain) pickModal("ok", "Pick confirmed", [el("p", {}, "Your pick: ", el("b", { text: nameOf(producer) }), ` for block ${fmt(h)}.`),
+        el("p", { class: "bx-result-at" }, "Result about ", el("b", { text: clock(about(h)) })),
+        el("div", { class: "bx-after" }, remindButtons(h), shareButton(h)),
         `It locks ${G.LEAD} blocks (about ${Math.round(G.LEAD * 3 / 60)} minutes) before the block. Until then you can change it ${changesWord()}, with your own Mana (a change counts toward today's ${G.PICKS_PER_DAY}).`,
         id ? el("p", { class: "ago mono", text: `Transaction ${String(id).slice(0, 18)}…` }) : null].filter(Boolean), [okBtn()]);
       else pickModal("info", "Sent, not seen on the chain yet", ["Your wallet sent it. It usually shows within a minute; this list updates by itself."], [okBtn("OK")]);
