@@ -8,7 +8,8 @@
 // - The queue: the producer whose last start is longest ago plays next. A producer goes to the bottom at the START of its
 //   game (D-342). A producer off the list at its turn is skipped and keeps its place (D-343). A producer with 2 games
 //   already running is skipped the same way. A new entrant goes to the bottom. A cancelled start leaves the queue unchanged.
-// - Each start gets ONE write-once schedule file, written 3 h 3 min to 3 h 33 min before the start (D-370, line timing A).
+// - Each start gets ONE write-once schedule file, written 3 h 33 min to 2 h 20 min before the start (D-370 as changed by D-732:
+//   2 or 3 tries per game, so one late data read or one missed run no longer cancels it).
 //   A file made later than 2 h 15 min before the start is invalid: that game is cancelled for everyone (D-344).
 // - 1 point per right pick (D-275). A count exactly on the line, and a void game, are skipped (D-287).
 // - A game belongs to the week it STARTS in (week changes Sun 7 PM ET = Mon 00:00 UTC).
@@ -30,7 +31,7 @@ export const MAX_RUNNING_PER_PRODUCER = 2;
 export const MIN = 60000;
 // The kit's manifest settings (Architecture's rolling-rounds draft); the recorder passes the manifest's numbers in.
 export const SCHEDULE_FROM_MIN = 213;              // 3 h 33 min before the start
-export const SCHEDULE_TO_MIN = 183;                // 3 h 3 min before the start
+export const SCHEDULE_TO_MIN = 140;                // 2 h 20 min before the start (D-732; was 183)
 export const CANCEL_AFTER_MIN = 135;               // later than 2 h 15 min before the start = cancelled
 export const SCHEDULE_VERSION = 1;
 export const WEEK_MS = 604800000;
