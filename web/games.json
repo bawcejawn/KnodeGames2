@@ -43,7 +43,7 @@
                     { "key": "jumps", "label": "Jumps", "wide": true }, { "key": "events", "label": "Events", "wide": true }] } },
     { "id": "vs", "name": "Knode Games VS", "kinds": ["free"], "status": "live", "href": "vs.html",
       "line": "Pick which producers beat our node. One call a day.",
-      "board": { "data": "games-data/vs/board.json", "soon": "Practice starts Mon 30 Nov; first points the day after.",
+      "board": { "data": "games-data/vs/board.json", "soon": "Producer lists from Mon 30 Nov (picks open Fri 27, 7 PM ET).",
         "free": { "show": 6, "prize": "Knode Games VS is free play and pays no prizes yet." },
         "columns": [{ "key": "pts", "label": "Points" }] } },
     { "id": "overunder", "name": "More or Fewer", "kinds": ["free"], "status": "live", "href": "overunder.html",
