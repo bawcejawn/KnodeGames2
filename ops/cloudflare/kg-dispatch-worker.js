@@ -41,6 +41,7 @@ export const JOBS = {
     { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25, ownOnly: true },
     { workflow: "bot.yml", windowMin: 50 }, { workflow: "names.yml", windowMin: 50 }, { workflow: "golf.yml", windowMin: 50 },
     { workflow: "lastnode.yml", windowMin: 10 },
+    { workflow: "x-post.yml", windowMin: 25 },   // X poster (off unless X_POSTING_ENABLED is "true"); its own timer is :02 and :32
   ],
 };
 // Tue 24 Nov (AB-072): GitHub's own timer started combo.yml once and lastnode.yml twice in 14 hours on Mon 23, so the
