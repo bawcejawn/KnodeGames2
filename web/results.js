@@ -81,21 +81,37 @@
       if (!this.weeks.length) { box.replaceChildren(el("div", { class: "empty", text: "No races recorded yet." })); return; }
       if (this.week == null || !this.weeks.includes(this.week)) this.week = this.weeks[0];
       await this.load(this.week);
+      this.typedThenDraw(this.week);   // starts the other lengths' files and marks them as loading, then the first draw
       this.draw();
     },
+    /** The week's 6-hour races and their Ruler file. The other lengths come after the first draw (typedThenDraw). */
     async load(w) {
-      if (this.files.has(w) && this.rtried.has(w)) { await this.loadTyped(w); return; }
-      if (!this.files.has(w)) try {
-        const f = await fetchJson(RAW + `race-data/W${String(w).padStart(3, "0")}.json`);
+      if (this.files.has(w) && this.rtried.has(w)) return;
+      // The two files are asked for at once (Speed PR 3: one wait on a slow phone, not two); handled as before.
+      const wp = this.files.has(w) ? null : fetchJson(RAW + `race-data/W${String(w).padStart(3, "0")}.json`);
+      const rp = fetchJson(RAW + `race-data/R${String(w).padStart(3, "0")}.json`);
+      rp.catch(() => {}); if (wp) wp.catch(() => {});   // each is awaited and handled below; this only stops an early "unhandled" warning
+      if (wp) try {
+        const f = await wp;
         if (f && f.v === 1 && f.week === w && Array.isArray(f.races)) this.files.set(w, f);
       } catch { /* drawn as "couldn't load" */ }
       this.rtried.add(w);
       // The VHP ruler's cards for this week (R<week>.json), for the Void marks. Missing or off = no marks, never an error.
       try {
-        const j = await fetchJson(RAW + `race-data/R${String(w).padStart(3, "0")}.json`);
+        const j = await rp;
         if (j && j.v === 1 && j.week === w && Array.isArray(j.races)) { this.rulerFailed.delete(w); if (Number.isInteger(j.rulerFrom)) this.rulerFrom = j.rulerFrom; if (j.mode !== "off") this.ruler.set(w, j); }
       } catch (e) { if (String(e && e.message) !== "404") { this.rulerFailed.add(w); this.rtried.delete(w); } /* 404: no ruler file this week */ }
-      await this.loadTyped(w);
+    },
+    /** Speed PR 3: the 6-hour races show first (2 small files); the 1-hour, 2-hour, daily and weekly races (T and R-1 to
+     *  R-4: about 1.2 MB to read on a phone) load after that, then the page draws again with them. Same files, same
+     *  checks, same results; only the order. While they load, the band says so and their tabs aren't there yet. */
+    typedThenDraw(w) {
+      if (!typesOnFor(w) || this.ttried.has(w) || this.typing === w) return;
+      this.typing = w;
+      this.loadTyped(w).catch(() => {}).finally(() => {
+        if (this.typing === w) this.typing = null;
+        if (this.week === w && this.box) this.draw();
+      });
     },
     /** The typed races of an ON week: T<www>.json (the races and picks) and R<www>-<t>.json (the Ruler's places, t = 1 to 4). Nothing before the types' week. */
     async loadTyped(w) {
@@ -171,7 +187,7 @@
         : el("p", { class: "rband-score", text: `${ended.filter((x) => x.status === "final").length} races final this week` });
       const weeks = el("div", { class: "rweeks", role: "group", "aria-label": "Week" }, ...this.weeks.map((w) => {
         const b = el("button", { type: "button", "aria-pressed": String(w === this.week), text: w === M.weekOf(now) ? `This week (${WS(w)})` : `${WL(w)}` });
-        b.addEventListener("click", async () => { this.week = w; this.day = null; await this.load(w); this.draw(); });
+        b.addEventListener("click", async () => { this.week = w; this.day = null; await this.load(w); this.typedThenDraw(w); this.draw(); });
         return b;
       }));
       const days = el("div", { class: "rdays", role: "group", "aria-label": "Day" }, ...DAYS.map((d, i) => {
@@ -187,7 +203,8 @@
         b.addEventListener("click", () => { this.type = t; this.day = null; this.draw(); });
         return b;
       })) : null;
-      const band = el("div", { class: "rband" }, el("div", { class: "rband-top" }, el("h1", { text: "Race results" }), score), weeks, lengths, days);
+      const typing = this.typing === this.week ? el("p", { class: "muted rband-wait", text: "Loading the 1-hour, 2-hour, daily and weekly races…" }) : null;
+      const band = el("div", { class: "rband" }, el("div", { class: "rband-top" }, el("h1", { text: "Race results" }), score), weeks, lengths, typing, days);
 
       // Tools: search the week, only mine.
       const search = el("input", { type: "search", "aria-label": "Find a producer or wallet", placeholder: "Find a producer or wallet", autocomplete: "off" });
