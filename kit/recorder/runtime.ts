@@ -355,6 +355,11 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
       } catch (e) {
         if (!(isNotYet(e) || e instanceof Disagree || e instanceof OutOfBudget || e instanceof ReadFailed)) throw e;
         alerts.errors.push(`round ${id}'s schedule file couldn't be made this run (${(e as Error).message}): without one by ${new Date(c.cancelAt(n)).toISOString()} the round is cancelled for everyone (D-344)`);
+        // R5-17: a window wider than one slot holds several starts. A later start's file is never made while an earlier
+        // start whose window is still open has none: it would carry the queue without that start, and the earlier file,
+        // made on a later run, would fork the queue. The later starts wait for the next run; once the earlier window
+        // closes with no file, that start is cancelled (D-344) and the later ones go on.
+        break;
       }
     }
   }
