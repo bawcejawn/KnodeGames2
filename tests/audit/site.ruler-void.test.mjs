@@ -83,7 +83,7 @@ test("the Ruler page says which games use it (Race live from Week 4; the others 
   assert.match(text, /6-hour races: live from Week 4 \(Mon 16 Nov\)/);
   assert.match(text, /From Week 5 \(Mon 23 Nov\)\. Week 4 is a practice week for the Ruler\./);
   assert.match(text, /From its first week, Week 5 \(from Mon 23 Nov\)\./);
-  assert.match(text, /From its first week \(Mon 7 Dec\)\./);
+  assert.match(text, /From Sun 29 Nov, 7 PM ET \(practice week 6\)\./);
   assert.doesNotMatch(text, /Planned:|next kit version/);
   assert.match(text, /luck against its own size/);
   assert.doesNotMatch(text, /\bmode [A-D]\b|clear edge|best day|even odds/i, "players are never told about the modes");
