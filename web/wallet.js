@@ -463,7 +463,7 @@
   /** Explain why a guest can't do something, instead of failing silently. */
   // Owner, 11 Nov: a guest's prize is claimed by turning the guest into a real wallet (same key, imported into Kondor).
   const guestSteps = () => h("ol", { class: "kw-steps" },
-    h("li", {}, "Tap ", h("b", {}, "Back up guest key"), ", then ", h("b", {}, "Tap to reveal"), " and ", h("b", {}, "Copy"), ". Keep it private."),
+    h("li", {}, "Tap ", h("b", {}, "Back up guest key"), ", then ", h("b", {}, "Tap to reveal"), ", ", h("b", {}, "Show"), " and ", h("b", {}, "Copy"), ". Keep it private."),
     h("li", {}, "On a computer, install the Kondor browser extension and set up your Kondor wallet."),
     h("li", {}, "In Kondor choose ", h("b", {}, "Import account"), " (private key), paste the key, and name the account."),
     h("li", {}, "Knode Games usually pays the Mana to collect a prize; a little KOIN in that wallet means you can always collect it yourself."),

@@ -411,3 +411,7 @@ test("Back up or move my wallet: after Copy a toast says where to paste it; the 
   assert.match(sheet, /Import account|guestSteps\(\)/);
   assert.match(fs.readFileSync(`${APP}/web/header-wallet.js`, "utf8"), /"Back up or move my wallet"/);
 });
+
+test("guest steps step 1 names every tap: Back up guest key, Tap to reveal, Show and Copy", () => {
+  assert.match(walletSrc, /h\("li", \{\}, "Tap ", h\("b", \{\}, "Back up guest key"\), ", then ", h\("b", \{\}, "Tap to reveal"\), ", ", h\("b", \{\}, "Show"\), " and ", h\("b", \{\}, "Copy"\), "\. Keep it private\."\),/);
+});
