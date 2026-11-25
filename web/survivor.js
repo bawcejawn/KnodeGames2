@@ -181,7 +181,9 @@ function start() {
   let producers = [];              // recent signers [{ a, blocks }]
   let switches = null;
   let picksContract = null, myPicks = new Map(), usage = null, sending = false, gameChanged = false;
-  const pays = (n) => Number.isInteger(n) && S.freePrizeOn(switches, n);
+  // A prize shows only when the free-prize switch is on AND the vault has game 3 (stakeOpen: KStake.stakeable(); Vault, M-790).
+  let stakeOpen = false;
+  const pays = (n) => Number.isInteger(n) && S.freePrizeOn(switches, n) && stakeOpen;
   const drafts = new Map();
 
   /** The season to show: the one running today, else the last one that started, else none yet. */
@@ -566,7 +568,6 @@ function start() {
 
   // Staking shows only once the vault takes stakes in Survivor (list_games has game 3 as staked; Vault, M-773).
   // Until then: no Staked tab, no stake panel, no Stake link, and everyone is on the Free play board.
-  let stakeOpen = false;
   async function checkStake() {
     const K = window.KStake;
     if (!K || typeof K.stakeable !== "function") return;
@@ -578,6 +579,7 @@ function start() {
     $("board-tabs").hidden = !open; $("stake-link").hidden = !open; $("stake-closed").hidden = open;
     if (open && typeof K.mount === "function") { $("stake-panel").hidden = false; K.mount($("stake-panel"), { game: S.GAME_ID }); }
     if (!open && board === "staked") setBoard("free");
+    renderPrizeText(); renderStandings();
   }
 
   function renderPrizeText() {

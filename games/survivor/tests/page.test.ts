@@ -149,6 +149,8 @@ test("staking shows only when the vault takes stakes in Survivor (Vault, M-773)"
   assert.ok(!/weekly bucket|staked board\./i.test(html), "no promise of a staked bucket while Survivor isn't a vault game");
   assert.ok(/<script src="stake-panel\.js"><\/script>\s*<script type="module" src="survivor\.js">/.test(html), "stake-panel.js loads before survivor.js");
   assert.ok(/ids\.includes\(S\.GAME_ID\)/.test(js) && /K\.stakeable\(\)/.test(js), "the same check as the Stake page: KStake.stakeable() lists game 3");
+  assert.ok(/const pays = \(n\) => Number\.isInteger\(n\) && S\.freePrizeOn\(switches, n\) && stakeOpen;/.test(js), "prize text needs the switch on AND game 3 in the vault (M-790)");
+  assert.ok(/id="prize-on" hidden/.test(html) && !/first paid season/.test(html) && html.includes("Season 2 starts Mon 14 Dec."), "no paid-season promise");
 });
 
 test("page source: built with textContent (no HTML strings), the rules come from games/survivor/math.js, no old files", () => {
