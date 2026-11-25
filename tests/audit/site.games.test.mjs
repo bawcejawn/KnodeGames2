@@ -87,7 +87,7 @@ test("Combo Card preview: linked from the home tile, the games list and the menu
   assert.equal(c.status, "preview"); assert.equal(c.href, "combo.html"); assert.equal(c.opens, "Opens Mon 7 Dec");
   assert.match(c.line, /Preview: build and share cards now; sending opens Mon 7 Dec\.$/);
   const h = read("web/index.html");
-  assert.match(h, /<a class="also-card gtile" href="combo\.html">[^]*?<b>Combo Card<\/b><p><span class="tile-tag">Preview<\/span>[^<]*Opens Mon 7 Dec\./);
+  assert.match(h, /<a class="also-card gtile" href="combo\.html"( data-game="combo")?>[^]*?<b>Combo Card<\/b><p><span class="tile-tag">Preview<\/span>[^<]*Opens Mon 7 Dec\./);
   assert.doesNotMatch(h, /gtile soon" aria-disabled="true"><span aria-hidden="true">🎟️/);
   const nav = read("tools/site-nav.mjs");
   assert.equal((nav.match(/\["Combo Card · Preview", "combo\.html"/g) || []).length, 2, "Play group and Games menu");
@@ -167,4 +167,5 @@ test("the Leaderboards picker has Knode Games VS and More or Fewer, with their '
   assert.equal(vs.board.soon, "Producer lists from Mon 30 Nov (picks open Fri 27, 7 PM ET).");
   assert.equal(ou.board.soon, "First results Mon 30 Nov.");
   assert.match(read("web/leaders.js"), /cfg\.soon \|\| "Couldn't load this leaderboard/);
+  assert.match(read("web/leaders.js"), /soon: typeof b\.soon === "string" && b\.soon\.length <= 100 \? b\.soon : "",/);
 });
