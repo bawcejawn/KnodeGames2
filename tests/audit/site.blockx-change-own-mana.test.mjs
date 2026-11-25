@@ -24,6 +24,8 @@ test("a change is never in a batch: 'Add to my picks' only for a first pick, and
   assert.match(q, /rounds\.filter\(\(r, i\) => !have\[i\]\)/, "a round that already has a pick is left out");
   assert.match(q, /Couldn't check your picks", \["Nothing was sent/, "fails closed when the read fails");
   assert.doesNotMatch(q, /noSponsor/, "the batch carries first picks only");
+  assert.match(q, /catch \{ return pickModal\("bad", "Couldn't check your picks"/, "R4-31 L-1: the batch fails closed");
+  assert.match(q, /\$\{changes \? `; \$\{changes\} already had a pick/, "R4-31 L-3: the sent line says when changes were left out");
 });
 
 test("a single change: read from the chain, asked first, own Mana only, never a guest, sent with noSponsor", () => {
@@ -32,6 +34,7 @@ test("a single change: read from the chain, asked first, own Mana only, never a 
   assert.match(p, /if \(n >= G\.MAX_CHANGES\) return pickModal\("info", "Already changed"/);
   assert.match(p, /W\.kind === "guest" \|\| !\(have >= CHANGE_MANA\)\) return pickModal\("info", "Your first pick stays"/);
   assert.match(p, /if \(!\(await askChange\(/);
+  assert.match(js, /const CHANGE_MANA = 1\.0;/, "R4-31 L-2: Vault's 1.0 Mana figure");
   assert.match(p, /W\.send\([^\n]*, \[operation\], change \? \{ noSponsor: true \} : \{\}\)/);
   assert.match(js, /"Cancel"\),\s*el\("button", \{ class: "btn", type: "button", onclick: \(\) => \{ closeModal\(\); done\(true\); \} \}, "Confirm change"\)/, "Cancel first");
 });

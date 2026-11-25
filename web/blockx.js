@@ -520,7 +520,7 @@
       try { await readHead(); } catch { /* use the last head */ }
       const res = await W.sendBatch(`${rounds.length} Block X picks`, ops.map((o) => { const { __round, ...op } = o; return Object.defineProperty(op, "__round", { value: __round, enumerable: false }); }), { stillOpen: (o) => open(o.__round) });
       for (const r of rounds) { queue.delete(r); drafts.delete(r); }
-      pickModal("ok", "Picks sent", [`${res.sent} pick${res.sent === 1 ? "" : "s"} sent${res.dropped ? `; ${res.dropped} locked while you were choosing, so they were left out` : ""}. This list updates by itself.`], [okBtn()]);
+      pickModal("ok", "Picks sent", [`${res.sent} pick${res.sent === 1 ? "" : "s"} sent${res.dropped ? `; ${res.dropped} locked while you were choosing, so they were left out` : ""}${changes ? `; ${changes} already had a pick, so ${changes === 1 ? "it stays" : "they stay"} in your list: tap the producer on the block to change it with your own Mana` : ""}. This list updates by itself.`], [okBtn()]);
     } catch (e) {
       const m = String((e && e.message) || e);
       const msg = /PICKS: this round is locked|locked/i.test(m) ? "Nothing was saved; a round had locked. Try again."
