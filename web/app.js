@@ -392,15 +392,47 @@
     return result || {};
   }
 
+  // Speed (PR 2): this week's question files are loaded and checked on chain first, so the page and the board can show;
+  // the older weeks (up to 42 files back, as before) follow in the background and the page redraws when they are in.
+  // Before: all 42 files and ~160 on-chain checks (4 at a time) before anything showed. Nothing else changes: the same
+  // files, the same checks, the same numbering; only the order in which they arrive.
+  const Q2 = { cur: [], older: [], olderBusy: false };
+  const qFileWeek = (f) => { const m = /^questions\/W(\d+)-/.exec(f); return m ? Number(m[1]) : null; };
+  const fetchFiles = (list) => Promise.all(list.map((f) => fetchJson(DATA + f).then((d) => ({ f, d })).catch(() => null))).then((a) => a.filter(Boolean));
+  function setQuestions() {
+    S.files = [...Q2.older, ...Q2.cur];
+    numberQuestions(S.files);
+    S.questions = S.files.flatMap(({ f, d }) => (d.questions || []).filter((q) => q.chainId !== undefined).map((q) => ({ ...q, chainId: Number(q.chainId), file: f })));
+  }
   async function loadQuestions() {
     const idx = await fetchJson(DATA + "index.json").catch(() => ({ days: [] }));
     // Only plain question files from game-data/questions/ (index.json is a published file; never follow other paths).
-    const days = (idx.days || []).filter((f) => typeof f === "string" && /^questions\/[A-Za-z0-9_-]+\.json$/.test(f));
-    const files = await Promise.all(days.slice(-42).map((f) => fetchJson(DATA + f).then((d) => ({ f, d })).catch(() => null)));
-    S.files = files.filter(Boolean);
-    await checkFiles(S.files);
-    numberQuestions(S.files);
-    S.questions = S.files.flatMap(({ f, d }) => (d.questions || []).filter((q) => q.chainId !== undefined).map((q) => ({ ...q, chainId: Number(q.chainId), file: f })));
+    const days = (idx.days || []).filter((f) => typeof f === "string" && /^questions\/[A-Za-z0-9_-]+\.json$/.test(f)).slice(-42);
+    // This week's files by name (W005-…), each confirmed by the week inside it; anything else counts as older.
+    // (Only once the chain has told us the week: before that, or without a chain, everything loads at once as before.)
+    const thisWeek = S.st && Number.isInteger(S.week) ? days.filter((f) => qFileWeek(f) === S.week) : days;
+    const got = await fetchFiles(thisWeek);
+    const cur = got.filter(({ d }) => num(d.week) === S.week || thisWeek === days);
+    await checkFiles(cur);
+    Q2.cur = cur;
+    const curNames = new Set(cur.map(({ f }) => f));
+    if (thisWeek === days) Q2.older = [];
+    else Q2.older = Q2.older.filter(({ f }) => !curNames.has(f) && days.includes(f));   // keep the last older pass until the next one is in
+    setQuestions();
+    if (thisWeek !== days && !Q2.olderBusy) loadOlderQuestions(days.filter((f) => !curNames.has(f)), got.filter(({ f }) => !curNames.has(f)));
+  }
+  async function loadOlderQuestions(names, already) {
+    Q2.olderBusy = true;
+    try {
+      const have = new Set(already.map(({ f }) => f));
+      const older = [...await fetchFiles(names.filter((f) => !have.has(f))), ...already];
+      older.sort((a, b) => names.indexOf(a.f) - names.indexOf(b.f));
+      await checkFiles(older);
+      Q2.older = older;
+      setQuestions();
+      renderAll();
+      if (!$("#view-results").hidden) renderResults();
+    } catch { /* tried again on the next refresh */ } finally { Q2.olderBusy = false; }
   }
 
   /** Each question file must hash to the params_hash posted on chain for its id, or the page will not offer it for
@@ -415,6 +447,29 @@
   // every 10 minutes. Before this, every question of the last nine days was re-read every minute (~70-100 node reads a
   // minute per open tab, measured with tools/capacity-harness/pages.mjs). The file-vs-chain hash check is unchanged.
   const chainReadAt = new Map(), SLOW_REREAD_MS = 600000;
+  /** One on-chain read of a question, kept for the file check and the leaderboard (Speed PR 2: the board used to read
+   *  every answered question again right after this). Returns { ok: false } when the chain has no params_hash for it
+   *  (nothing kept then, as before), else { ok: true }; `outcome` is the chain's outcome either way. */
+  async function readQuestion(id) {
+    const onChain = (await read("get_question", { id })).question || {};
+    chainReadAt.set(id, Date.now());
+    const h = String(onChain.params_hash || "").replace(/^0x/, "").toLowerCase();
+    if (!h) return { ok: false, outcome: num(onChain.outcome) };
+    chainHashes.set(id, h);
+    chainOutcomes.set(id, num(onChain.outcome));
+    chainDataHashes.set(id, String(onChain.data_hash || "").replace(/^0x/, "").toLowerCase());
+    // What the contract enforces must be what the file shows: answers close at the chain's lock time, and the
+    // chain's window and number of options decide the result (audit W1-04).
+    chainFacts.set(id, { lock: num(onChain.lock_time), ws: num(onChain.window_start), we: num(onChain.window_end), k: num(onChain.k) });
+    return { ok: true, outcome: num(onChain.outcome) };
+  }
+  /** A question's outcome for the leaderboard: the one read in the last minute if there is one (the board was re-read
+   *  every minute before too), else a fresh read. Same number either way: num(question.outcome). */
+  const BOARD_REUSE_MS = 60000;
+  async function outcomeFor(id) {
+    if (chainOutcomes.has(id) && Date.now() - (chainReadAt.get(id) || 0) < BOARD_REUSE_MS) return chainOutcomes.get(id);
+    return (await readQuestion(id)).outcome;
+  }
   async function checkFiles(files) {
     const qs = files.flatMap(({ d }) => (d.questions || []).filter((q) => q.chainId !== undefined));
     // Nothing is added to a question before it is hashed (any extra key would change its hash).
@@ -429,16 +484,7 @@
         const known = chainFacts.get(id), waiting = !chainOutcomes.get(id) && !!known && nowMs() >= known.lock;
         const due = !chainReadAt.has(id) || waiting || Date.now() - chainReadAt.get(id) >= SLOW_REREAD_MS;
         if (!chainHashes.has(id) || ((recent || !chainOutcomes.get(id)) && due)) {
-          const onChain = (await read("get_question", { id })).question || {};
-          chainReadAt.set(id, Date.now());
-          const h = String(onChain.params_hash || "").replace(/^0x/, "").toLowerCase();
-          if (!h) { q.hashOk = null; return; }
-          chainHashes.set(id, h);
-          chainOutcomes.set(id, num(onChain.outcome));
-          chainDataHashes.set(id, String(onChain.data_hash || "").replace(/^0x/, "").toLowerCase());
-          // What the contract enforces must be what the file shows: answers close at the chain's lock time, and the
-          // chain's window and number of options decide the result (audit W1-04).
-          chainFacts.set(id, { lock: num(onChain.lock_time), ws: num(onChain.window_start), we: num(onChain.window_end), k: num(onChain.k) });
+          if (!(await readQuestion(id)).ok) { q.hashOk = null; return; }
         }
         const f = chainFacts.get(id);
         const same = !f || (f.lock === num(q.lockTime) && f.ws === num(q.windowStart) && f.we === num(q.windowEnd) && f.k === (q.options || []).length);
@@ -741,7 +787,7 @@
     }
     const ids = new Set(rows.flatMap((r) => r.answers.map((a) => num(a.question_id))));
     const outcomes = new Map();
-    await Promise.all([...ids].map(async (id) => outcomes.set(id, num(((await read("get_question", { id })).question || {}).outcome))));
+    await Promise.all([...ids].map(async (id) => outcomes.set(id, await outcomeFor(id))));
     if (isTestWeek(week)) for (const q of S.questions || []) { const p = practiceOf(q); if (p && outcomes.has(Number(q.chainId))) outcomes.set(Number(q.chainId), p); }
     const res = score(rows, outcomes, week);
     if (isTestWeek(week)) { res.practice = true; return res; }   // practice standings: no pots, no rewards
