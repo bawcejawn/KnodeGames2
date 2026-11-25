@@ -331,13 +331,13 @@ test("Repo Lens #D-12 F-1: owner-propose proposes only the pinned \"nextOwner\" 
   assert.throws(() => planPropose(view(), MAINNET_OWNER, OTHER, NOW, {}, NEW), /is not the planned new owner/);
   assert.match(planPropose(view(), MAINNET_OWNER, NEW, NOW, {}, NEW).join("\n"), new RegExp(groups4(NEW).replace(/ /g, " ")));
   assert.equal(groups4("1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd"), "1LMV 8EcR FLFG RMFS C7rK w3eQ 3PSz LRRF md");
-  // Owner D-268 / D-417: the Picks handover comes LAST, after the v2 upload and every Picks apply (earliest propose
-  // Wed 25 Nov). Until then no "nextOwner" is pinned, so upgrade-schedule and upgrade-upload are not blocked by a
-  // planned handover. It is pinned again, to the cold owner 1LMV8E…, by its own reviewed PR just before the propose.
+  // Owner D-268 / D-417: the Picks handover comes LAST, after the v2 upload and every Picks apply. v2 is live (Sun 22 Nov,
+  // 92d555d0), so "nextOwner" is pinned again, to the cold owner 1LMV8E…, by this reviewed PR just before the propose.
+  // While it is pinned, upgrade-schedule refuses (no Picks upgrade is planned before the handover).
   const dep = JSON.parse(fs.readFileSync("picks-data/deployment.json", "utf8"));
-  assert.equal(dep.nextOwner, undefined, "no Picks handover is planned before the v2 upload (D-268, D-417)");
-  assert.equal(network(false).nextOwner, null);
-  assert.equal(handoverBlocksUpgrade({ owner: MAINNET_OWNER }, network(false).nextOwner), null, "so the v2 upgrade is not blocked");
+  assert.equal(dep.nextOwner, "1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd", "the planned Picks owner (the cold wallet), pinned for owner-propose");
+  assert.equal(network(false).nextOwner, "1LMV8EcRFLFGRMFSC7rKw3eQ3PSzLRRFmd");
+  assert.notEqual(handoverBlocksUpgrade({ owner: MAINNET_OWNER }, network(false).nextOwner), null, "a planned handover blocks a new Picks upgrade");
 });
 
 test("Repo Lens #D-12 F-2: the read-back waits for a node one block behind; never catching up still saves the primary's owner as unchecked", async () => {
