@@ -3,7 +3,7 @@
   "orphans": [],
   "lastCompound": 41356734,
   "warnings": [],
-  "lastProduced": 41378916,
+  "lastProduced": 41379903,
   "producedByDay": {
     "1428": 42,
     "1429": 48,
@@ -13,16 +13,16 @@
     "1433": 46,
     "1434": 55,
     "1435": 53,
-    "1436": 43
+    "1436": 44
   },
-  "producerScannedTo": 41379448,
+  "producerScannedTo": 41380588,
   "settings": "{\"min_stake\":\"100000000\",\"min_stake_next\":\"0\",\"min_stake_next_week\":\"0\",\"max_sponsor_rc\":\"0\",\"min_sponsor_rc\":\"0\",\"paused\":false}",
-  "sealedAt": 41379446,
+  "sealedAt": 41380577,
   "desk": {
     "settings": "{\"fee_bps\":1000,\"min_swap\":\"100000000\",\"max_swap\":\"0\",\"paused\":false,\"timelock\":\"172800000\"}",
-    "koin": "23836497379",
+    "koin": "25113024117",
     "koinOut": "804097000000",
-    "at": 1795619334590
+    "at": 1795622942640
   },
   "deskProducerKey": "AzCYCDLDa49PPVHKk60xQbOErS6XY1TcEA8bkSo8Sk6E",
   "notified": [
@@ -31,36 +31,36 @@
   ],
   "vhpLists": {
     "a1dca6c62b750898eb147d4f8eeb0ee35f9a98fcdd14f0c06f4b2c1c08a8fc00": {
-      "n": 30,
-      "last": 41379506
+      "n": 31,
+      "last": 41380641
     },
     "3f9ce05670aadbaeeded237077c0909cf70e412ba52d44f8d05683fec1027655": {
-      "n": 30,
-      "last": 41379506
+      "n": 31,
+      "last": 41380641
     },
     "253d108f5e8e60e1751289eb179734bdd02af1055fd04325b611bd67577a1af3": {
-      "n": 17,
-      "last": 41379506
+      "n": 18,
+      "last": 41380641
     },
     "8e552054cffcd7b0d4dcccd0ecbb6e997a3a98d5b3adaca35db7ad115ad5e2a2": {
-      "n": 17,
-      "last": 41379506
+      "n": 18,
+      "last": 41380641
     },
     "a56210950680e8911f2273b7ba198b254220dc4f2bb913972c8b8cda5ee58df8": {
-      "n": 2,
-      "last": 41379506
+      "n": 3,
+      "last": 41380641
     },
     "97036ac8596fe1a0b5f9b31d4c13ffc2ee04d97d3a0b93e656afa99075bd4514": {
-      "n": 2,
-      "last": 41379506
+      "n": 3,
+      "last": 41380641
     },
     "2521dec578c270d553168119ee9555d788b8d5b028e8333c48dcfdbae73494f0": {
-      "n": 2,
-      "last": 41379506
+      "n": 3,
+      "last": 41380641
     },
     "b04467930903aaf015311696186baeb7fb6cf490711516015e5ea8bfa3e7c7e9": {
-      "n": 2,
-      "last": 41379506
+      "n": 3,
+      "last": 41380641
     }
   },
   "manaByDay": {
@@ -171,5 +171,5 @@
     1795603155601,
     1795603179961
   ],
-  "seal": "15aa74359126adb928b2fc6e774e2359be6b886b8b26442cd50bebb7e2a8da5f"
+  "seal": "3b37fec7fc1475a190ffb73565feabda56f426c25ffda1bf5ab15973cdb89d8c"
 }
