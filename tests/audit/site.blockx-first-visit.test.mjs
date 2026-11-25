@@ -34,6 +34,7 @@ test("the success card: 'Result about <time>', Remind me (two choices) and Share
   assert.match(r, /try \{ document\.dispatchEvent\(new CustomEvent\("kg:remind", \{ detail: \{ reminder: "result" \} \}\)\); \} catch/);
   assert.match(r, /try \{ document\.dispatchEvent\(new CustomEvent\("kg:remind", \{ detail: \{ reminder: "daily" \} \}\)\); \} catch/);
   const s = fn("function shareButton");
+  assert.match(s, /const url = PAGE_URL\(\) \+ "\?utm_source=share";/, "Growth: the shared link carries utm_source=share only");
   assert.match(s, /I picked who signs block \$\{fmt\(h\)\} on Knode Games\. Your turn\./);
   assert.doesNotMatch(s, /W\.address|\bme\(\)|\bwho\b(?! signs)|address/i, "no address in the share");
 });

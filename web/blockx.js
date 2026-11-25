@@ -593,7 +593,7 @@
   function shareButton(h) {
     const text = `I picked who signs block ${fmt(h)} on Knode Games. Your turn.`;
     return el("button", { class: "btn ghost", type: "button", onclick: async () => {
-      const url = PAGE_URL();
+      const url = PAGE_URL() + "?utm_source=share";   // Growth's plan: a shared link is counted as a share, nothing else in it
       try { if (navigator.share) { await navigator.share({ title: "Who Signs Block X", text, url }); return; } } catch { return; }
       copy(`${text} ${url}`);
     } }, "Share");
