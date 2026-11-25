@@ -545,7 +545,7 @@ test("I-028: withdrawing or moving below the minimum mid-week is explained befor
 test("owner 5 Nov / Run a Node: the site lists Proof-of-Burn as sponsored (after the owner's config send, 6 Nov) and a registration asks for the 2.4 per-transaction cap", () => {
   const sp = JSON.parse(fs.readFileSync(`${APP}/game-data/deployment.json`, "utf8")).sponsor;
   assert.ok(sp.covers.includes("159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv")); assert.equal(sp.pob, "159myq5YUhhoVWu3wsHKHiJYKPKGUrGiyv");
-  assert.equal(sp.rcLimitOther, "240000000", "not an answer or a pick: rcLimitOther");
+  assert.equal(sp.rcLimitOther, "450000000", "not an answer or a pick: rcLimitOther (4.5 from 24 Nov: the per-tx cap, so a 10-pick batch fits)");
   assert.ok(!Object.keys(sp.rcLimits || {}).some((k) => k.startsWith("159myq")), "no measured row yet: the fallback (2.4) applies");
   const w = fs.readFileSync(`${APP}/web/wallet.js`, "utf8");
   assert.match(w, /rcFor\(sp, ops, String\(answerOnly \? \(sp\.rcLimit \|\| "100000000"\) : \(sp\.rcLimitOther \|\| "100000000"\)\)\)/);
