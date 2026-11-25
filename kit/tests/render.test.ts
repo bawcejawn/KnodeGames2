@@ -216,6 +216,19 @@ test("render: the run blocks are valid bash", { skip: NO_BASH }, () => {
   for (const b of blocks) { const r = spawnSync("bash", ["-n"], { input: b.replace(/\$\{\{[^}]*\}\}/g, "X"), encoding: "utf8" }); assert.equal(r.status, 0, r.stderr + "\n" + b.slice(0, 300)); }
 });
 
+// M-538: a game whose recorder wrote 0 files has no artifact: publish-kit says so as a notice, and downloads only when
+// the record job handed over files, so a real missing artifact stays an error.
+test("render: no files from a game -> a notice, not a download error (M-538)", () => {
+  const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
+  for (const g of ["fantasy", "vs", "overunder", "survivor"]) {
+    if (!kit.includes(`record-${g}:`)) continue;
+    assert.ok(kit.includes(`        if: \${{ needs.record-${g}.outputs.files == '0' }}\n        run: echo "::notice title=${g}::nothing to publish this run (its recorder wrote 0 files)"`), `${g}: the notice`);
+    assert.ok(kit.includes(`        if: \${{ needs.record-${g}.outputs.files != '0' && needs.record-${g}.outputs.files != '' }}\n        continue-on-error: true\n        with:\n          name: kit-games-data-${g}`), `${g}: the download only with files`);
+  }
+  assert.ok(kit.includes(`      files: \${{ steps.rec.outputs.files }}`));
+  assert.ok(kit.includes(`echo "files=$(find "$O" -type f | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"`));
+});
+
 // #R5-10-2 (B2 (2), L5): the publish job's push rule takes <slug>/live.json and nothing else named live.
 test("render: the publish push rule accepts <slug>/live.json and rejects other live.json paths (B2, #R5-10-2)", () => {
   const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");

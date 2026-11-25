@@ -15,7 +15,7 @@ function gh(total, { listStatus = 200, dispatchStatus = 204 } = {}) {
   const f = async (url, init = {}) => {
     calls.push({ url, method: init.method ?? "GET", headers: init.headers, body: init.body });
     const n = typeof total === "function" ? total(url) : total;
-    if (url.includes("/runs?")) return new Response(JSON.stringify({ total_count: n, workflow_runs: [] }), { status: listStatus });
+    if (url.includes("/runs?")) return new Response(JSON.stringify({ total_count: n, workflow_runs: Array.from({ length: n }, () => ({ conclusion: "success" })) }), { status: listStatus });
     return new Response(null, { status: dispatchStatus });
   };
   return { f, calls };
@@ -49,8 +49,8 @@ test("kg-dispatch: :07 and :37 start race-samples.yml when it hasn't run in 30 m
   assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/race-samples.yml/dispatches");
   const busy = gh(1);
   const out = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, busy.f, NOW);
-  assert.deepEqual(out.map((x) => x.dispatched), [false, false, false, false, false]);
-  assert.equal(busy.calls.length, 5, "all ran recently: five lists, nothing started");
+  assert.deepEqual(out.map((x) => x.dispatched), [false, false, false, false, false, false]);
+  assert.equal(busy.calls.length, 6, "all ran recently: six lists, nothing started");
 });
 
 test("kg-dispatch: :07 and :37 start kit-games.yml (Fantasy) only when it hasn't run in 25 minutes (D-355: runs at :27 and :57)", async () => {
@@ -72,12 +72,12 @@ test("kg-dispatch: an error on one job still runs the other, then the run fails 
   const lines = [];
   const f = async (url, init = {}) => {
     if (url.includes("race-samples")) return new Response("", { status: 502 });
-    if (url.includes("/runs?")) return new Response(JSON.stringify({ total_count: 0 }), { status: 200 });
+    if (url.includes("/runs?")) return new Response(JSON.stringify({ total_count: 0, workflow_runs: [] }), { status: 200 });
     return new Response(null, { status: 204 });
   };
   await assert.rejects(M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW, (l) => lines.push(l)), /race-samples\.yml: GitHub answered 502 listing/);
   assert.deepEqual(lines, ["kg-dispatch: race-samples.yml: ERROR race-samples.yml: GitHub answered 502 listing runs", `kg-dispatch: kit-games.yml: no run since 2026-11-14T14:16:00Z: started one`,
-    "kg-dispatch: bot.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: names.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: golf.yml: no run since 2026-11-14T13:51:00Z: started one"]);
+    "kg-dispatch: bot.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: names.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: golf.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: lastnode.yml: no run since 2026-11-14T14:31:00Z: started one"]);
 });
 
 test("kg-dispatch: a run this hour (GitHub's timer, by hand, or ours) -> nothing started", async () => {
@@ -96,10 +96,10 @@ test("kg-dispatch: only its jobs; an unknown trigger, no token, a GitHub error o
   await assert.rejects(M.runJob("41 * * * *", {}, f, NOW), /GH_DISPATCH_TOKEN/);
   await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, gh(0, { listStatus: 401 }).f, NOW), /401 listing/);
   const bad = async () => new Response("{}", { status: 200 });
-  await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, bad, NOW), /total_count/);
+  await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, bad, NOW), /workflow_runs/);
   await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, gh(0, { dispatchStatus: 403 }).f, NOW), /403 to the dispatch/);
   assert.deepEqual(Object.keys(M.JOBS), ["22 * * * *", "41 * * * *", "51 * * * *", "7,37 * * * *"], "four triggers: the account's 5th stays free (J5-2)");
-  assert.deepEqual(Object.values(M.JOBS).flat().map((j) => j.workflow), ["vhp-ruler.yml", "stats.yml", "race.yml", "games.yml", "race-samples.yml", "kit-games.yml", "bot.yml", "names.yml", "golf.yml"]);
+  assert.deepEqual(Object.values(M.JOBS).flat().map((j) => j.workflow), ["vhp-ruler.yml", "stats.yml", "combo.yml", "lastnode.yml", "race.yml", "games.yml", "race-samples.yml", "kit-games.yml", "bot.yml", "names.yml", "golf.yml", "lastnode.yml"]);
 });
 
 test("kg-dispatch: no web endpoint, and the token is never in the file", async () => {
@@ -152,4 +152,28 @@ test("kg-dispatch: kit-games.yml counts only its own (workflow_dispatch) runs, s
   const [k2] = (await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, own.f, Date.UTC(2026, 10, 23, 22, 7, 0))).filter((r) => r.workflow === "kit-games.yml");
   assert.equal(k2.dispatched, false);
   assert.match(k2.why, /already ran in the last 25 minutes \(1 Worker run\(s\)/);
+});
+
+// Tue 24 Nov (AB-072): GitHub's timer started combo.yml once and lastnode.yml twice in 14 hours, so the Worker starts
+// them; and a run pushed out of a concurrency queue (cancelled) doesn't count as "ran".
+test("kg-dispatch: :22 also starts combo.yml (window 50) and lastnode.yml (window 10); :07/:37 also lastnode.yml", async () => {
+  const at22 = M.JOBS["22 * * * *"].map((j) => [j.workflow, j.windowMin]);
+  assert.deepEqual(at22.filter(([w]) => w === "combo.yml" || w === "lastnode.yml"), [["combo.yml", 50], ["lastnode.yml", 10]]);
+  assert.ok(M.JOBS["7,37 * * * *"].some((j) => j.workflow === "lastnode.yml" && j.windowMin === 10));
+  assert.ok(!M.JOBS["7,37 * * * *"].some((j) => j.workflow === "combo.yml"), "Combo only at :22 (never beside kit games in the knode-games queue)");
+  assert.ok(!M.JOBS["51 * * * *"].some((j) => j.workflow === "combo.yml"));
+  const { f, calls } = gh(0);
+  const out = await M.runJob("22 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW);
+  assert.deepEqual(out.map((r) => [r.workflow, r.dispatched]), [["vhp-ruler.yml", true], ["stats.yml", true], ["combo.yml", true], ["lastnode.yml", true]]);
+  assert.ok(calls.some((c) => c.method === "POST" && c.url.endsWith("/combo.yml/dispatches")));
+});
+
+test("kg-dispatch: a cancelled run in the window doesn't count as ran; any other run does", async () => {
+  const list = (runs) => async (url, init = {}) => (url.includes("/runs?") ? new Response(JSON.stringify({ total_count: runs.length, workflow_runs: runs }), { status: 200 }) : new Response(null, { status: 204 }));
+  const [a] = await M.runJob("51 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, list([{ conclusion: "cancelled" }]), NOW);
+  assert.equal(a.dispatched, true, "only a cancelled run: start one");
+  for (const c of [null, "success", "failure", "skipped"]) {
+    const [b] = await M.runJob("51 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, list([{ conclusion: "cancelled" }, { conclusion: c }]), NOW);
+    assert.equal(b.dispatched, false, `a ${c ?? "running"} run counts`);
+  }
 });
