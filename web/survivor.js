@@ -564,6 +564,22 @@ function start() {
     $("me-line").textContent = !who ? "" : !mine ? "You're not in this season." : `You: #${myPlace.place} on the ${mine.board === "staked" ? "Staked" : "Free play"} board, ${mine.outN === null ? `${mine.lives} ${mine.lives === 1 ? "life" : "lives"} left` : `out on day ${mine.outN}`}, ${mine.days} day${mine.days === 1 ? "" : "s"} played.`;
   }
 
+  // Staking shows only once the vault takes stakes in Survivor (list_games has game 3 as staked; Vault, M-773).
+  // Until then: no Staked tab, no stake panel, no Stake link, and everyone is on the Free play board.
+  let stakeOpen = false;
+  async function checkStake() {
+    const K = window.KStake;
+    if (!K || typeof K.stakeable !== "function") return;
+    let ids = null;
+    try { ids = await K.stakeable(); } catch { return; }   // chain unreachable: stay closed
+    const open = Array.isArray(ids) && ids.includes(S.GAME_ID);
+    if (open === stakeOpen) return;
+    stakeOpen = open;
+    $("board-tabs").hidden = !open; $("stake-link").hidden = !open; $("stake-closed").hidden = open;
+    if (open && typeof K.mount === "function") { $("stake-panel").hidden = false; K.mount($("stake-panel"), { game: S.GAME_ID }); }
+    if (!open && board === "staked") setBoard("free");
+  }
+
   function renderPrizeText() {
     const s = seasonNow(), n = s ? s.season : 1, on = pays(n);
     $("prize-off").hidden = on; $("prize-on").hidden = !on;
@@ -577,6 +593,7 @@ function start() {
     const picksReady = setupPicks().catch(() => {});
     await loadData().catch(() => {});
     renderStandings(); renderMine(); renderDays(true); renderPrizeText();
+    checkStake();
     await picksReady;
     await refreshBlocks(true);
     renderDays(true);
