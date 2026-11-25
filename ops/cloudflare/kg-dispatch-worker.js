@@ -31,14 +31,22 @@ const REPO = "bawcejawn/KnodeGames2";
 // check then sees it) and stats (every 2 hours, window 110). Same 4 triggers; when GitHub's timers run, the Worker
 // sees their runs and starts nothing. A duplicate is harmless: each workflow's concurrency group queues it.
 export const JOBS = {
-  "22 * * * *": [{ workflow: "vhp-ruler.yml", windowMin: 30 }, { workflow: "stats.yml", windowMin: 110 }],
+  "22 * * * *": [
+    { workflow: "vhp-ruler.yml", windowMin: 30 }, { workflow: "stats.yml", windowMin: 110 },
+    { workflow: "combo.yml", windowMin: 50 }, { workflow: "lastnode.yml", windowMin: 10 },
+  ],
   "41 * * * *": [{ workflow: "race.yml", windowMin: 30 }],
   "51 * * * *": [{ workflow: "games.yml", windowMin: 30 }],
   "7,37 * * * *": [
     { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25, ownOnly: true },
     { workflow: "bot.yml", windowMin: 50 }, { workflow: "names.yml", windowMin: 50 }, { workflow: "golf.yml", windowMin: 50 },
+    { workflow: "lastnode.yml", windowMin: 10 },
   ],
 };
+// Tue 24 Nov (AB-072): GitHub's own timer started combo.yml once and lastnode.yml twice in 14 hours on Mon 23, so the
+// Worker starts them too: Combo once an hour at :22 (after the race at :37/:41 and Block X at :51 of the hour before;
+// none of the knode-games queue runs then), Last Node three times an hour (:07, :22, :37), as its own timer intends.
+// A cancelled run (a waiting run pushed out of a concurrency queue) does not count as "ran" (J8b-1, AB-072).
 // ownOnly (kit-games.yml, Mon 23 Nov): count only this Worker's own runs (event workflow_dispatch). GitHub's timer (:27,
 // :57) can start a run very late (21:44 UTC for 21:27 on Mon 23), and that late run made the 22:07 check skip, so no kit
 // run happened between 21:44 and 22:37 and an Over Under round was cancelled (D-344). Rolling games need every :07 and
@@ -69,8 +77,8 @@ async function runOne(job, token, f, now) {
   const list = await f(API + job.workflow + "/runs?branch=main&per_page=5" + (job.ownOnly ? "&event=workflow_dispatch" : "") + "&created=" + encodeURIComponent(">=" + since), { headers });
   if (!list.ok) throw new Error(`${job.workflow}: GitHub answered ${list.status} listing runs`);
   const j = await list.json();
-  const n = Number(j && j.total_count);
-  if (!Number.isFinite(n)) throw new Error(`${job.workflow}: GitHub's run list had no total_count`);
+  if (!j || !Array.isArray(j.workflow_runs)) throw new Error(`${job.workflow}: GitHub's run list had no workflow_runs`);
+  const n = j.workflow_runs.filter((r) => r && r.conclusion !== "cancelled").length;
   if (n > 0) return { workflow: job.workflow, dispatched: false, why: `already ran in the last ${job.windowMin} minutes (${n} ${job.ownOnly ? "Worker " : ""}run(s) since ${since})` };
   const d = await f(API + job.workflow + "/dispatches", { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ ref: "main" }) });
   if (d.status !== 204) throw new Error(`${job.workflow}: GitHub answered ${d.status} to the dispatch`);

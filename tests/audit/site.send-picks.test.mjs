@@ -7,7 +7,7 @@ const js = fs.readFileSync("web/blockx.js", "utf8"), w = fs.readFileSync("web/wa
 
 test("the bar and the Add button exist only behind W.batchReady (the sponsor's batch row)", () => {
   assert.match(js, /const batchOn = \(\) => !!\(W && typeof W\.batchReady === "function" && W\.batchReady\(\)/);
-  assert.match(js, /const add = batchOn\(\) \? /);
+  assert.match(js, /const add = batchOn\(\) && !mineP \? /, "D-743: only a first pick can be added (a change is never in a batch)");
   assert.match(js, /if \(!batchOn\(\) \|\| !queue\.size\) \{ bar\.hidden = true/);
   assert.match(w, /batchReady: batchReady,/);
 });
@@ -18,7 +18,7 @@ test("at most 10 per transaction, locked rounds dropped right before signing, th
   assert.match(js, /Nothing was saved; a round had locked\. Try again\./);
 });
 test("a single pick still goes through sendPick exactly as before", () => {
-  assert.match(js, /W\.send\(`pick \$\{nameOf\(producer\)\} for block/);
+  assert.match(js, /W\.send\(`\$\{change \? "change your pick to" : "pick"\} \$\{nameOf\(producer\)\} for block/, "D-743: a change says so and goes with noSponsor");
 });
 
 test("batchReady is off for a missing batch, batch {}, an empty perOp or missing fixed/margin; on only with measured numbers (Block X chat, 14 Nov)", () => {
