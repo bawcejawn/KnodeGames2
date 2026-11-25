@@ -66,19 +66,25 @@ export function producersFrom(files: Record<string, string>, now: number): Set<s
   return out;
 }
 /** Players on the published leaderboards (race-data board.json): their nicknames are looked up too. */
+/** Every wallet on a leaderboard: the Race's board.json and every game's board-<game>.json (games-data, M-756: before,
+ *  only the Race's players had their @names looked up, so players of the other games showed short addresses). */
+export const BOARD_FILE = /^board(-[a-z0-9]+)?\.json$/;
 export function boardPlayers(files: Record<string, string>): Set<string> {
   const out = new Set<string>();
-  try {
-    const j = JSON.parse(files["board.json"] || "null");
-    for (const k of ["today", "week", "lastWeek", "allTime"]) for (const r of (j && j[k] && Array.isArray(j[k].rows) ? j[k].rows : [])) if (typeof r?.a === "string" && ADDR.test(r.a)) out.add(r.a);
-  } catch { /* none */ }
+  for (const [f, text] of Object.entries(files)) {
+    if (!BOARD_FILE.test(f)) continue;
+    try {
+      const j = JSON.parse(text || "null");
+      for (const k of ["today", "week", "lastWeek", "allTime"]) for (const r of (j && j[k] && Array.isArray(j[k].rows) ? j[k].rows : [])) if (typeof r?.a === "string" && ADDR.test(r.a)) out.add(r.a);
+    } catch { /* that board is skipped */ }
+  }
   return out;
 }
 
 function readDir(dir: string): Record<string, string> {
   const out: Record<string, string> = {};
   if (!dir || !fs.existsSync(dir)) return out;
-  for (const f of fs.readdirSync(dir)) if (/^(W\d{3}|recent-blocks|board)\.json$/.test(f)) out[f] = fs.readFileSync(path.join(dir, f), "utf8");
+  for (const f of fs.readdirSync(dir)) if (/^(W\d{3}|recent-blocks)\.json$/.test(f) || BOARD_FILE.test(f)) out[f] = fs.readFileSync(path.join(dir, f), "utf8");
   return out;
 }
 const readJson = (file: string) => { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return null; } };
@@ -321,6 +327,13 @@ function filesFromGit(): Record<string, string> {
     if (gitTry(["fetch", "-q", "origin", `+refs/heads/${b}:refs/remotes/origin/${b}`]) == null) continue;
     for (const f of git(["ls-tree", "--name-only", `refs/remotes/origin/${b}`]).split("\n")) {
       if (/^(W\d{3}|recent-blocks|board)\.json$/.test(f)) files[f] = git(["show", `refs/remotes/origin/${b}:${f}`]);
+    }
+  }
+  // every game's board (games-data/<game>/board.json), as the hourly job reads them (M-756)
+  if (gitTry(["fetch", "-q", "origin", "+refs/heads/games-data:refs/remotes/origin/games-data"]) != null) {
+    for (const f of git(["ls-tree", "-r", "--name-only", "refs/remotes/origin/games-data"]).split("\n")) {
+      const m = /^([a-z0-9]+)\/board\.json$/.exec(f);
+      if (m) files[`board-${m[1]}.json`] = git(["show", `refs/remotes/origin/games-data:${f}`]);
     }
   }
   return files;

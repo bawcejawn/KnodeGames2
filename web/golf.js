@@ -6,7 +6,6 @@
   const G = window.KGolf;
   if (!G || typeof document === "undefined" || !document.getElementById("card-rows")) return;
   const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/golf/";
-  const EXPLORER = "https://koinosscan.com/address/";
   const $ = (id) => document.getElementById(id);
   const el = (tag, attrs = {}, ...kids) => {
     const e = document.createElement(tag);
@@ -31,7 +30,7 @@
   let games = new Map();          // id → { name, href }
   let weeks = { this: null, last: null };
   let showing = "this";
-  let board = null, lb = null, club = null;
+  let club = null;
   const me = () => (window.KWallet && isAddr(window.KWallet.address) ? window.KWallet.address : "");
 
   // The key in How it works: one row per score.
@@ -61,7 +60,6 @@
   function drawCard() {
     const wf = weeks[showing];
     // The practice note follows the week on screen (Repo Lens B13-B6).
-    $("practice").hidden = !(wf && wf.practice);
     const who = me();
     $("wk-last").hidden = !weeks.last;
     $("wk-this").setAttribute("aria-pressed", String(showing === "this"));
@@ -141,26 +139,6 @@
     }));
   }
 
-  function drawBoard() {
-    if (!window.KBoard) return;
-    if (!lb) {
-      lb = window.KBoard.create($("gf-board"), {
-        label: "Block Golf leaderboard",
-        columns: [{ key: "pts", label: "Points" }, { key: "topar", label: "To par" }, { key: "holes", label: "Holes played", wide: true }, { key: "lost", label: "Lost balls", wide: true }],
-        name: nameOf, link: (a) => EXPLORER + a,
-        scored: (r) => r.pts > 0,
-        // Free play medals by Golf's own places (B13-B1), the same rule as the vault file's first/second.
-        freeWinners: (_part, rows, weekly) => (weekly ? G.freeMedals(rows) : new Map()),
-        summary: (r) => `${G.toParText(r.topar)} · ${r.pts} pts`,
-        me: (r, place) => `${place ? `You: #${place} at` : "Your score (only you see this):"} ${G.toParText(r.topar)}, ${r.pts} points.`,
-        unranked: "Block Golf is free to play: everyone is on one board.",
-        free: { show: 6, prize: "Block Golf pays no prizes." },
-      });
-    }
-    lb.setMe(me());
-    if (board) lb.set(board);
-  }
-
   // The Clubhouse (golf-math.js CLUB_FEATURES): the features this wallet has earned (kept for good) and the ones still
   // to earn, from clubhouse.json. Shown only once the Clubhouse is on the course.
   function drawClub() {
@@ -178,7 +156,13 @@
       : `${n} feature${n === 1 ? "" : "s"} earned: ${G.NAMES[G.clubStrokes(n)]} on the Clubhouse hole. Each one is kept for good; doing it again adds nothing.`;
     $("club-list").replaceChildren(...all.map((f) => el("span", { class: mine[f] !== undefined ? "gf-club-on" : "gf-club-off", text: `${mine[f] !== undefined ? "✓" : "○"} ${nameOfF(f)}` })));
   }
-  function drawAll() { drawCard(); drawTodo(); drawClub(); drawBoard(); }
+  // GAME-PAGE-STANDARD (M-607): the board lives on the Leaderboards page (index.html#leaderboard/golf), not here.
+  function drawAll() {
+    drawCard(); drawTodo(); drawClub();
+    // Repo Lens #R3-29: the "For the curious" row shows only when something inside it does (not for a guest, a final
+    // week, or before the Clubhouse is on the course).
+    $("curious").hidden = $("todo-box").hidden && $("clubhouse").hidden;
+  }
 
   $("wk-this").addEventListener("click", () => { showing = "this"; drawCard(); });
   $("wk-last").addEventListener("click", () => { if (weeks.last) { showing = "last"; drawCard(); } });
@@ -206,7 +190,6 @@
       const ok = files.filter((f) => f && f.v === 1 && Array.isArray(f.holes) && Array.isArray(f.cards));
       weeks.this = ok[ok.length - 1] || null;
       weeks.last = ok.length > 1 ? ok[ok.length - 2] : null;
-      board = await fetchJson(DATA + "board.json").catch(() => null);
       club = await fetchJson(DATA + "clubhouse.json").catch(() => null);
       say(weeks.this ? "" : "No Block Golf week yet.");
     } catch {
@@ -232,4 +215,12 @@
   }
   setInterval(() => { if (!document.hidden) load(); }, 600000);
   load();
+  // GAME-PAGE-STANDARD: a link to something inside a closed fold-out (Rules, the Clubhouse) opens that row and scrolls to it.
+  document.addEventListener("click", (e) => {
+    const a = e.target && e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    const t = a && document.getElementById(a.getAttribute("href").slice(1));
+    const d = t && (t.tagName === "DETAILS" ? t : t.closest("details"));
+    if (!d) return;
+    e.preventDefault(); d.open = true; t.scrollIntoView({ block: "start" });
+  });
 })();

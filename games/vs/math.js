@@ -29,6 +29,11 @@ export const MAX_ROWS = 64;
  *  week 5's write-once file was published EMPTY, VS-9). makeRoster throws, so the kit holds the file, alerts and retries
  *  every run instead of locking an empty week. checkRoster does not use it: week 5's published file must still read. */
 export const MIN_ROWS = 2;
+/** The week's list must have at least this many producers before its write-once inputs file is made (Repo Lens 1
+ *  away-window item 3, M-748): a short list is as broken as an empty one and would be locked for the whole week, so under
+ *  8 the recorder says "not yet": the file waits, the kit warns, then emails an owner error 6 h before the week, and
+ *  every run retries. makeRoster keeps MIN_ROWS (2) as its own backstop. A normal day has about 16. */
+export const MIN_LIST = 8;
 export const MAX_NUMBER = 18446744073709551615n;
 export const ROSTER_VERSION = 1;
 

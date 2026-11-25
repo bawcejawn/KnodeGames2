@@ -10,10 +10,12 @@ import { P, FROM } from "../../../kit/testing/ruler-fixture.ts";
 import { rulerLib } from "../../../kit/recorder/sources/vhp-ruler.ts";
 import type { Sample } from "../../../kit/testing/conformance.ts";
 
-/** The kit's ruler fixture (five producers, a block every 3 s, a deterministic generator) plus the pool node (the Vault) as a sixth
- *  producer, so the day's card has the pool node's row. Same generator as kit/testing/ruler-fixture.ts. */
+/** The kit's ruler fixture (five producers, a block every 3 s, a deterministic generator), four more made-up producers (M-748)
+ *  and the pool node (the Vault) as the tenth producer, so the day's card has the pool node's row. Same generator as kit/testing/ruler-fixture.ts. */
 const POOL = "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr";
-const PRODUCERS = [...P, POOL], VHPS = [400, 250, 200, 140, 1, 150];
+// M-748: four more producers (made-up addresses), so the week's list reaches V.MIN_LIST (8): 9 producers + the pool node.
+const MORE = ["1GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG", "1HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH", "1JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ", "1KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK"];
+const PRODUCERS = [...P, ...MORE, POOL], VHPS = [400, 250, 200, 140, 1, 120, 110, 100, 90, 150];
 const UNIT = 10n ** 15n, BURN = 408000000n, PRE = 15 * 28800;
 function ledger(extraBlocks: number): any {
   const N = PRE + extraBlocks, tot = VHPS.reduce((a, b) => a + b);
