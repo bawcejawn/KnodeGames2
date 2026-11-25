@@ -282,7 +282,8 @@
         lane.setAttribute("aria-label", `${nameOf(r.a)}: ${ended ? (rp >= 0 ? `place ${rp + 1}` : "no place") : `running ${i + 1}`}, ${fmt(r.steps, 1)} steps`);
         keep.push(lane);
       });
-      track.replaceChildren(...keep);
+      { const lanes6 = keep.filter((n) => n.classList.contains("pr-lane") && !n.classList.contains("rt-head") && !n.classList.contains("pr-headrow"));
+        track.replaceChildren(...keep.filter((n) => !lanes6.includes(n)), ...capLanes(lanes6, "0", () => render())); }
       if (live && B.top !== lastTop && lastTop) { const lane = existing.get(B.signers[B.sig[B.sig.length - 1]]); if (lane) { lane.classList.remove("pr-step"); void lane.offsetWidth; lane.classList.add("pr-step"); } }
       lastTop = B.top;
     }
@@ -324,7 +325,18 @@
   }
 
   // ── results ──
+  /** Standard page (GAME-PAGE-STANDARD.md "Long lists"): a board shows its first LANE_CAP lanes in the chosen order (plus
+   *  the player's own pick), then ONE "Show all (N)" row. The choice holds per race length until the page reloads. */
+  const LANE_CAP = 6, showAll = new Set();
+  function capLanes(lanes, key, redraw) {
+    for (const l of lanes) l.hidden = false;
+    if (lanes.length <= LANE_CAP + 1 || showAll.has(key)) return lanes;
+    lanes.forEach((l, i) => { if (i >= LANE_CAP && !l.classList.contains("mine")) l.hidden = true; });
+    const more = el("button", { type: "button", class: "btn btn-ghost lane-more", onclick: () => { showAll.add(key); redraw(); } }, `Show all (${lanes.length})`);
+    return [...lanes, more];
+  }
   function renderHistory() {
+    if (!$("hist-rows")) return;   // Standard page: the Results table moved to the links row (index.html#results/race)
     const now = Date.now(), cur = M.raceIndex(now);
     let from, to;
     if (histMode === "today") { const d0 = Math.floor(now / M.DAY) * M.DAY; from = M.raceIndex(d0); to = from + 3; }
@@ -722,6 +734,8 @@
         el("span", { class: o && !o.wait ? (o.ok ? "pk-ok" : "pk-no") : "", text: o && !o.wait ? o.mark : "" })));
     }
     const trial = cur.mode !== "on";
+    // Standard page: the 3 newest races, then ONE "Show all (N)" row.
+    if (rows.length > 4 && !showAll.has(`r${rtype}`)) { rows.forEach((r, i) => { if (i >= 3) r.hidden = true; }); rows.push(el("button", { type: "button", class: "btn btn-ghost lane-more", onclick: () => { showAll.add(`r${rtype}`); renderRulerBox(); } }, `Show all (${rows.length})`)); }
     $("ruler-list").replaceChildren(!rows.length ? el("p", { class: "note", text: `No ${T.name.toLowerCase()} results yet.` }) : trial ? el("details", { class: "rl-trial" }, el("summary", { text: "Trial results (count for nothing)" }), ...rows) : el("div", { class: "pk-list rl" }, ...rows));
     // Once the Ruler scores the race, this list is the results: the older lists would repeat them.
     const hist = document.getElementById("history");
@@ -754,8 +768,11 @@
   if (window.KNames && window.KNames.onChange) window.KNames.onChange(() => { render(); renderPicks(true); renderBoard(); });
 
   const setMode = (m) => { histMode = m; $("h-today").setAttribute("aria-pressed", String(m === "today")); $("h-week").setAttribute("aria-pressed", String(m === "week")); renderHistory(); };
-  $("h-today").onclick = () => setMode("today");
-  $("h-week").onclick = () => setMode("week");
+  if ($("h-today")) { $("h-today").onclick = () => setMode("today"); $("h-week").onclick = () => setMode("week"); }
+  // Standard page: the Rules link (tool row, or race.html#how) opens the closed Rules row.
+  const openRules = () => { const d = $("how"); if (d) d.open = true; };
+  document.addEventListener("click", (e) => { if (e.target && e.target.closest && e.target.closest('a[href="#how"]')) openRules(); });
+  if (location.hash === "#how") openRules();
 
   // ── race types (D-166): the toggle and the 1-hour, 2-hour, daily and weekly races ──
   // Shown only from M.TYPES_FROM_WEEK (the week the Race contract v2 is live). The 6-hour race above is unchanged.
@@ -886,7 +903,7 @@
         ...cells);
       return lane;
     });
-    $("rt-track").replaceChildren(head, ...lanes);
+    $("rt-track").replaceChildren(head, ...capLanes(lanes, String(rtype), () => rtRender(true)));
   }
   function rtTabs() {
     const nav = $("race-types");

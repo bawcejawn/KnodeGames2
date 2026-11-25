@@ -14,10 +14,10 @@ test("the box: Marketing's Race line, in the page", () => {
 });
 
 test("the handicap card and the latest blocks are in one closed 'For the curious' fold-out", () => {
-  const i = html.indexOf('<details class="card curious" id="curious">'), j = html.indexOf("</details>", html.indexOf('id="feed"'));
+  const i = html.indexOf('<details class="card curious" id="curious">'), j = html.indexOf("</details>", html.indexOf('id="history"'));   // standard page: the 6-hour results table sits in it too
   assert.ok(i > 0 && j > i, "the fold-out wraps both");
   const inner = html.slice(i, j);
-  assert.match(inner, /<summary>For the curious: the handicap card and the latest blocks<\/summary>/);
+  assert.match(inner, /<summary>For the curious: the handicap card, the latest blocks and past 6-hour races<\/summary>/);
   assert.ok(inner.includes('id="card-title"') && inner.includes('id="feed"'));
   assert.doesNotMatch(html.slice(i, i + 60), /\bopen\b/, "closed by default");
 });

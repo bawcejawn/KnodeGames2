@@ -42,6 +42,17 @@
     .rl td.rl-when b { display: block; }
     .rl td.rl-when span { font-size: 13px; color: var(--muted); }
     .rl td.rl-when .void-chip { margin-top: 4px; color: var(--ink); }
+    /* Standard page: the steps on a light card, the closed rows, the links row. */
+    .rc-rules.fold > summary { cursor: pointer; font-weight: 800; font-size: 17px; padding: 4px 0; }
+    .rc-rules.fold[open] > summary { margin-bottom: 12px; }
+    .rules-steps { margin-bottom: 14px !important; max-width: none !important; }
+    .rules-steps li { background: var(--surface2, rgba(0,0,0,.04)) !important; border-color: var(--line) !important; }
+    .rules-steps span { color: var(--muted) !important; }
+    .rules-steps strong { color: var(--ink) !important; }
+    .lane-more { display: block; width: 100%; margin-top: 8px; }
+    .pr-lane[hidden], .rl-row[hidden] { display: none !important; }
+    .links-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .links-row a { font-weight: 700; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: inherit; }
     .curious > summary { cursor: pointer; font-weight: 700; padding: 2px 0; }
     .curious[open] > summary { margin-bottom: 10px; }
     .curious .cols > .card { margin: 0; }
@@ -367,11 +378,6 @@
       <img class="rc-hero-horse" src="media/animals/horse.png" alt="" aria-hidden="true" width="120" height="120">
       <h1>Producer Race <span class="rc-tag">Free</span></h1>
       <p class="lede">Pick your producer. Watch it run. Real blocks, live races.</p>
-      <ol class="rc-steps">
-        <li><b>1</b><span><strong>Pick a horse</strong>free, before the race starts</span></li>
-        <li><b>2</b><span><strong>Watch it run</strong><span id="rc-step-len">6 hours, live, block by block</span></span></li>
-        <li><b>3</b><span><strong>Score points</strong><span id="rc-step-pts">when it finishes top 3</span></span></li>
-      </ol>
     </section>
     <nav class="tools" aria-label="On this page"><a href="#live" class="hide-sm">Live race</a><a href="#pick-zone" class="go-pick">Pick<span class="hide-sm"> a horse</span></a><a href="#board-box">Leaderboard</a><a href="#ruler-box">Results</a><a href="#how">Rules</a><a href="node.html" class="hide-sm">Producer lookup</a></nav>
 
@@ -408,13 +414,10 @@
     </section>
 
     <div id="pick-zone">
-    <section class="card soon" id="picks-soon">
-      <h2>Picks: coming next</h2>
-      <p class="note" style="margin-top:0">Soon: connect a wallet and pick one horse per race, up to 24 hours ahead. Picks lock when the race starts and are free. A weekly leaderboard follows the Knode Games week (Monday 00:00 UTC).</p>
-    </section>
 
-    <section class="card" id="picks" hidden>
+    <section class="card" id="picks">
       <div class="head"><h2>My picks</h2><span class="note" id="picks-left" style="margin:0"></span></div>
+      <p class="note" style="margin-top:0" id="picks-soon">Soon: connect a wallet and pick one horse per race, up to 24 hours ahead. Picks lock when the race starts and are free. A weekly leaderboard follows the Knode Games week (Monday 00:00 UTC).</p>
       <p class="note" style="margin-top:0" id="picks-who"></p>
       <div class="pk-list" id="pk-list"></div>
       <p class="note">Free: one horse per race, for the next 4 races; Knode Games pays the Mana for a first pick. You can change a pick once per race, with your own Mana (about 0.9), until its race starts; then the chain locks it. <span id="pk-limit-note">Up to 5 picks a day (changes count).</span></p>
@@ -439,7 +442,7 @@
 
     <!-- D-730 (owner): the page is the game and its results; the handicap card and the block feed are for the curious. -->
     <details class="card curious" id="curious">
-      <summary>For the curious: the handicap card and the latest blocks</summary>
+      <summary>For the curious: the handicap card, the latest blocks and past 6-hour races</summary>
     <div class="cols">
       <section class="card">
         <h2 id="card-title">Handicap card</h2>
@@ -455,17 +458,25 @@
         <ul class="list feed" id="feed"></ul>
       </section>
     </div>
-    </details>
-
+    <!-- Standard page: the 6-hour results table (Today / This week, with View for a past race) sits here; Results and
+         Leaderboard pages are one tap away in the links row below. -->
     <section class="card" id="history">
-      <div class="head"><h2>Results</h2></div>
+      <div class="head"><h2>6-hour races: today and this week</h2></div>
       <div class="tabs2" role="group" aria-label="Show"><button type="button" id="h-today" aria-pressed="true">Today</button><button type="button" id="h-week" aria-pressed="false">This week</button></div>
       <table class="hist"><thead><tr><th>Race (your time)</th><th>Status</th><th>Winner</th><th class="num hide-sm">Steps</th><th class="num hide-sm">Ahead by</th><th class="num hide-sm">Wins · Shows</th><th></th></tr></thead><tbody id="hist-rows"></tbody></table>
     </section>
+    </details>
 
-    <section class="card rc-rules" id="how">
-      <h2>Rules book</h2>
-      <p class="note">Everything about how the Race works. Tap a topic to open it.</p>
+
+    <!-- Standard page (GAME-PAGE-STANDARD.md): everything long sits in ONE closed row; the three steps live here now. -->
+    <details class="card fold rc-rules" id="how">
+      <summary>Rules and how points work</summary>
+      <ol class="rc-steps rules-steps">
+        <li><b>1</b><span><strong>Pick a horse</strong>free, before the race starts</span></li>
+        <li><b>2</b><span><strong>Watch it run</strong><span id="rc-step-len">6 hours, live, block by block</span></span></li>
+        <li><b>3</b><span><strong>Score points</strong><span id="rc-step-pts">when it finishes top 3</span></span></li>
+      </ol>
+
       <details><summary>The races</summary><p>Every Koinos block producer is a horse. Each block it signs moves it forward, and smaller producers get a handicap so every horse has the same chance. Four 6-hour races a day, every day, starting at 00:00, 06:00, 12:00 and 18:00 UTC. There are also 1-hour races (every hour), 2-hour races (every 2 hours), a daily race (the UTC day) and a weekly race (Monday to Saturday, UTC); the tabs above the board switch between them. Free, just for fun.</p></details>
       <details><summary>Picks and changes</summary><p>Pick one producer per race before it starts; the chain locks the pick when the race starts. Your first pick in a race is free: Knode Games pays the Mana. You can change it once per race, and a change is paid with your own Mana (about 0.9 Mana); a guest wallet, or one without enough Mana, can't change a pick, and the first pick stays.</p></details>
       <details><summary>Points, boards and prizes</summary><p><span id="pts-note">A pick on the winner is a win (3 points). A pick on the horse that finishes 2nd or 3rd is a show (1 point).</span> Ranked by points; ties go to more wins, then more picks placed. Wallets still tied share the place. <b>Who gets paid:</b> on the Staked board, exactly the top 30% of staked players with a point share the Race's bucket, and tied wallets share their level. If a tie crosses that line, the wallets that reached the score first (their last scoring pick was earlier) get the spots. On the Free play board, 1st and 2nd each go to at most 10 wallets, with ties broken the same way. Weeks are Knode Games weeks (Monday 00:00 UTC). Races run every day. Monday to Saturday count for the week. <b>Sunday is review day</b>: the week's results are checked on chain while you keep playing. Sunday's races are <b>fun races</b>: they score on the Today and All time boards, but never on a week's board, medals or prizes. The week's results go final from Monday 00:00 UTC, and rewards can be claimed from Monday evening (Americas) / Tuesday UTC. The <b>Staked</b> board is for wallets with VHP staked in the Producer Race that week; they share the Race's weekly reward bucket. Everyone else plays on the <b>Free play</b> board, where 1st and 2nd win the weekly free-play prize (2 VHP and 1 VHP). Prizes and bucket shares are paid from Week 4 (the week of Mon 16 Nov); winners claim them from the vault. If your Race stake drops below 1 VHP during a week, you sit out that week's share (your VHP stays yours and can always be withdrawn).</p></details>
@@ -475,7 +486,9 @@
       <details><summary>Handicap: same chance</summary><p>A small producer's few blocks come in lucky and unlucky bursts, which would let the smallest horses win most races. A luck trim evens that out:</p><p><code>steps per block = (biggest VHP ÷ your VHP) × (1 − c ÷ √k) ÷ (1 − c ÷ √k of the biggest)</code></p><p>Here <i>k</i> is how many blocks a producer is expected to sign in a 6-hour race (luck in <i>k</i> blocks is about √<i>k</i>). <i>c</i> is re-tuned on every card by thousands of simulated races (the same ones for everyone) to the value where each horse's chance of winning is as equal as it gets.</p></details>
       <details><summary>Handicap: six cards per race</summary><p>The handicap is set from VHP at the start and updated every hour. Each card applies to the blocks signed in its hour, so moving VHP around during a race buys at most an hour. Cards are recorded publicly by the race recorder.</p></details>
       <details><summary>The finish line</summary><p>The finish line is the end of the race: 6 hours for the 6-hour race, and 1 hour, 2 hours, a day or the week (Monday to Saturday) for the others. You see the real live order all the way to the end: the track is drawn so the leader gets close to the line, and only the winner crosses it when the time is up. The winner is the horse with the most steps at the end.</p></details>
-    </section>
+    </details>
+
+    <nav class="card links-row" aria-label="Results and leaderboard"><a href="index.html#leaderboard/race">Leaderboard →</a><a href="index.html#results/race">Results →</a></nav>
   </main>
 
   <nav class="tabbar" aria-label="Main">
