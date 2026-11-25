@@ -83,7 +83,8 @@ test("standards every game page meets: nicknames (D-078), stake badge and panel 
   assert.doesNotMatch(js + html, /KStake\.badge|stake-badge/);
   assert.match(js, /KStake\.status\(GAME_ID, who\); if \(!mounted && st && st\.amount > 0n\) \{ mounted = true; window\.KStake\.mount\(\$\("golf-stake"\), \{ game: GAME_ID \}\)/);
   assert.match(html, /<section class="gf-card" id="golf-stake" hidden>/);
-  assert.match(html, /Sunday is review day: results are checked and paid from Monday\./);
+  assert.match(html, /Sunday is review day: results are checked, and the week goes final from Monday 00:00 UTC, once every game's results are final/);
+  assert.doesNotMatch(html, /paid from Monday|Lowest score (of the week )?wins/, "M-772: Golf pays no prizes; the lowest score tops the board");
   assert.doesNotMatch(html + js, /bawcejawn\.github\.io\/Knode|\/Knode\/|final 12 hours/, "no old repo address or 12-hour final");
 });
 
