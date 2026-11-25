@@ -73,7 +73,11 @@ test("games.json: Block Golf is live, with its page and its leaderboard on games
 
 test("standards every game page meets: nicknames (D-078), stake badge and panel for game 6 (D-031), the Sunday line (D-125)", () => {
   assert.match(js, /window\.KNames\.of\(a\)/, "names through names.js");
-  assert.match(js, /name: nameOf,/, "the board shows nicknames");
+  // GAME-PAGE-STANDARD (M-607): the board moved to the Leaderboards page (it shows nicknames there); the leader's card
+  // line here still names the wallet through names.js.
+  assert.match(js, /nameOf\(card\.a\)/, "the leader's card line shows a nickname");
+  assert.doesNotMatch(js + html, /KBoard\.create|id="gf-board"|id="board-box"/, "no copy of the board on the game page");
+  assert.match(html, /<a href="index\.html#leaderboard\/golf">Leaderboard<\/a>/);
   assert.match(js, /const GAME_ID = 6;/);
   // D-586: no stake badge (nothing invites staking); the panel only for a wallet that still has stake in Block Golf.
   assert.doesNotMatch(js + html, /KStake\.badge|stake-badge/);
@@ -111,4 +115,22 @@ test("the Clubhouse: the page's ladder text matches the shared rules, and it rea
   assert.match(js, /href: "#clubhouse"/);
   for (const f of Object.keys(G.CLUB_FEATURES)) assert.ok(G.isFeature(f), f);
   assert.equal(G.featureName("play-race", "Producer Race"), "Played Producer Race");
+});
+
+test("GAME-PAGE-STANDARD (M-607): box first, the scorecard open, then one links row and two closed rows, nothing else open", () => {
+  const main = html.slice(html.indexOf('<main class="gf">'), html.indexOf("</main>"));
+  assert.match(main, /^<main class="gf">\s*<aside class="page-box" data-game="golf">/, "the shared box is first in <main>");
+  assert.match(main, /<h1>Block Golf<\/h1>\s*<p class="gf-links"><a href="#rules" id="rules-link">Rules<\/a> · <a href="index\.html#leaderboard\/golf">Leaderboard<\/a> · <a href="ruler\.html">Ruler<\/a><\/p>/);
+  assert.doesNotMatch(main, /gf-kicker|gf-lede|id="practice"|id="how"/, "no second intro, no note box, no old How it works");
+  const folds = [...main.matchAll(/<details([^>]*)>/g)].map((m) => m[1]);
+  assert.deepEqual(folds, [' class="fold" id="curious"', ' class="fold gf-how" id="rules"'], "exactly two fold-outs, closed on load (no open attribute)");
+  // After the scorecard: only the hidden stake panel, the links row and the two fold-outs (Holes + Clubhouse inside "curious").
+  const after = main.slice(main.indexOf('id="card-box"'));
+  const top = after.slice(after.indexOf("</section>") + 10).replace(/<details[\s\S]*?<\/details>/g, "");
+  assert.deepEqual([...top.matchAll(/<section[^>]*>/g)].map((m) => m[0]), ['<section class="gf-card" id="golf-stake" hidden>'], "no open section after the play area");
+  const curious = main.slice(main.indexOf('id="curious"'), main.indexOf("</details>", main.indexOf('id="curious"')));
+  assert.match(curious, /id="todo-box"/); assert.match(curious, /id="clubhouse"/);
+  const rules = main.slice(main.indexOf('id="rules"'));
+  for (const s of [/Block Golf is free to play\.<\/b> No staking and no prizes/, /Points = 7 for each counted hole, minus your strokes/, /Sunday is review day/]) assert.match(rules, s);
+  assert.match(js, /a link to something inside a closed fold-out \(Rules, the Clubhouse\) opens that row/);
 });
