@@ -17,7 +17,7 @@
 | D-004 | ❓ | Mainnet sends are opt-in | active |
 | D-005 | ❓ | Hosting costs $0 | active |
 | D-006 | ❓ | Never mention Chainge; Vortex is the bridge | active |
-| D-007 | ❓ | Swap desk: 3% fee, no daily payout cap | active |
+| D-007 | ❓ | Swap desk: 3% fee, no daily payout cap | fee superseded by D-911 (10%, 25 Nov); no cap still active |
 | D-008 | ❓ | Mana sponsor daily hard cap (1,000) | superseded by D-061 |
 | D-009 | ❓ | Guest play on (web and mobile) | active |
 | D-010 | ❓ | New prize rules start Week 3 | superseded by D-062 (free prizes) |
@@ -225,6 +225,7 @@
 - **Source:** 💬 Questions chat
 
 ## D-007 — Swap desk: 3% fee, no daily payout cap
+- **Superseded (fee only) by D-911, 25 Nov 2026:** the owner set the fee to **10%** on chain. "No daily payout cap" still stands.
 - **Decision:** 3% fee per swap; no daily payout cap; if KOIN is available it can be swapped for VHP; swaps grow the desk node's production.
 - **Source:** 💬 Questions chat; 3% ✅ `desk-data/deployment.json` (`feeBps: 300`)
 
@@ -385,6 +386,7 @@
 
 ## D-044 — Swap desk design
 - **Date:** 2026-10-16
+- **Fee changed (D-911, 25 Nov 2026):** the owner set the fee to **10%** on chain; the design below is unchanged.
 - **Decision:** A separate contract with a flat 3% fee. The desk node's VHP (fees included) produces blocks, which refills the KOIN on offer ("burn without burning"). Kept separate from game and personal funds. The treasury stays the owner wallet for now; changing it has a 48 h timelock.
 - **Source:** 💬 Swap Desk
 

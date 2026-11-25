@@ -60,11 +60,11 @@ test("setSiteBatch writes only the batch block and keeps the rest of the file", 
   assert.equal(setSiteBatch(batchFromFlags(EX, SP)!, g), false);
 });
 
-test("step 1 on main: selfPayMin 25 Mana and an empty batch block (batching stays off until step 2)", () => {
+test("step 2 on main (Vault, 24 Nov: mainnet batch-test): selfPayMin 25 Mana and the measured batch block", () => {
   const sp = JSON.parse(fs.readFileSync(path.resolve(process.env.APP || ".", "game-data/deployment.json"), "utf8")).sponsor;
   assert.equal(sp.selfPayMin, "2500000000");
-  assert.deepEqual(sp.batch, {});
-  assert.ok(BigInt(sp.rcLimitOther) >= 50000000n, "rcLimitOther is above the example 10-pick ask of 0.50");
+  assert.deepEqual(sp.batch, { fixed: "90000000", perOp: { [`${PICKS}:8ce33c6c`]: "25000000", [`${RACE}:8ce33c6c`]: "30000000" }, margin: "50000000" });
+  assert.ok(batchWorst(sp.batch) <= BigInt(sp.rcLimitOther), "10 picks fit under rcLimitOther");
 });
 
 // Repo Lens R3-2.1: site-limits end to end (the chain read is stubbed; the files are copies in a temp folder).
@@ -102,17 +102,18 @@ test("R3-2.1: --send with the flags writes the batch block into the game file on
   });
 });
 
-test("R3-2.1: --send without the flags leaves the batch block as it is (empty: batching stays off)", async () => {
+test("R3-2.1: --send without the flags leaves the batch block as it is", async () => {
+  const was = JSON.parse(copyOf("game-data/deployment.json")).sponsor.batch;
   await inTemp(async (read) => {
     await siteLimits(true, [], chain);
-    assert.deepEqual(read("game-data/deployment.json").sponsor.batch, {});
+    assert.deepEqual(read("game-data/deployment.json").sponsor.batch, was);
   });
 });
 
 test("R3-2.1: a refused batch (over rcLimitOther) writes nothing even with --send", async () => {
   await inTemp(async (_, raw) => {
     const before = [raw("game-data/deployment.json"), raw("desk-data/deployment.json")];
-    await assert.rejects(() => siteLimits(true, ["--batch-fixed", "0.5", "--batch-per-op", "picks:pick=0.2", "--batch-margin", "0.1"], chain), /more than the site's limit/);
+    await assert.rejects(() => siteLimits(true, ["--batch-fixed", "1", "--batch-per-op", "picks:pick=0.4", "--batch-margin", "0.5"], chain), /more than the site's limit/);
     assert.deepEqual([raw("game-data/deployment.json"), raw("desk-data/deployment.json")], before);
   });
 });

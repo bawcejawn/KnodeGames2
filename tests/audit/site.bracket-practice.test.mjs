@@ -161,6 +161,28 @@ test("ruler line: hidden with the switch unset; the shadow week names the Monday
   assert.match(on.$("bk-ruler").textContent, /^The VHP ruler decides the matchups \(since Week 4, the week of Mon, Nov 16\)\./);
 });
 
+// M-741 (live score): in an on week, a round the ruler hasn't decided yet shows the day index so far as a live estimate,
+// marked "~" and labelled; it never looks like a result, and once the round is decided no percentage is shown (G48-4).
+test("on week: an undecided round shows a labelled live estimate (~ and the words); a decided round shows none", async () => {
+  const hour = (i) => ({ from: i * 100, to: i * 100 + 99, n: 100, q: 100, checked: 1, re: 1,
+    by: Object.fromEntries(seeds.map((a, k) => [a, 12 - k])), cr: Object.fromEntries(seeds.map((a, k) => [a, 12 - k])), r: {},
+    av: Object.fromEntries(seeds.map((a, k) => [a, (8 - k) * 1e8])), w: Object.fromEntries(seeds.map((a, k) => [a, 8 - k])) });
+  const half = Array.from({ length: 24 }, (_, i) => (i < 12 ? hour(i) : null));
+  const NOON = BM.roundDay(4, 0, 8) + 12.5 * 3600000;
+  const r0 = async (pg) => { pg.$("bk-rounds").querySelector("button").click(); await flush(pg.w); return pg; };
+  const live = await r0(await openPage({ now: NOON, index: { ...idx(5), rulerFrom: 4 },
+    weekExtra: { status: "locked", rulerFrom: 4, rulerMode: "on", days: [half, new Array(24).fill(null), new Array(24).fill(null)], results: { rounds: [], done: false } } }));
+  const ests = [...live.$("bk-list").querySelectorAll(".bk-ix.est")];
+  assert.ok(ests.length > 0, "estimates shown");
+  for (const e of ests) { assert.match(e.textContent, /^~[0-9.,]+%$/); assert.match(e.title, /^live estimate/); }
+  assert.match(live.$("bk-day").textContent, /~ live estimate \(blocks against expected so far, updated hourly\); the VHP ruler decides at the end of the day$/);
+  assert.equal(live.$("bk-list").querySelectorAll(".bk-ix:not(.est)").length, 0, "nothing looks like a result");
+  const done = await r0(await openPage({ now: NOON, index: { ...idx(5), rulerFrom: 4 },
+    weekExtra: { status: "locked", rulerFrom: 4, rulerMode: "on", days: [half, new Array(24).fill(null), new Array(24).fill(null)], results: { rounds: [[1, 2, 3, 4]], done: false } } }));
+  assert.equal(done.$("bk-list").querySelectorAll(".bk-ix.est").length, 0, "decided: no estimate");
+  assert.doesNotMatch(done.$("bk-day").textContent, /live estimate/);
+});
+
 // Repo Lens #G-48 G48-4: in a week the VHP ruler scores, the page says what decided each played round and doesn't show the
 // day index's percentages (the forfeit badge stays: forfeits come first in every week); the ruler line names the backup
 test("on week: a played round says the ruler's card (or the seeding, for a backup round) decided it; no day-index percentages", async () => {
