@@ -48,8 +48,7 @@
     .g { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow); padding: 14px; color: var(--ink); text-decoration: none; }
     a.g:hover { border-color: var(--violet); }
     a.g:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
-    .g-ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--violet-soft); color: var(--violet); }
-    .g-ic svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .g-ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--violet-soft); font-size: 22px; line-height: 1; box-shadow: 0 10px 18px -12px rgba(20, 22, 31, .6); }
     .g-bd { flex: 1; min-width: 0; display: grid; gap: 4px; }
     .g-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
     .g-name { font-weight: 700; font-size: 16px; }
@@ -86,17 +85,17 @@
           <summary>Games</summary>
           <div class="dd-menu">
             <a href="games.html" aria-current="page">All games</a>
-            <a href="index.html#play">Daily Questions</a>
-            <a href="race.html">Producer Race</a>
-            <a href="blockx.html">Who Signs Block X</a>
-            <a href="bracket.html">Producer Bracket</a>
-            <a href="golf.html">Block Golf</a>
-            <a href="fantasy.html">Fantasy Producers</a>
-            <a href="lastnode.html">Last Node Standing</a>
-            <a href="survivor.html">Survivor</a>
-            <a href="vs.html">Knode Games VS</a>
-            <a href="overunder.html">More or Fewer</a>
-            <a href="combo.html">Combo Card · Preview</a>
+            <a href="index.html#play"><span class="mi" aria-hidden="true">🎯</span>Daily Questions</a>
+            <a href="race.html"><span class="mi" aria-hidden="true">🏇</span>Producer Race</a>
+            <a href="blockx.html"><span class="mi" aria-hidden="true">🧱</span>Who Signs Block X</a>
+            <a href="bracket.html"><span class="mi" aria-hidden="true">🏆</span>Producer Bracket</a>
+            <a href="golf.html"><span class="mi" aria-hidden="true">⛳</span>Block Golf</a>
+            <a href="fantasy.html"><span class="mi" aria-hidden="true">📋</span>Fantasy Producers</a>
+            <a href="lastnode.html"><span class="mi" aria-hidden="true">🏁</span>Last Node Standing</a>
+            <a href="survivor.html"><span class="mi" aria-hidden="true">🛡️</span>Survivor</a>
+            <a href="vs.html"><span class="mi" aria-hidden="true">🆚</span>Knode Games VS</a>
+            <a href="overunder.html"><span class="mi" aria-hidden="true">↕️</span>More or Fewer</a>
+            <a href="combo.html"><span class="mi" aria-hidden="true">🎟️</span>Combo Card · Preview</a>
           </div>
         </details>
         <a href="index.html#leaderboard">Leaderboards</a>
@@ -160,17 +159,17 @@
   <div class="more-sheet" id="more-sheet" hidden>
     <nav class="more-panel" aria-label="More pages">
       <p class="ms-h">Play</p>
-      <a href="index.html#play"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"></path></svg><span>Daily Questions</span></a>
-      <a href="race.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 21V4"></path><path d="M5 4h12l-2.5 4L17 12H5"></path></svg><span>Producer Race</span></a>
-      <a href="blockx.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg><span>Who Signs Block X</span></a>
-      <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
-      <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
-      <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
-      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
-      <a href="survivor.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path><path d="M9 12l2 2 4-4"></path></svg><span>Survivor</span></a>
-      <a href="vs.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h12l-3-3"></path><path d="M20 17H8l3 3"></path></svg><span>Knode Games VS</span></a>
-      <a href="overunder.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M7 9l5-5 5 5"></path><path d="M7 15l5 5 5-5"></path></svg><span>More or Fewer</span></a>
-      <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+      <a href="index.html#play"><span class="mi" aria-hidden="true">🎯</span><span>Daily Questions</span></a>
+      <a href="race.html"><span class="mi" aria-hidden="true">🏇</span><span>Producer Race</span></a>
+      <a href="blockx.html"><span class="mi" aria-hidden="true">🧱</span><span>Who Signs Block X</span></a>
+      <a href="bracket.html"><span class="mi" aria-hidden="true">🏆</span><span>Producer Bracket</span></a>
+      <a href="golf.html"><span class="mi" aria-hidden="true">⛳</span><span>Block Golf</span></a>
+      <a href="fantasy.html"><span class="mi" aria-hidden="true">📋</span><span>Fantasy Producers</span></a>
+      <a href="lastnode.html"><span class="mi" aria-hidden="true">🏁</span><span>Last Node Standing</span></a>
+      <a href="survivor.html"><span class="mi" aria-hidden="true">🛡️</span><span>Survivor</span></a>
+      <a href="vs.html"><span class="mi" aria-hidden="true">🆚</span><span>Knode Games VS</span></a>
+      <a href="overunder.html"><span class="mi" aria-hidden="true">↕️</span><span>More or Fewer</span></a>
+      <a href="combo.html"><span class="mi" aria-hidden="true">🎟️</span><span>Combo Card · Preview</span></a>
       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
       <p class="ms-h">Tools</p>

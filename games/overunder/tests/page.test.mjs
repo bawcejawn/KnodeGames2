@@ -78,3 +78,17 @@ test("the game is called More or Fewer: 'Over' or 'Under' never shows on this pa
   assert.doesNotMatch(mine.replace(/overunder\.(html|js|css)/g, ""), /\b(Over|Under|over|under)\b/, "no Over / Under word a player can see");
   assert.match(mine, /More or Fewer/);
 });
+
+test("the two spots the Hub checked say More or Fewer: the label above the headline and the Prizes paragraph (M-577)", () => {
+  assert.match(html, /<p class="ou-kicker">More or Fewer<\/p>/);
+  const prizes = html.match(/<p><b>Prizes\.<\/b>[^\n]*<\/p>/)[0];
+  assert.match(prizes, /More or Fewer/);
+  assert.doesNotMatch(prizes, /\b(Over|Under)\b/);
+});
+
+test("the owner's admin cards for game 16 say More or Fewer; the variable names stay OVERUNDER_ (display only, D-762)", () => {
+  const admin = fs.readFileSync(new URL("../../../ops/admin/switches.ts", import.meta.url), "utf8");
+  const cards = admin.split("\n").filter((l) => /name: "OVERUNDER_/.test(l));
+  assert.equal(cards.length, 4);
+  for (const c of cards) assert.doesNotMatch(c.replace(/OVERUNDER_[A-Z_]+/g, ""), /Over Under|\b(Over|Under)\b/);
+});
