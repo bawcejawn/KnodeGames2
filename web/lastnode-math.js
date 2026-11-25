@@ -40,6 +40,8 @@
 (function (root) {
   "use strict";
   const HOUR = 3600000, DAY = 24 * HOUR, WEEK = 7 * DAY, MIN = 60000;
+  /** AB-076 (owner D3, option B): from this vault week a final-hour void can't hand the win away (see rulerCutsFrom). */
+  const FINAL_LUCK_FROM_WEEK = 7;
   const GENESIS = 1792368000000;     // KnodeGames week 0: Monday 2026-10-19 00:00 UTC (as race-math.js)
   const MIN_KH = 20;                 // expected blocks an hour to be in the field (by VHP, before form)
   const FORM_HOURS = 48, FORM_MIN = 0.8, FORM_MAX = 1.2, FORM_MIN_HOURS = 24;
@@ -292,18 +294,29 @@
      *   - of the rest, if 2 or more: the lowest fpct (its luck that hour against the whole network's field, so size
      *     doesn't matter) is cut (why "luck"); equal fpct: the larger address is cut.
      *  The event is done when at most 1 node stands: that node wins; 0 (every node still standing out in the same hour):
-     *  no winner (the event is void: no one scores, nothing is returned). Returns { cuts: [{ at, a, why, fpct }], standing, done, winner }. */
-    function rulerCutsFrom(field, hours) {
+     *  no winner (the event is void: no one scores, nothing is returned). Returns { cuts: [{ at, a, why, fpct }], standing, done, winner }.
+     *  From vault week FINAL_LUCK_FROM_WEEK (7, owner D3 / audit AB-076, option B): a void or no-entry node that still has
+     *  its luck (an fpct) can't end the event by itself. If cutting it would leave at most 1 node, it stays in that hour's
+     *  luck cut with the others instead: of all those nodes, only the lowest fpct is cut. Nodes without an fpct are cut as
+     *  before. `week` is the event's vault week (df.week); without it, the rule before week 7 applies. */
+    function rulerCutsFrom(field, hours, week) {
+      const finalLuck = Number.isInteger(week) && week >= FINAL_LUCK_FROM_WEEK;
       const standing = field.nodes.map((x) => x.a), cuts = [];
       let done = standing.length <= 1;
       for (let hr = 0; hr < hours.length && !done; hr++) {
         const rows = (hours[hr] && hours[hr].rows) || {}, at = hr + 1;
-        const out = [], rest = [];
+        let out = [], rest = [];
+        const soft = [];   // void or no-entry nodes that still have an fpct (AB-076)
         for (const a of [...standing].sort()) {
-          const r = rows[a];
-          if (r && r.void === true) out.push({ at, a, why: "void", fpct: null });
-          else if (!r || r.entry !== true || typeof r.fpct !== "string" || !/^(0|[1-9][0-9]*)$/.test(r.fpct)) out.push({ at, a, why: "no entry", fpct: null });
+          const r = rows[a], hasF = !!r && typeof r.fpct === "string" && /^(0|[1-9][0-9]*)$/.test(r.fpct);
+          if (r && r.void === true) { out.push({ at, a, why: "void", fpct: null }); if (hasF) soft.push({ a, f: BigInt(r.fpct) }); }
+          else if (!r || r.entry !== true || !hasF) { out.push({ at, a, why: "no entry", fpct: null }); if (hasF) soft.push({ a, f: BigInt(r.fpct) }); }
           else rest.push({ a, f: BigInt(r.fpct) });
+        }
+        if (finalLuck && soft.length && rest.length <= 1 && rest.length + soft.length >= 2) {
+          const keep = new Set(soft.map((x) => x.a));
+          out = out.filter((c) => !keep.has(c.a));
+          rest = rest.concat(soft);
         }
         rest.sort((x, y) => (x.f > y.f ? -1 : x.f < y.f ? 1 : x.a < y.a ? -1 : x.a > y.a ? 1 : 0));
         if (rest.length >= 2) { const w = rest.pop(); out.push({ at, a: w.a, why: "luck", fpct: w.f.toString() }); }
@@ -353,7 +366,7 @@
       GAME: g, GAME_ID: g.id, PICKS_GAME, CUT, LEAD, OFFSET, AHEAD, PERIOD, PHASE, LOCK_BEFORE, MAX_FIELD,
       HOUR, DAY, WEEK, GENESIS, MIN_KH, FORM_HOURS, FORM_MIN, FORM_MAX, FORM_MIN_HOURS, formOf, BONUS, SEED, TRIALS, H_SCALE, START_HOUR: PERIOD === DAY ? PHASE / HOUR : null,
       roundOf, roundTime, lockTime, isOpen, eventOf, nextEvent, pickable, nextEntry, cardTotal, raceCut, weekOf, weekStart, rng, handicapOf, calibrate, makeField, hInt,
-      cutsFrom, rulerCutsFrom, playerResult, board, places, freePrizes, FREE_MIN_EVENTS, FREE_AMOUNTS, forGame, MAINNET_GAME, FAST_GAME, REAL_TEST_GAME,
+      cutsFrom, rulerCutsFrom, FINAL_LUCK_FROM_WEEK, playerResult, board, places, freePrizes, FREE_MIN_EVENTS, FREE_AMOUNTS, forGame, MAINNET_GAME, FAST_GAME, REAL_TEST_GAME,
     };
   }
 

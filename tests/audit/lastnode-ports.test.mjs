@@ -45,7 +45,7 @@ function week(R) {
 withPython("N-9: the publish job's watch_week flags exactly what the recorder's watchWeek flags (500 random ruler weeks)", () => {
   const R = L.rng(77), weeks = Array.from({ length: 500 }, () => week(R));
   const want = weeks.map((w) => watchWeek(w, 3600000));
-  const got = JSON.parse(py(["js_round", "DEC", "dec", "ruler_cuts_from", "watch_week", "WEEK_Z", "WEEK_WINS", "EVENT_Z"], "[watch_week(w) for w in json.load(sys.stdin)]", weeks));
+  const got = JSON.parse(py(["js_round", "DEC", "dec", "ruler_cuts_from", "FINAL_LUCK_FROM_WEEK", "watch_week", "WEEK_Z", "WEEK_WINS", "EVENT_Z"], "[watch_week(w) for w in json.load(sys.stdin)]", weeks));
   assert.deepEqual(got, want);
   assert.ok(want.filter((x) => x.length).length >= 20, "the sample has flagged weeks too");
 });
