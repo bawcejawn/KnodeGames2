@@ -214,11 +214,14 @@
       .pr { padding-top: 16px; }
       .pr .lede { font-size: 15px; margin-bottom: 12px; }
       .lede-more, .tools .hide-sm { display: none; }
-      #live, #pick-zone, #board-box, #history, #how { scroll-margin-top: 124px; }
+      #live, #pick-zone, #board-box, #ruler-box, #history, #how { scroll-margin-top: 124px; }
       .tools { position: sticky; top: calc(60px + env(safe-area-inset-top, 0px)); z-index: 19; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; margin: 0 -16px 14px; padding: 8px 16px; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
       .tools::-webkit-scrollbar { display: none; }
       .tools a { flex: none; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px; }
       .tools a.go-pick { background: var(--tang); border-color: var(--tang); color: #1b1206; }
+      /* R3-21 (Repo Lens 3): the four pills fit a 320 px phone, so no link sits past the right edge. */
+      .tools { gap: 6px; padding: 8px 12px; margin: 0 -12px 14px; }
+      .tools a { padding: 6px 8px; font-size: 13px; }
       .card { padding: 14px; border-radius: 18px; }
     }
     @media (max-width: 640px) { .pr-lane { grid-template-columns: 1fr 96px; } .pr-who { grid-column: 1 / -1; } .pr-meta { padding-left: 0; } .hist .hide-sm { display: none; } }
@@ -370,7 +373,7 @@
         <li><b>3</b><span><strong>Score points</strong><span id="rc-step-pts">when it finishes top 3</span></span></li>
       </ol>
     </section>
-    <nav class="tools" aria-label="On this page"><a href="#live">Live race</a><a href="#pick-zone" class="go-pick">Pick a horse</a><a href="#board-box">Leaderboard</a><a href="#history">Results</a><a href="#how">Rules</a><a href="node.html" class="hide-sm">Producer lookup</a></nav>
+    <nav class="tools" aria-label="On this page"><a href="#live" class="hide-sm">Live race</a><a href="#pick-zone" class="go-pick">Pick<span class="hide-sm"> a horse</span></a><a href="#board-box">Leaderboard</a><a href="#ruler-box">Results</a><a href="#how">Rules</a><a href="node.html" class="hide-sm">Producer lookup</a></nav>
 
     <!-- D-166: race types. Hidden until the Race contract v2 is live (TYPES_FROM_WEEK in race-math.js). -->
     <nav class="rt-tabs" id="race-types" aria-label="Race type" hidden></nav>
