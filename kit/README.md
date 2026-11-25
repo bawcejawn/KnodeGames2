@@ -63,6 +63,12 @@ unless the owner decides to move one (GAME_KIT §6: replay, two shadow weeks wit
 Rule 2 is built (every run warns past 60% of the 2 MB publish cap). Rule 3 holds (page loops and the 1.9 MB write cap
 throw; only display boards trim, and they say how much). Rule 4 (compact, split files) is the next kit PR. See GAME_KIT §5a.
 
+**B2 (Sun 22 Nov):**
+- **Parts weeks.** A `parts` game's week is published as `W<NNN>/`, each part under kit/parts' 2 MB cap. So its whole week has its own limit, `MAX_PARTS_WEEK_BYTES` (16 MiB), instead of the one-file 1.9 MB / 2 MB. The recorder stops at 95% of it and warns at 60% and 85%. Every real file, a plain `W<NNN>.json` included, keeps the 2 MB cap. Fantasy's sim writes and publishes every file at 5,000, 9,000 and 10,000 players.
+- **`liveBoard`.** For a staked weekly game without `liveWeek`, game.json `"liveBoard": true` makes every run also write `live.json` = `{ v: 1, updated, live }`. `live` is this week's board rows from the rounds decided so far, in the same shape as `board.json`'s `lastWeek`, with `final: false`.
+  - It is display only: no open week file, no vault file, nothing in `alltime.json`, and it is not in the vault's kit pin.
+  - The publish check takes it only for a `liveBoard` game, only for this week by its own clock, and not stamped in the future. It can't recompute the rows, because the open week isn't published.
+
 ## Known gaps (none block Fantasy's port)
 - The ruler's optional `include` (G6) and `mode` card settings aren't in the kit's strict card settings yet: they join with the Ruler PRs that bring them (until then such a card fails closed).
 - A ruler game can't decide a round without a card except by `cardPerRound: false` (GAME_KIT §3).

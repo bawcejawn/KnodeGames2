@@ -331,10 +331,11 @@
     const h = G.target(r), mult = card ? X.multiplier(card, a, about(h)) : null;
     const pick = el("button", { class: "btn", type: "button", onclick: () => { closeModal(); sendPick(r, a); } }, mineP ? "Change my pick" : "Pick");
     const other = el("button", { class: "btn ghost", type: "button", onclick: () => { drafts.delete(r); renderTargets(true); closeModal(); } }, "Choose another");
-    const add = batchOn() ? el("button", { class: "btn ghost", type: "button", onclick: () => { queue.set(r, a); closeModal(); renderQueue(); } }, "Add to my picks") : null;
+    // D-743: a change is never in a batch, so only a first pick can be added to "Send my picks".
+    const add = batchOn() && !mineP ? el("button", { class: "btn ghost", type: "button", onclick: () => { queue.set(r, a); closeModal(); renderQueue(); } }, "Add to my picks") : null;
     pickModal("info", `${nameOf(a)} for block ${fmt(h)}?`, [
       el("p", {}, "About ", el("b", { text: dayTime(about(h)) }), ` · scores ${multText(mult)} if right`),
-      ...(mineP ? [`Your pick now: ${nameOf(mineP)}. You can change it once.`] : []),
+      ...(mineP ? [`Your pick now: ${nameOf(mineP)}. You can change it ${changesWord()}, with your own Mana, until it locks.`] : []),
     ], add ? [pick, add, other] : [pick, other]);
     // The ✕ in the corner, as well as a tap outside, closes it to choose another.
     const box = modal && modal.querySelector(".pk-box");
@@ -496,7 +497,17 @@
     const used = usage ? Number(usage.picks_today) || 0 : 0, max = usage ? Number(usage.max_picks_per_day) || G.PICKS_PER_DAY : G.PICKS_PER_DAY;
     const open = (r) => G.lockHeight(r) - head.height > 20;
     const mineSame = (r) => { const m = myPicks.get(r); return !!(m && m.producers && m.producers[0] === queue.get(r)); };
-    const rounds = [...queue.keys()].filter((r) => open(r) && !mineSame(r)).slice(0, 10);
+    let rounds = [...queue.keys()].filter((r) => open(r) && !mineSame(r)).slice(0, 10);
+    // D-743 / D-278: a change never goes in a batch (the sponsor pays first picks only). This page's list can be a minute old
+    // and a pick made on another device would go out as a sponsored "first pick" that is really a change, so each round is
+    // read from the chain right before; any round that already has a pick is left out and stays in the list.
+    let changes = 0;
+    try {
+      const have = await Promise.all(rounds.map((r) => picksContract.functions.get_pick({ game: G.GAME_ID, round: String(r), player: who })
+        .then((x) => !!(x.result && x.result.pick && x.result.pick.producers && x.result.pick.producers.length))));
+      const keep = rounds.filter((r, i) => !have[i]); changes = rounds.length - keep.length; rounds = keep;
+    } catch { return pickModal("bad", "Couldn't check your picks", ["Nothing was sent. Try again in a moment."], [okBtn("OK")]); }
+    if (!rounds.length && changes) return pickModal("info", "Those are changes", [`You already have a pick for ${changes === 1 ? "that block" : "those blocks"}. A change goes on its own, with your own Mana: tap the producer on the block to change it.`], [okBtn("OK")]);
     if (!rounds.length) { queue.clear(); renderQueue(); return pickModal("info", "Nothing to send", ["Those picks have locked or are already yours."], [okBtn("OK")]); }
     if (used + rounds.length > max) return pickModal("info", "Not enough picks left today", [`You have ${Math.max(0, max - used)} left today and ${rounds.length} waiting. Clear some, or send fewer.`], [okBtn("OK")]);
     sending = true; renderTargets(true); renderQueue();
@@ -509,7 +520,7 @@
       try { await readHead(); } catch { /* use the last head */ }
       const res = await W.sendBatch(`${rounds.length} Block X picks`, ops.map((o) => { const { __round, ...op } = o; return Object.defineProperty(op, "__round", { value: __round, enumerable: false }); }), { stillOpen: (o) => open(o.__round) });
       for (const r of rounds) { queue.delete(r); drafts.delete(r); }
-      pickModal("ok", "Picks sent", [`${res.sent} pick${res.sent === 1 ? "" : "s"} sent${res.dropped ? `; ${res.dropped} locked while you were choosing, so they were left out` : ""}. This list updates by itself.`], [okBtn()]);
+      pickModal("ok", "Picks sent", [`${res.sent} pick${res.sent === 1 ? "" : "s"} sent${res.dropped ? `; ${res.dropped} locked while you were choosing, so they were left out` : ""}${changes ? `; ${changes} already had a pick, so ${changes === 1 ? "it stays" : "they stay"} in your list: tap the producer on the block to change it with your own Mana` : ""}. This list updates by itself.`], [okBtn()]);
     } catch (e) {
       const m = String((e && e.message) || e);
       const msg = /PICKS: this round is locked|locked/i.test(m) ? "Nothing was saved; a round had locked. Try again."
@@ -519,13 +530,39 @@
     } finally { sending = false; await loadMine(); renderQueue(); }
   }
 
+  /** D-743 (Vault M-522): a change on the Picks contract costs the player about 1.0 Mana (mainnet mana-report). */
+  const CHANGE_MANA = 1.0;
+  const changesWord = () => (G.MAX_CHANGES === 1 ? "once" : `up to ${G.MAX_CHANGES} times`);
+  /** D-743: "You already have a pick for this block" with Cancel (first, so it has the focus) and Confirm change. */
+  function askChange(old, producer, h, have, left) {
+    return new Promise((done) => pickModal("info", "Change your pick?", [
+      `You already have a pick for block ${fmt(h)} (${nameOf(old)}). Changing it uses your own Mana: about ${fmt(CHANGE_MANA, 1)} (you have ${fmt(have, 1)}).`,
+      el("p", {}, "Change to ", el("b", { text: nameOf(producer) }), "?"),
+      `${left} change${left === 1 ? "" : "s"} left for this block.`,
+    ], [el("button", { class: "btn ghost", type: "button", "data-cancel": "", onclick: () => { closeModal(); done(false); } }, "Cancel"),
+      el("button", { class: "btn", type: "button", onclick: () => { closeModal(); done(true); } }, "Confirm change")]));
+  }
   async function sendPick(r, producer) {
     const who = me();
     if (!who || !picksContract || sending) return;
     const h = G.target(r);
     if (!isAddr(producer)) return pickModal("info", "Choose a producer first", ["Pick who you think signs the block, then press Pick."], [okBtn("OK")]);
-    const mine = myPicks.get(r);
+    // D-743 / D-278: read the pick from the chain right before deciding (this page's list can be a minute old).
+    let mine = myPicks.get(r);
+    try { const x = await picksContract.functions.get_pick({ game: G.GAME_ID, round: String(r), player: who }); mine = (x.result && x.result.pick && x.result.pick.producers && x.result.pick.producers.length) ? x.result.pick : null; if (mine) myPicks.set(r, mine); }
+    catch { return pickModal("bad", "Couldn't check your pick", ["Nothing was sent. Try again in a moment."], [okBtn("OK")]); }
     if (mine && mine.producers && mine.producers[0] === producer) return pickModal("info", "That is already your pick", [`${nameOf(producer)} for block ${fmt(h)}.`], [okBtn("OK")]);
+    // A change replaces a pick you already have: never on one tap, never in a batch, and paid with your own Mana (the
+    // Knode Games Mana sponsor pays first picks only). The contract allows G.MAX_CHANGES per pick (1 on games 2 and 12).
+    const change = !!(mine && mine.producers && mine.producers.length);
+    if (change) {
+      const n = Number(mine.changes) || 0;
+      if (n >= G.MAX_CHANGES) return pickModal("info", "Already changed", [`You have used your change for this block, so ${nameOf(mine.producers[0])} stays your pick.`], [okBtn("OK")]);
+      let have = 0;
+      if (W.kind !== "guest") { try { have = Number(BigInt(await provider.getAccountRc(who))) / 1e8; } catch { have = 0; } }
+      if (W.kind === "guest" || !(have >= CHANGE_MANA)) return pickModal("info", "Your first pick stays", ["You need your own Mana to change a pick. Your first pick stays.", el("p", {}, el("a", { href: "get.html", text: "How to get KOIN and Mana" }))], [okBtn("OK")]);
+      if (!(await askChange(mine.producers[0], producer, h, have, G.MAX_CHANGES - n))) return;
+    }
     try { await readHead(); } catch { /* use the last head */ }
     if (!(G.lockHeight(r) - head.height > 20)) return pickModal("bad", "Too close to the lock", [`Block ${fmt(h)} locks in a few minutes. Pick a later one.`], [okBtn("OK")]);
     sending = true; renderTargets(true);
@@ -537,10 +574,10 @@
       : W.kind === "guest" ? "Free: the Knode Mana sponsor pays the Mana."
       : W.kind === "vault" ? "KOIN Vault chooses who pays the Mana for this pick."
       : "Free when the Knode Mana sponsor can pay; if it can't, your wallet asks to use your own Mana.";
-    pickModal("busy", W.kind === "guest" || W.kind === "test" ? "Sending your pick…" : `Confirm in ${wallet}`, [what, `Scores ×${fmt(mult, 2)} if right.`, mana]);
+    pickModal("busy", W.kind === "guest" || W.kind === "test" ? "Sending your pick…" : `Confirm in ${wallet}`, [what, `Scores ×${fmt(mult, 2)} if right.`, change ? "A change: your own Mana pays. Approve it in your wallet." : mana]);
     try {
       const { operation } = await picksContract.functions.pick({ player: who, game: G.GAME_ID, round: String(r), producers: [producer], number: "0" }, { onlyOperation: true });
-      const id = await W.send(`pick ${nameOf(producer)} for block ${fmt(h)}`, [operation]);
+      const id = await W.send(`${change ? "change your pick to" : "pick"} ${nameOf(producer)} for block ${fmt(h)}`, [operation], change ? { noSponsor: true } : {});
       pickModal("busy", "Sent. Checking the chain…", [what]);
       let onChain = false;
       for (let t = 0; t < 10 && !onChain; t++) {
@@ -549,7 +586,7 @@
       }
       drafts.delete(r);
       if (onChain) pickModal("ok", "Pick confirmed", [el("p", {}, "Your pick: ", el("b", { text: nameOf(producer) }), ` for block ${fmt(h)}.`),
-        `It locks ${G.LEAD} blocks (about ${Math.round(G.LEAD * 3 / 60)} minutes) before the block. Until then you can change it ${G.MAX_CHANGES === 1 ? "once" : `up to ${G.MAX_CHANGES} times`} (a change counts toward today's ${G.PICKS_PER_DAY}).`,
+        `It locks ${G.LEAD} blocks (about ${Math.round(G.LEAD * 3 / 60)} minutes) before the block. Until then you can change it ${changesWord()}, with your own Mana (a change counts toward today's ${G.PICKS_PER_DAY}).`,
         id ? el("p", { class: "ago mono", text: `Transaction ${String(id).slice(0, 18)}…` }) : null].filter(Boolean), [okBtn()]);
       else pickModal("info", "Sent, not seen on the chain yet", ["Your wallet sent it. It usually shows within a minute; this list updates by itself."], [okBtn("OK")]);
     } catch (e) {

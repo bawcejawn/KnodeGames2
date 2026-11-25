@@ -100,17 +100,27 @@
     return { ...d, today: fix(d.today), week: fix(d.week), lastWeek: fix(d.lastWeek), allTime: fix(d.allTime) };
   }
 
-  let games = [{ id: "questions", name: "Daily Questions" }];
+  let games = [{ id: "questions", name: "Daily Questions", href: "#play" }];
   let current = "questions";
   const boards = new Map();   // id → { lb, data, loaded }
   const panel = $("lb-game"), qPart = $("lb-q");
 
   function buttons() {
     host.replaceChildren(...games.map((g) => {
-      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), text: g.name });
+      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), text: g.name, class: g.id !== "questions" && !g.cfg ? "soon" : null });
       b.addEventListener("click", () => { if (location.hash !== `#leaderboard/${g.id}`) location.hash = g.id === "questions" ? "#leaderboard" : `#leaderboard/${g.id}`; else show(g.id); });
       return b;
     }));
+  }
+
+  /** The three tabs (Questions | Leaderboard | Results) follow the chosen game: "Play" opens that game's page. */
+  function tabs(g) {
+    const nav = document.querySelector && document.querySelector("#view-leaderboard .qtabs"), first = nav && nav.querySelector('a[data-view="play"]');
+    if (!first) return;
+    const q = g.id === "questions";
+    nav.setAttribute("aria-label", g.name);
+    first.textContent = q ? "Questions" : "Play";
+    first.setAttribute("href", q || !/^[a-z0-9-]+\.html(#[a-z0-9-]+)?$/.test(g.href || "") ? "#play" : g.href);
   }
 
   async function show(id) {
@@ -119,9 +129,18 @@
     buttons();
     const q = id === "questions";
     qPart.hidden = !q; panel.hidden = q;
-    $("lb-title").textContent = q ? "Leaderboard · Daily Questions" : `Leaderboard · ${games.find((g) => g.id === id).name}`;
+    const gg = games.find((x) => x.id === id);
+    tabs(gg);
+    $("lb-title").textContent = q ? "Leaderboard · Daily Questions" : `Leaderboard · ${gg.name}`;
     if (q) return;
-    const g = games.find((x) => x.id === id), cfg = g.cfg;
+    const g = gg, cfg = g.cfg;
+    if (!cfg) {
+      // No board for this game yet: say so and point to its page, instead of hiding it.
+      panel.replaceChildren(el("div", { class: "empty" },
+        el("p", { text: `${g.name}'s board opens soon. Until then, its points are on its own page.` }),
+        /^[a-z0-9-]+\.html(#[a-z0-9-]+)?$/.test(g.href || "") ? el("p", {}, el("a", { class: "btn btn-primary", href: g.href, text: `Open ${g.name}` })) : null));
+      return;
+    }
     let b = boards.get(id);
     if (!b) {
       const box = el("div");
@@ -156,9 +175,10 @@
   async function load() {
     try {
       const list = (await fetchJson("games.json")).games;
-      const extra = (Array.isArray(list) ? list : []).filter((g) => g && g.status === "live" && g.id !== "questions"
+      // Every live or preview game, in the games list's order; a game with no board yet is greyed, not hidden.
+      const extra = (Array.isArray(list) ? list : []).filter((g) => g && (g.status === "live" || g.status === "preview") && g.id !== "questions"
         && typeof g.id === "string" && /^[a-z0-9-]{1,24}$/.test(g.id) && typeof g.name === "string" && g.name.length <= 40)
-        .map((g) => ({ id: g.id, name: g.name, cfg: boardOf(g) })).filter((g) => g.cfg);
+        .map((g) => ({ id: g.id, name: g.name, href: typeof g.href === "string" ? g.href : "", cfg: g.status === "live" ? boardOf(g) : null }));
       games = [games[0], ...extra];
     } catch { /* only the question game */ }
     buttons();
@@ -167,6 +187,6 @@
 
   window.addEventListener("hashchange", route);
   if (W && W.subscribe) W.subscribe(() => { for (const b of boards.values()) b.lb.setMe(me()); });
-  setInterval(() => { if (!document.hidden && current !== "questions" && !panel.hidden) show(current); }, 300000);
+  setInterval(() => { const cur = games.find((g) => g.id === current); if (!document.hidden && cur && cur.cfg && current !== "questions" && !panel.hidden) show(current); }, 300000);
   load();
 })();

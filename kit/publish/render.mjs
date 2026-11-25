@@ -278,6 +278,7 @@ export function renderJobs({ branch, games, script, ruler = null }) {
       contents: read
     outputs:
       rc: \${{ steps.rec.outputs.rc }}
+      files: \${{ steps.rec.outputs.files }}
     steps:
       - uses: ${CHECKOUT}
         with:
@@ -298,6 +299,8 @@ ${fetchStep(branch, g.slug)}${(g.published ?? []).map((o) => "\n" + fetchStep(br
           rc=0; npm run kit -- ${g.slug} || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then rm -rf "$O"; mkdir -p "$O"; echo "rc $rc: a stop, nothing uploaded"; fi
+          # M-538: how many files this run hands to publish-kit; 0 means no artifact, which publish-kit reports as a notice.
+          echo "files=$(find "$O" -type f | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
         env:
           RPC: \${{ vars.RPC || 'https://koinos.armana.io' }}
           RPC_CHECK: \${{ vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
@@ -315,7 +318,13 @@ ${(g.published ?? []).map((o) => `          KIT_PUBLISHED_${up(o)}: \${{ runner.
           path: \${{ runner.temp }}/out/
           retention-days: 1
           if-no-files-found: ignore`).join("\n\n");
-  const downloads = games.map((g) => `      - uses: ${DOWN}
+  // M-538: a game whose recorder wrote 0 files (before its first week, a week still open) has no artifact: say so as a
+  // notice instead of the download's "Artifact not found" error, so a real missing artifact stays an error.
+  const downloads = games.map((g) => `      - name: No files from ${g.slug} this run
+        if: \${{ needs.${job(g)}.outputs.files == '0' }}
+        run: echo "::notice title=${g.slug}::nothing to publish this run (its recorder wrote 0 files)"
+      - uses: ${DOWN}
+        if: \${{ needs.${job(g)}.outputs.files != '0' && needs.${job(g)}.outputs.files != '' }}
         continue-on-error: true
         with:
           name: kit-${branch}-${g.slug}
@@ -410,7 +419,7 @@ ${ind(script, 10).replace(/\n$/, "")}
             git ls-files -z -- "$dir" | xargs -0 -r git update-index --force-remove --
           done
           while IFS= read -r name; do
-            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|alltime|${WEEK_SH})|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|schedule/r[0-9]{5}|${WEEK_SH}/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
+            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|live|alltime|${WEEK_SH})|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|schedule/r[0-9]{5}|${WEEK_SH}/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
             h=$(git hash-object -w "$IN/$name")
             git update-index --add --cacheinfo "100644,$h,$name"
           done < "$LIST"

@@ -14,20 +14,10 @@
   const PRIZE_URL = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/prize-settings/free-prizes.json";
   const RACE_DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/race-data/";
   const $ = (id) => document.getElementById(id);
-  const SVG = "http://www.w3.org/2000/svg";
 
-  // Card icons (fixed drawings, never from data).
-  const ICONS = {
-    race: ["M5 21V4", "M5 4h12l-2.5 4L17 12H5"],
-    questions: ["M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"],
-    blockx: ["M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z", "M9 12h6", "M12 9v6"],
-    survivor: ["M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z", "M9 12l2 2 4-4"],
-    fantasy: ["M12 5a3 3 0 1 1 0 6a3 3 0 1 1 0-6z", "M5 20c1-4 4-6 7-6s6 2 7 6"],
-    golf: ["M7 21V4l9 4-9 4", "M4 21h8"],
-    bracket: ["M4 5h5v4H4z", "M4 15h5v4H4z", "M15 10h5v4h-5z", "M9 7h3v10H9", "M12 12h3"],
-    overunder: ["M12 4v16", "M7 9l5-5 5 5", "M7 15l5 5 5-5"],
-    combo: ["M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z", "M14 5v14"],
-  };
+  // Card icons: the game's own emoji and tile colour from games.json ("icon", "accent"), the same as Home and the menus
+  // (D-748; tests/audit/site.game-icons.test.mjs). Checked in clean(); drawn with textContent only.
+  const ACCENTS = new Set(["blue", "violet", "mint", "sun", "hot"]);
   const KINDS = { free: "Free play", staked: "Staked" };
 
   function el(tag, attrs, ...kids) {
@@ -35,12 +25,6 @@
     for (const [k, v] of Object.entries(attrs || {})) { if (v == null) continue; if (k === "text") e.textContent = v; else e.setAttribute(k, v); }
     for (const c of kids) if (c) e.append(c);
     return e;
-  }
-  function icon(id) {
-    const s = document.createElementNS(SVG, "svg");
-    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true");
-    for (const d of ICONS[id] || ICONS.blockx) { const p = document.createElementNS(SVG, "path"); p.setAttribute("d", d); s.append(p); }
-    return s;
   }
   const dur = (ms) => {
     if (!(ms > 0)) return "now";
@@ -57,7 +41,9 @@
       && typeof g.line === "string" && g.line.length <= 200 && Array.isArray(g.kinds) && g.kinds.length && g.kinds.every((k) => k in KINDS)
       && (g.status === "live" || g.status === "soon" || g.status === "preview") && typeof g.href === "string"
       && (g.status === "soon" ? g.href === "" : /^[a-z0-9-]+\.html(#[a-z/]+)?$/.test(g.href))
-      && (g.opens === undefined || (typeof g.opens === "string" && g.opens.length <= 30));
+      && (g.opens === undefined || (typeof g.opens === "string" && g.opens.length <= 30))
+      && typeof g.icon === "string" && g.icon.length >= 1 && g.icon.length <= 8 && !/[<>&"'A-Za-z0-9\s]/.test(g.icon)
+      && typeof g.accent === "string" && ACCENTS.has(g.accent);
     return Array.isArray(list) ? list.filter(ok).slice(0, 40) : [];
   }
 
@@ -153,6 +139,28 @@
     }
   }
 
+  /** The "Staked" tag follows the vault, like the Stake page (D-768): shown where the vault takes stakes now, gone where
+   *  it doesn't, added where it does. If the vault can't be read, the tags stay as games.json says. games.json's kinds
+   *  stay as they are for the Rules text. */
+  async function stakedTags(games) {
+    const K = window.KStake;
+    if (!K || !K.stakeable) return;
+    let open;
+    try { open = await K.stakeable(); } catch { return; }
+    if (!Array.isArray(open)) return;
+    for (const g of games) {
+      const vid = VAULT_IDS[g.id], a = document.querySelector(`.g[data-game="${g.id}"] .g-t`);
+      if (!vid || !a || g.status !== "live") continue;
+      const tag = a.querySelector(`[data-staked-pill="${g.id}"]`), on = open.includes(vid);
+      if (tag && !on) tag.remove();
+      else if (!tag && on) {
+        const t = el("span", { class: "pill staked", text: KINDS.staked, "data-staked-pill": g.id });
+        const free = a.querySelector(".pill.free");
+        if (free) free.after(t); else a.querySelector(".g-name").after(t);
+      }
+    }
+  }
+
   async function loadRace() {
     try { const b = await fetchJson(RACE_DATA + "board.json"); if (b && b.v === 1) raceBoard = b; } catch { /* no board yet */ }
     refresh();
@@ -173,14 +181,14 @@
   function card(g) {
     const live = g.status === "live", preview = g.status === "preview";
     // "preview" (Combo, owner 15 Nov): the page opens, but nothing is live yet: no status, stake or prize, just a link
-    const pills = [...g.kinds.map((k) => el("span", { class: `pill ${k}`, text: KINDS[k] })), live ? el("span", { class: "pill", "data-prize": g.id, hidden: "" })
+    const pills = [...g.kinds.map((k) => el("span", { class: `pill ${k}`, text: KINDS[k], ...(k === "staked" ? { "data-staked-pill": g.id } : {}) })), live ? el("span", { class: "pill", "data-prize": g.id, hidden: "" })
       : preview ? el("span", { class: "pill preview", text: g.opens ? `Preview · ${g.opens}` : "Preview" }) : el("span", { class: "pill soon", text: "Soon" })];
     const body = el("span", { class: "g-bd" },
       el("span", { class: "g-t" }, el("span", { class: "g-name", text: g.name }), ...pills),
       el("span", { class: "g-line", text: typesLive() && typeof g.lineTypes === "string" && g.lineTypes.length <= 200 ? g.lineTypes : g.line }),
       live && status[g.id] ? el("span", { class: "g-st", "data-status": g.id }) : null,
       live && VAULT_IDS[g.id] ? el("span", { class: "g-stake", "data-stake": String(VAULT_IDS[g.id]), hidden: "" }) : null);
-    const ic = el("span", { class: "g-ic" }); ic.append(icon(g.id));
+    const ic = el("span", { class: `g-ic gi acc-${g.accent}`, "aria-hidden": "true", text: g.icon });
     return live || preview
       ? el("a", { class: "g" + (preview ? " preview" : ""), href: g.href, "data-game": g.id }, ic, body, el("span", { class: "g-go", "aria-hidden": "true", text: "›" }))
       : el("div", { class: "g soon", "data-game": g.id }, ic, body);
@@ -195,6 +203,7 @@
     const free = games.filter((g) => g.status === "live" && g.kinds.includes("free"));
     const stakedOnly = games.filter((g) => g.status === "live" && !g.kinds.includes("free"));
     $("g-live").replaceChildren(...free.map(card), ...stakedOnly.map(card));
+    stakedTags(games);
     // Every live game's own leaderboard, one tap away (the Leaderboards page, a tab per game).
     const boards = games.filter((g) => g.status === "live" && (g.id === "questions" || (g.board && typeof g.board === "object")));
     if (boards.length) {

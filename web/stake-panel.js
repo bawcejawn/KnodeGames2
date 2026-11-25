@@ -142,16 +142,37 @@
     if (len < 86400000n) return new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
     return new Date(ms).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).replace(",", "");
   }
-  /** Last week's rewards per 100 VHP staked in a game: its bucket ÷ the stake counted for it (null = not known).
+  /** The VHP staked that counted for a game's week (the vault's weightFor; found by the Vault chat, 30 Oct), or null.
    *  The vault saves a week's weight only once the game moves past it; until then it uses the live numbers, so this
-   *  does the same (the vault's weightFor; found by the Vault chat, 30 Oct). g = the game object, x = that week. */
+   *  does the same. g = the game object, x = that week. */
+  function weightOf(gw, g, x) {
+    if (gw.weight_set) return big(gw.weight);
+    if (g && x != null) return big(x) > big(g.week) ? big(g.week_stake) + (big(g.next_stake) > 0n && big(g.next_week) <= big(x) ? big(g.next_stake) : 0n) : big(g.week_stake);
+    return null;
+  }
+  /** Last week's rewards per 100 VHP staked in a game: its bucket ÷ the stake counted for it (null = not known). */
   function per100(gw, g, x) {
     if (!gw || !gw.closed) return null;
-    let w;
-    if (gw.weight_set) w = big(gw.weight);
-    else if (g && x != null) w = big(x) > big(g.week) ? big(g.week_stake) + (big(g.next_stake) > 0n && big(g.next_week) <= big(x) ? big(g.next_stake) : 0n) : big(g.week_stake);
-    else return null;
-    return w > 0n ? (big(gw.bucket) * 100n * UNIT) / w : null;
+    const w = weightOf(gw, g, x);
+    return w != null && w > 0n ? (big(gw.bucket) * 100n * UNIT) / w : null;
+  }
+  /** What last week paid, as the page says it (D-768, Vault's rule): { rolled: true, pot } when nobody won and the pot moved
+   *  into this week (voided, or rolled_over: a finalized week with 0 winners always is); { pending: true, pot } while the week
+   *  is closed but not yet finalized (winners are decided by Wednesday night); otherwise { pot, staked } (at least one winner;
+   *  only the top 30% of staked players share the pot, so no rate is implied). null = not known. */
+  function lastWeek(gw, g, x) {
+    if (!gw || !gw.closed) return null;
+    if (gw.voided || gw.rolled_over) return { rolled: true, pot: big(gw.bucket) };
+    if (!gw.finalized) return { pending: true, pot: big(gw.bucket) };
+    const w = weightOf(gw, g, x);
+    return w != null && w > 0n ? { pot: big(gw.bucket), staked: w } : null;
+  }
+  /** The plain sentence for lastWeek(): no per-100 figure, which read as a rate. */
+  function lastText(l) {
+    if (!l) return "";
+    if (l.rolled) return `No winners last week: its pot (${amount(l.pot)} VHP) rolled into this week`;
+    if (l.pending) return `Last week's pot: ${amount(l.pot)} VHP (winners decided by Wednesday night)`;
+    return `Last week's pot: ${amount(l.pot)} VHP; ${amount(l.staked)} VHP was staked`;
   }
   /** "Your Mana is busy" (the node still holds the last transaction's Mana limit) and other wallet errors, in plain words. */
   function sayError(e) {
@@ -393,7 +414,7 @@
           }
         } catch { claims = []; claimsUnknown = true; }
       }
-      if (id !== Q_GAME && week > 0n) { try { const gx = await read("get_game", { game: id, week: (week - 1n).toString() }); last = per100(gx.week, gx.game || g, week - 1n); } catch { /* shown as not known */ } }
+      if (id !== Q_GAME && week > 0n) { try { const gx = await read("get_game", { game: id, week: (week - 1n).toString() }); last = lastWeek(gx.week, gx.game || g, week - 1n); } catch { /* shown as not known */ } }
       return { id, name: g.name || `Game ${id}`, active: !!g.active, season: Number(g.season_weeks || 1), total, mine, counted, pending,
         pendingFrom: pending ? weekDate(cfg, pendingWeek) : "", share: total > 0n ? Number((mine * 1000000n) / total) / 1000000 : 0,
         staked: counted >= min && min > 0n, claims, claimsUnknown, last };
@@ -606,7 +627,7 @@
   }
 
   /** "Where to stake": every game that takes stakes, side by side — staked in it, your stake, and last week's rewards
-   *  per 100 VHP staked — each with a link to its page's panel. `links` maps a vault game id to that page (the hub's
+   *  the last week's pot — each with a link to its page's panel. `links` maps a vault game id to that page (the hub's
    *  games.json "vault" ids). Hidden until the vault is live, like the panel. */
   function mountList(root, opts = {}) {
     if (!root) return null;
@@ -628,7 +649,7 @@
         for (const g of games) {
           const id = Number(g.id);
           let last = null, mine = null;
-          if (id !== Q_GAME && week > 0n) { const gx = await read("get_game", { game: id, week: (week - 1n).toString() }); last = per100(gx.week, gx.game || g, week - 1n); }
+          if (id !== Q_GAME && week > 0n) { const gx = await read("get_game", { game: id, week: (week - 1n).toString() }); last = lastWeek(gx.week, gx.game || g, week - 1n); }
           if (who) {
             const r = id === Q_GAME ? await read("get_player", { player: who, week: week.toString() }) : await read("get_game_player", { player: who, game: id, week: week.toString() });
             mine = r.player ? big(r.player.stake) + big(r.player.pending) : 0n;
@@ -649,9 +670,9 @@
             el("div", { class: "kstake-list-stats" },
               el("span", {}, el("small", { class: "muted" }, "Staked "), `${amount(r.stake)} VHP`),
               who ? el("span", {}, el("small", { class: "muted" }, "Yours "), `${amount(r.mine)} VHP`) : null,
-              el("span", {}, el("small", { class: "muted" }, "Last week "), r.last != null ? `${amount(r.last)} VHP per 100` : r.id === Q_GAME ? "see its page" : "new: no full week yet"))))),
+              el("span", {}, r.last != null ? lastText(r.last) : el("span", {}, el("small", { class: "muted" }, "Last week "), r.id === Q_GAME ? "see its page" : "new: no full week yet")))))),
           el("p", { class: "muted fine-print" }, "Other games appear here as they open for staking."),
-          el("p", { class: "muted fine-print" }, `"Last week" is the game's rewards for the week of ${weekDate(cfg, week - 1n).replace(/^\w+ /, "")} divided by the VHP staked in it: the top 30% of its staked players share them, so winners get more and others nothing. Past weeks don't promise future rewards. Daily Questions pays the staked players who answered: its page shows this week's pot.`));
+          el("p", { class: "muted fine-print" }, `"Last week" is the game's pot for the week of ${weekDate(cfg, week - 1n).replace(/^\w+ /, "")}, shared by the VHP staked in it: the top 30% of its staked players share it, so winners get more and others nothing. A week with no winners rolls its pot into the next one. Past weeks don't promise future rewards. Daily Questions pays the staked players who answered: its page shows this week's pot.`));
         root.hidden = false;
       } catch {
         if (!root.children || !root.children.length) root.hidden = true;
@@ -666,6 +687,14 @@
   // ═══════════════ status: staked or free in one game (every game page shows it) ═══════════════
   /** The wallet's standing in one game this week. Daily Questions (game 1) works on every vault version; the other
    *  games once the vault is live. { open, staked, amount, counted, pending, pendingFrom, min } (units are BigInt). */
+  /** The games the vault takes stakes in right now: the same list the Stake page shows (list_games, staked, and open or
+   *  holding stake), as vault game ids. Read only. null = not known (the vault isn't live or didn't answer). */
+  async function stakeable() {
+    await setup();
+    const state = await read("get_state", {});
+    if (!live(state)) return null;
+    return ((await read("list_games", {})).games || []).filter((g) => g.staked && (g.active || big(g.stake) > 0n)).map((g) => Number(g.id));
+  }
   async function status(game, who) {
     await setup();
     const state = await read("get_state", {});
@@ -726,6 +755,6 @@
     return { refresh };
   }
 
-  window.KStake = { mount, mountList, badge, status, overview, send, fmt: { amount, exact, toUnits, weekDate, explain },
-    wallet: () => Wallet(), sayError, live: async () => { await setup(); return live(await read("get_state", {})); }, _test: { qExactReward, qFreePrize, qNeedsOwnMana, qShared, badgeText, VAULT_ABI, TOKEN_ABI, toUnits, minStakeFor, live, claimable, explain, buildOps, exact, weekDate, per100, sayError } };
+  window.KStake = { mount, mountList, badge, status, stakeable, overview, send, fmt: { amount, exact, toUnits, weekDate, explain, lastText },
+    wallet: () => Wallet(), sayError, live: async () => { await setup(); return live(await read("get_state", {})); }, _test: { qExactReward, qFreePrize, qNeedsOwnMana, qShared, badgeText, VAULT_ABI, TOKEN_ABI, toUnits, minStakeFor, live, claimable, explain, buildOps, exact, weekDate, per100, lastWeek, lastText, sayError } };
 })();

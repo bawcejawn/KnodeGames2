@@ -173,6 +173,11 @@ body.ln-arena a:not(.btn) { color: var(--violet); }
   .ln-run { grid-column: 1 / -1; grid-row: 2; }
   .ln .hist .hide-sm { display: none; }
   .ln .hist th, .ln .hist td { padding: 9px 4px; }
+  /* Live check, 24 Nov: a long producer name ("Koinnoisseur's max VHP pool · 18UY…") made the Scouting report 556 px wide
+     on a 360/390 px phone; the name now wraps inside its cell. */
+  .ln .hist td.who { white-space: normal; }
+  .ln .hist td.who > span.ln-whobox { display: flex; min-width: 0; }
+  .ln .hist td.who a { overflow-wrap: anywhere; min-width: 0; }
   .ln .relbar { width: 40px; margin-right: 6px; }
   .ln-runcard { grid-template-columns: auto minmax(0, 1fr); }
   .ln-pts { grid-column: 1 / -1; text-align: left; }
