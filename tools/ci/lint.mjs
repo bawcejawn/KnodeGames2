@@ -3,8 +3,10 @@
 // website folder contains the testnet pages.
 import fs from "node:fs";
 import path from "node:path";
+import YAML from "yaml";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
+// LINT_ROOT: a test points the lint at a folder of fixtures (audit AB-084); otherwise the repository.
+const root = process.env.LINT_ROOT ? path.resolve(process.env.LINT_ROOT) : path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
 const problems = [];
 const TIMERS = {
   "bot.yml": ["7 * * * *", "48 11 * * 1-6", "48 23 * * 0-5"],
@@ -24,9 +26,17 @@ for (const f of fs.readdirSync(wf).filter((n) => n.endsWith(".yml") || n.endsWit
   const text = fs.readFileSync(path.join(wf, f), "utf8");
   // Timers (D-240, cutover Sun 22 Nov): only these files, only these times, exactly the old repository's. Any other
   // schedule, or a changed time, fails here. docs/WORKFLOWS.md lists them.
-  const crons = [...text.matchAll(/^\s+- cron: "([^"]+)"/gm)].map((m) => m[1]);
+  // Audit AB-084: read the timers from the parsed YAML, as GitHub does, so a cron in single quotes, without quotes or
+  // in flow style ({ cron: ... }) is counted too. The old line-by-line match saw only double-quoted crons.
+  let doc;
+  try { doc = YAML.parse(text); } catch (e) { say(`${f}: not valid YAML (${String(e?.message ?? e).split("\n")[0]})`); continue; }
+  const on = doc && typeof doc === "object" ? doc.on : undefined;
+  const onList = typeof on === "string" ? [on] : Array.isArray(on) ? on.map(String) : [];
+  const sched = on && typeof on === "object" && !Array.isArray(on) ? on.schedule : undefined;
+  const crons = Array.isArray(sched) ? sched.map((x) => (x && typeof x === "object" ? String(x.cron) : `<unreadable: ${JSON.stringify(x)}>`)) : sched == null ? [] : [`<unreadable: ${JSON.stringify(sched)}>`];
+  const hasSchedule = sched != null || onList.includes("schedule");
   const want = TIMERS[f] ?? [];
-  if (/^ {2}schedule:/m.test(text) !== want.length > 0 || crons.join("|") !== want.join("|")) say(`${f}: timers ${JSON.stringify(crons)}; allowed ${JSON.stringify(want)} (tools/ci/lint.mjs TIMERS)`);
+  if (hasSchedule !== want.length > 0 || crons.join("|") !== want.join("|")) say(`${f}: timers ${JSON.stringify(crons)}; allowed ${JSON.stringify(want)} (tools/ci/lint.mjs TIMERS)`);
   if (/pull_request_target|workflow_run/.test(text)) say(`${f} uses a privileged trigger`);
   if (/permissions:\s*(?:[>|][+-]?\s*)?["']?write-all/i.test(text)) say(`${f} asks for every permission`);
 }
