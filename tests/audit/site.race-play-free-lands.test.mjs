@@ -42,7 +42,9 @@ test("typed lanes: the same 'Play free to pick' buttons, never disabled for want
 test("Play free lands on the open tab's pick area, with the first Pick button above the phone's bottom bar", () => {
   assert.match(js, /return tabs && !tabs\.hidden \? tabs : rtype \? \$\("typed"\) : \$\("live"\);/);
   assert.match(js, /document\.querySelectorAll\(rtype \? "#rt-track \.rt-pk" : "#track \.rt-pk"\)/);
-  assert.match(js, /getComputedStyle\(n\)\.position === "fixed"/, "the bottom bar is measured");
+  assert.match(js, /const bar = document\.querySelector\("nav\.tabbar"\);/, "the bottom bar is measured");
+  assert.match(js, /const barH = bar && bar\.getClientRects\(\)\.length \? Math\.max\(0, window\.innerHeight - bar\.getBoundingClientRect\(\)\.top\) : 0;/, "R3-32: by its own selector, never the wallet sheet's backdrop");
+  assert.doesNotMatch(js, /document\.elementFromPoint\(window\.innerWidth \/ 2, window\.innerHeight - 2\)/, "R3-32: not whatever is fixed at the bottom of the screen");
   assert.match(js, /const a = e\.target && e\.target\.closest && e\.target\.closest\('a\[href="#pick-zone"\]'\);/, "a tap on any #pick-zone link");
   assert.match(js, /if \(location\.hash === "#pick-zone" && !landed\)/, "and a visit to race.html#pick-zone");
   assert.match(js, /if \(stayAtPick && me\(\)\) \{ stayAtPick = false;/, "after the guest starts, the page stays at the pick area");

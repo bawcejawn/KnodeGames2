@@ -953,11 +953,12 @@
     // The first Pick button must be on screen too: if it would sit below the fold, scroll just far enough for it.
     const first = [...document.querySelectorAll(rtype ? "#rt-track .rt-pk" : "#track .rt-pk")].find((b) => b.offsetParent);
     if (first) {
-      // Phones have a fixed bar at the bottom (the site's tab bar): keep the button above it.
-      let barH = 0;
-      for (let n = document.elementFromPoint(window.innerWidth / 2, window.innerHeight - 2); n && n !== document.body; n = n.parentElement) {
-        if (getComputedStyle(n).position === "fixed") { barH = Math.max(0, window.innerHeight - n.getBoundingClientRect().top); break; }
-      }
+      // Phones have a fixed bar at the bottom (the site's tab bar): keep the button above it. R3-32: measure that bar by its
+      // own selector; a header "Play free" tap opens the wallet sheet at the same moment, and its full-screen backdrop
+      // must not be taken for the bar.
+      const bar = document.querySelector("nav.tabbar");
+      // (getClientRects, not offsetParent: a position:fixed element has no offsetParent even when it is on screen.)
+      const barH = bar && bar.getClientRects().length ? Math.max(0, window.innerHeight - bar.getBoundingClientRect().top) : 0;
       const bottom = first.getBoundingClientRect().bottom + window.scrollY, room = window.innerHeight - barH - 16;
       if (bottom - y > room) y = bottom - room;
     }
