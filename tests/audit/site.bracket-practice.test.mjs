@@ -175,7 +175,7 @@ test("on week: an undecided round shows a labelled live estimate (~ and the word
   const ests = [...live.$("bk-list").querySelectorAll(".bk-ix.est")];
   assert.ok(ests.length > 0, "estimates shown");
   for (const e of ests) { assert.match(e.textContent, /^~[0-9.,]+%$/); assert.match(e.title, /^live estimate/); }
-  assert.match(live.$("bk-day").textContent, /~ live estimate \(blocks against expected so far, updated hourly\); the VHP ruler decides at the end of the day$/);
+  assert.match(live.$("bk-day").textContent, /~ live estimate \(blocks against expected so far, updated hourly\); the VHP Ruler decides at the end of the day, and its result can differ$/);
   assert.equal(live.$("bk-list").querySelectorAll(".bk-ix:not(.est)").length, 0, "nothing looks like a result");
   const done = await r0(await openPage({ now: NOON, index: { ...idx(5), rulerFrom: 4 },
     weekExtra: { status: "locked", rulerFrom: 4, rulerMode: "on", days: [half, new Array(24).fill(null), new Array(24).fill(null)], results: { rounds: [[1, 2, 3, 4]], done: false } } }));

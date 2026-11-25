@@ -190,7 +190,8 @@
       .bk-rounds { position: sticky; top: calc(60px + env(safe-area-inset-top, 0px)); z-index: 6; background: var(--surface); padding: 6px 0; margin: -6px 0 8px; }
       .bk-rounds button { font-size: 12px; padding: 7px 4px; }
       .bk-hero { padding: 14px 16px 12px; border-radius: 18px; }
-      .bk-actions { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+      /* the send bar stays above the sticky round tabs when both are stuck (they met where the bracket comes into view) */
+      .bk-actions { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 7; }
       #week-box .bx-head { font-size: 16px; }
       /* Game page standard (2.5 screens at 390 px): a tighter matchup card on phones. Same content and order, tap
          targets stay 44 px or more; the decorative "vs" between the two buttons is dropped (they are already apart). */
@@ -200,7 +201,9 @@
       .bk-vs { display: none; }
       .bk-side { min-height: 44px; padding: 3px 8px; }
       #own-note { font-size: 13px; margin: 8px 0 0; }
-      .bk-name small { font-size: 11px; }
+      /* owner M-662: each producer's stats line (VHP share, blocks a day, form) is hidden on phones; the seed number,
+         Follow and Quick fill stay, and the line shows on wider screens */
+      .bk-name small { display: none; }
     }
   </style>
   <link rel="stylesheet" href="page-box.css">
