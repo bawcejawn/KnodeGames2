@@ -332,6 +332,9 @@
   }
 
   // ── results ──
+  /** M-768 (Ruler M-739, exact words): why a producer races with no handicap this hour. The second sentence covers the
+   *  6-hour "active" edge until the 24-hour rule is on (Week 7). */
+  const SITS_OUT = "No handicap this hour: this producer is expected to sign fewer than 10 blocks in this race. With so few blocks one lucky block decides the race, so no handicap can make it fair, and it races without one. It can also mean the producer signed no block in the 6 hours before this hour's card; it gets a handicap again at the next card after it signs.";
   /** Standard page (GAME-PAGE-STANDARD.md "Long lists"): a board shows its first LANE_CAP lanes in the chosen order (plus
    *  the player's own pick), then ONE "Show all (N)" row. The choice holds per race length until the page reloads. */
   const LANE_CAP = 6, showAll = new Set();
@@ -891,6 +894,9 @@
       if (rk && before && before.has(a) && before.get(a) !== rk) { const d = before.get(a) - rk; pill = el("span", { class: `rt-pill ${d > 0 ? "up" : d < 0 ? "down" : ""}`, text: d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : "–", title: d === 0 ? "Same place" : `${d > 0 ? "Gained" : "Lost"} ${Math.abs(d)} place${Math.abs(d) === 1 ? "" : "s"}` }); }
       const cells = upc.map((u) => {
         const k = `${rtype}:${u.index}`, mine = rtPicks.get(k), draft = rtDrafts.get(k), chosen = (draft || mine) === a, used = !chosen && mine && !changesLeft(rtype, u.index);   // D-745
+        // M-768 (Ruler M-739): a producer with no handicap on the card in force sits out: a pick on it can't score unless
+        // its VHP grows before that race, so the button is grey "Sits out" (a pick already made still shows as such).
+        if (!hm.has(a) && !chosen) return el("button", { type: "button", class: "rt-pk out", disabled: "", "aria-label": `${nameOf(a)} sits out this hour: no pick` }, el("span", { text: "Sits out" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));
         const free = !who;   // M-696: without a wallet the button says "Play free to pick" and starts the guest
         const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}${free ? " free" : ""}`, "aria-pressed": String(chosen), "aria-label": free ? `Play free to pick ${nameOf(a)} for the race at ${dayTime(u.start)}` : `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
           el("span", { text: free ? "Play free to pick" : chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
@@ -905,7 +911,7 @@
       const lane = el("div", { class: `pr-lane rt-lane${rk === 1 && !ended ? " lead" : ""}${ended && rk && endLabel(ROt, a, rk - 1).win ? " win" : ""}`, style: grid, "data-addr": a },
         el("div", { class: "pr-who" }, el("span", { class: "pr-rank", text: ((q) => q > 0 ? ord(q) : "–")(ended && ROt ? (ROt.pending ? 0 : ROt.placings.indexOf(a) + 1) : rk || 0) }), el("span", { class: "pr-dot", style: `background:${colour(a)}` }),
           el("a", { class: "pr-name", href: EXPLORER + a, target: "_blank", rel: "noopener noreferrer", text: nameOf(a) }), pill || "",
-          el("span", { class: "pr-meta", text: `${h ? `×${h.toFixed(2)} per block` : "no handicap this hour"} · ${fmt(r ? r.blocks : 0)} blocks${sh ? ` · ${fmt(sh * 100, sh < 0.01 ? 2 : 1)}% VHP` : ""}` })),
+          el("span", { class: "pr-meta", text: `${h ? `×${h.toFixed(2)} per block` : "No handicap this hour"} · ${fmt(r ? r.blocks : 0)} blocks${sh ? ` · ${fmt(sh * 100, sh < 0.01 ? 2 : 1)}% VHP` : ""}` })),
         el("div", { class: `pr-run${ended ? " over" : ""}${packView ? " pack" : ""}` }, el("div", { class: "pr-shade", style: `width:${frac > 0 ? POS(frac) : "0"}` }), el("div", { class: "pr-trail", style: `width:${POS(x / 100)};background:${colour(a)}` }),
           el("img", { class: "pr-horse rt-animal", alt: "", "aria-hidden": "true", src: `media/animals/${ANIMAL[rtype]}.png`, width: "40", height: "40", style: `left:calc(${POS(x / 100)} - 20px)` }), el("div", { class: "pr-nowline", style: `left:${POS(frac)}` })),
         el("div", { class: "pr-gap" }, r ? ((() => { const L = ended ? endLabel(ROt, a, rk - 1) : { text: rk === 1 ? "Leading" : null }; return L.text ? el("b", { text: L.text }) : `${fmt(r.behind, 1)} behind`; })()) : "–", el("br"), el("span", { class: "ago", text: `${fmt(r ? r.steps : 0, 1)} steps` })),
@@ -913,6 +919,8 @@
       return lane;
     });
     $("rt-track").replaceChildren(head, ...capLanes(lanes, String(rtype), () => rtRender(true)));
+    // M-768: the Ruler's words (M-739) for "No handicap this hour", once under the board when a lane shows it.
+    { const n = $("rt-sitsout"); if (n) { const any = order.some((a) => !hm.has(a)); n.hidden = !any; n.textContent = any ? SITS_OUT : ""; } }
   }
   function rtTabs() {
     const nav = $("race-types");

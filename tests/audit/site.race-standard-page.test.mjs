@@ -40,3 +40,12 @@ test("long lists: 6 lanes per board (plus your pick) and 3 races in Results, the
   assert.match(js, /if \(rows\.length > 4 && !showAll\.has\(`r\$\{rtype\}`\)\) \{ rows\.forEach\(\(r, i\) => \{ if \(i >= 3\) r\.hidden = true; \}\);/);
   assert.match(html, /\.pr-lane\[hidden\], \.rl-row\[hidden\] \{ display: none !important; \}/);
 });
+
+test("M-768 (Ruler M-739): 'No handicap this hour' is explained once under the typed board, and such a producer's Pick is grey 'Sits out'", () => {
+  assert.ok(js.includes('const SITS_OUT = "No handicap this hour: this producer is expected to sign fewer than 10 blocks in this race. With so few blocks one lucky block decides the race, so no handicap can make it fair, and it races without one. It can also mean the producer signed no block in the 6 hours before this hour\'s card; it gets a handicap again at the next card after it signs.";'));
+  assert.match(js, /const any = order\.some\(\(a\) => !hm\.has\(a\)\); n\.hidden = !any; n\.textContent = any \? SITS_OUT : "";/);
+  assert.match(js, /if \(!hm\.has\(a\) && !chosen\) return el\("button", \{ type: "button", class: "rt-pk out", disabled: "",/);
+  assert.match(js, /el\("span", \{ text: "Sits out" \}\)/);
+  assert.match(html, /<div class="pr-track rt-board" id="rt-track"><\/div>\n\s*<p class="note" id="rt-sitsout" hidden><\/p>/);
+  assert.match(js, /: "No handicap this hour"\}/);
+});
