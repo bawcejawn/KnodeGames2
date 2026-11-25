@@ -414,7 +414,9 @@ test("pages: Daily Questions shows no staking or pool info (owner, 12 Nov: staki
   assert.match(page, /await K\.send\(action, a\)/);
   assert.doesNotMatch(page, /innerHTML|localStorage|kondor|buildOps|Transaction|Contract\(/);
   assert.match(page, /const d = await K\.overview\(me\(\)\);/);
-  assert.match(read("web/games.js"), /K\.status\(Number\(b\.dataset\.stake\), who\)/);
+  // PR B: the All games card has a Stake button (real wallets only) that opens the Stake page on that game; no amounts
+  assert.match(read("web/games.js"), /href: `stake\.html#g\$\{VAULT_IDS\[g\.id\]\}`, text: "Stake"/);
+  assert.match(read("web/games.js"), /const real = !!\(W && W\.address\) && W\.kind !== "guest";/);
 });
 
 // ── the staking hub (stake.html): overview and send ──

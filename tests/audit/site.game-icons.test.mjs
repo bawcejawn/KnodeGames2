@@ -59,7 +59,7 @@ test("menus: every page's Games drop-down and More sheet show the games.json ico
     pages++;
     for (const g of shown) {
       const target = p === "index.html" || !g.href.startsWith("index.html") ? link(g) : g.href;
-      const icon = `<span class="mi" aria-hidden="true">${g.icon}</span>`;
+      const icon = `<span class="mi gi acc-${g.accent}" aria-hidden="true">${g.icon}</span>`;
       for (const [name, block] of [["Games drop-down", dd], ["More sheet", sheet]]) {
         if (!block) continue;
         const a = block[0].match(new RegExp(`<a href="${esc(target)}"[^>]*>(.*?)</a>`));

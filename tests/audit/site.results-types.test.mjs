@@ -115,6 +115,7 @@ test("the Hub sources: typed ids only through race-math, the week switch is M.TY
   assert.match(js, /race-data\/T\$\{p3\}\.json/); assert.match(js, /race-data\/R\$\{p3\}-\$\{t\}\.json/);
   assert.match(js, /M\.parseTypedId\(r\.id\)/); assert.match(js, /M\.pagePick\(type, r\.start/);
   assert.doesNotMatch(js, /places: *\[|win: *12|\b12, 6, 4\b/, "the points table lives in race-math only");
-  assert.match(read("web/games.js"), /M\.TYPES_ON_WEEK !== null && M\.weekOf\(Date\.now\(\)\) >= M\.TYPES_ON_WEEK/);
+  // games.js (All games cards) shows each game's short line and no longer switches lines by race type (PR B).
+  assert.doesNotMatch(read("web/games.js"), /TYPES_ON_WEEK/);
   assert.match(read("ops/admin/actions.ts"), /pattern: \/\^\(0\|\[1-9\]\|1\\d\|20\)\$\//, "the admin accepts 0 (no per-game limit)");
 });
