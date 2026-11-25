@@ -15,10 +15,10 @@
 // The module never sees the clock, files or the network except through what this passes it.
 import fs from "node:fs";
 import path from "node:path";
-import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_STATE_BYTES, MAX_EXTRAS_BYTES, rollingClock, rollingId, rollingNo, scheduleName, startDay, rollingProblem, MAX_SCHEDULE_BYTES, rollingCancelled, inScheduleWindow } from "../publish/check.inline.mjs";
+import { dayOf, isSunday, pad3, tally, weekHash, resolveRound, roundsChange, canon, sha256, isAddr, allTimeOf, KIT_FILE_VERSION, MAX_ROUNDS, MAX_FILE_BYTES, MAX_BEHIND_MS, MAX_PARTS_WEEK_BYTES, MAX_STATE_BYTES, MAX_EXTRAS_BYTES, rollingClock, rollingId, rollingNo, scheduleName, startDay, rollingProblem, MAX_SCHEDULE_BYTES, rollingCancelled, inScheduleWindow } from "../publish/check.inline.mjs";
 import { clockFromState, rollingRounds, type VaultClock } from "./clock.ts";
 import { agree, budgeted, Budget, DEFAULT_BUDGETS, Disagree, OutOfBudget, ReadFailed, sameJson, toJson, type Budgets, type KitNode } from "./nodes.ts";
-import { Prev, Out, MAX_WRITE_BYTES } from "./store.ts";
+import { Prev, Out, MAX_WRITE_BYTES, MAX_PARTS_WEEK_WRITE_BYTES } from "./store.ts";
 import { decide, holdWeeks, releaseCode, releaseMatches } from "./lifecycle.ts";
 import { boardFor } from "./boards.ts";
 import { vaultFileFor } from "./vaultfile.ts";
@@ -35,6 +35,7 @@ export type KitGameCfg = {
   sundayFunRound: boolean; payoutRule: "legacy-tied-whole" | "d152"; vaultValues: "dense255" | "points";
   entry: { minRounds: number; minPoints: number }; minPts: number; rowCap: number;
   liveWeek: boolean; roundsCorrectable: boolean; maxRoundPoints?: number; budgets?: Partial<Budgets>;
+  /** B2 (2): a staked weekly game's display-only live ranking, live.json (this week's rounds so far; never paid from). */ liveBoard?: boolean;
   /** K1: weeks in a season (scoreRound's seasonStaked). */ seasonWeeks?: number;
   /** The first week the game records (game.json firstWeek; Fantasy, 14 Nov). Weeks before it are never read, recorded or
    *  alerted on, and no inputs file is made for them. Unset: every week, as before. */
@@ -109,6 +110,14 @@ export const MAX_HEAD_GAP_MS = 5 * MIN;        // the two nodes' chain times (KC
 export { MAX_BEHIND_MS };                        // the chain time vs the runner's clock (KC-7; the check's FRESH_MS uses it, NK-11)
 export const WARN_BYTES = Math.floor(MAX_FILE_BYTES * 0.6);     // a warning from 60% of the 2 MB cap…
 export const ALERT_BYTES = Math.floor(MAX_FILE_BYTES * 0.85);   // …and an owner alert from 85%, well before the 1.9 MB stop (NK-3)
+/** B2 (1), #R5-10-1: a parts game's whole week against the parts-week limit: a warning over 60%, an owner alert over 85%,
+ *  a stop over 95% (MAX_PARTS_WEEK_WRITE_BYTES). Pure, so the edges are tested. */
+export function partsWeekLevel(n: number): "ok" | "warn" | "alert" | "stop" {
+  if (n > MAX_PARTS_WEEK_WRITE_BYTES) return "stop";
+  if (n > Math.floor(0.85 * MAX_PARTS_WEEK_BYTES)) return "alert";
+  if (n > Math.floor(0.6 * MAX_PARTS_WEEK_BYTES)) return "warn";
+  return "ok";
+}
 /** The variable names the owner sets for a game (hyphens → _, KC-19). */
 export const varName = (slug: string, what: "RELEASE" | "HOLD_WEEKS") => `${slug.toUpperCase().replace(/-/g, "_")}_${what}`;
 
@@ -185,12 +194,14 @@ export async function runGame(m: GameModule<any, any, any>, cfg: KitGameCfg, o: 
   // K4 (Survivor): a liveWeek game also writes an open copy of the current week every run, with the rounds decided so
   // far, so players see each day's result the next morning. It has no vault file and adds nothing to the all-time
   // board; it never stops last week's run (a failure is a warning).
-  if (cfg.liveWeek) {
+  // B2 (2): a liveBoard game (no liveWeek) runs the same live pass, but it writes only live.json: this week's ranking
+  // so far, display only (no week file, no vault file, nothing in the all-time board).
+  if (cfg.liveWeek || cfg.liveBoard) {
     try {
       const lv = await runOnce(m, cfg, { ...o, live: true }, budget);
       r.written.push(...lv.written.filter((x) => !r.written.includes(x)));
       for (const k of ["errors", "warnings", "notes"] as const) for (const x of lv.alerts[k]) r.alerts[k].push(`live week ${lv.week ?? "?"}: ${x}`);
-    } catch (e) { r.alerts.warnings.push(`the current week's open copy couldn't be written this run (${(e as Error).message})`); }
+    } catch (e) { r.alerts.warnings.push(`the current week's ${cfg.liveWeek ? "open copy" : "live ranking (live.json)"} couldn't be written this run (${(e as Error).message})`); }
   }
   for (const rel of r.written) {
     let n = 0;
@@ -725,6 +736,14 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
     if (n > ALERT_BYTES) alerts.errors.push(`${what} is ${Math.round(n / 1024)} KB, over 85% of the 2 MB cap: it stops at 1.9 MB, so the game needs its files split soon (NK-3, NK-4)`);
     else if (n > WARN_BYTES) alerts.warnings.push(`${what} is ${Math.round(n / 1024)} KB, over 60% of the 2 MB cap (KC-9, NK-3)`);
   };
+  // B2 (1): a parts game's whole week is never one file (each part is warned on by kit/parts), so it is measured against
+  // the parts-week limit instead: a warning from 60%, an owner alert from 85%, a stop at 95%.
+  const partsWeekAlert = (n: number) => {
+    const mb = (x: number) => (x / 1048576).toFixed(1);
+    const lv = partsWeekLevel(n);
+    if (lv === "alert") alerts.errors.push(`week ${w}'s whole week is ${mb(n)} MB, over 85% of the ${mb(MAX_PARTS_WEEK_BYTES)} MB parts-week limit: it stops at ${mb(MAX_PARTS_WEEK_WRITE_BYTES)} MB (B2)`);
+    else if (lv === "warn") alerts.warnings.push(`week ${w}'s whole week is ${mb(n)} MB, over 60% of the parts-week limit (B2)`);
+  };
   // board.json is trimmed to its byte budget (boardOf); if its kept rows alone are still too big, the week's other files
   // are written anyway and the board waits, with an owner alert (NK-4: the cap never leaves a week with no files).
   const writeBoard = (b: any) => {
@@ -780,8 +799,14 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   const d = decide({ now, end: span.end, due, complete: t.complete, hash, prev: pw ? { state: pw.state, seen: pw.seen } : null, rereadOk, held: held ?? inputsHeld ?? (t.vaultError ? `no vault file: ${t.vaultError}` : null) });
   body.state = d.state; body.seen = d.seen;
   const size = Buffer.byteLength(JSON.stringify(body));
-  if (size > MAX_WRITE_BYTES) throw new Error(`week ${w}'s file would be ${Math.round(size / 1024)} KB, over the ${Math.round(MAX_WRITE_BYTES / 1024)} KB the kit writes: this game has outgrown one week file (GAME_KIT.md §6: split it before this happens)`);
-  sizeAlert(`week ${w}'s file`, size);
+  if (cfg.parts) {
+    // B2 (1): a parts week is written as parts (each capped by kit/parts), so the one-file limit doesn't apply to it.
+    if (partsWeekLevel(size) === "stop") throw new Error(`week ${w} would be ${Math.round(size / 1024)} KB in all, over the ${Math.round(MAX_PARTS_WEEK_WRITE_BYTES / 1024)} KB a parts week may hold (B2): stopping`);
+    partsWeekAlert(size);
+  } else {
+    if (size > MAX_WRITE_BYTES) throw new Error(`week ${w}'s file would be ${Math.round(size / 1024)} KB, over the ${Math.round(MAX_WRITE_BYTES / 1024)} KB the kit writes: this game has outgrown one week file (GAME_KIT.md §6: split it before this happens)`);
+    sizeAlert(`week ${w}'s file`, size);
+  }
   // KG parts v1: a parts game writes the week as its folder W<NNN>/ (display columns from partCols ride along).
   const writeWeek = (j: any) => {
     if (!cfg.parts) { out.write(`W${pad3(w)}.json`, j); return; }
@@ -790,6 +815,17 @@ async function runOnce(m: GameModule<any, any, any>, cfg: KitGameCfg, o: RunOpts
   };
   if (o.live) {
     if (d.state !== "open") throw new Error(`week ${w} isn't open by the chain's clock`);
+    if (!cfg.liveWeek) {
+      // B2 (2): liveBoard: the board's rows for this week so far, as live.json (the publish check keeps it display only).
+      const lb = boardFor(body, cfg, now);
+      const lj = { v: 1, updated: lb.updated, live: lb.lastWeek };
+      const n = Buffer.byteLength(JSON.stringify(lj));
+      if (n > MAX_WRITE_BYTES) throw new Error(`live.json would be ${Math.round(n / 1024)} KB: not written`);
+      sizeAlert("live.json", n);
+      out.write("live.json", lj);
+      log(`${cfg.slug} week ${w}: live ranking written (live.json); ${rounds.length} rounds.`);
+      return { week: w, state: d.state, alerts, written: out.written };
+    }
     writeWeek(body);
     log(`${cfg.slug} week ${w}: OPEN (live copy); ${rounds.length} rounds.`);
     return { week: w, state: d.state, alerts, written: out.written };
