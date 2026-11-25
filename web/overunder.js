@@ -28,6 +28,8 @@ function start() {
   // ── small helpers ──
   const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; if (k === "text") e.textContent = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? "" : v); } for (const c of kids) if (c != null) e.append(c); return e; };
   const nameOf = (a) => (!F.isAddr(a) ? "–" : window.KNames && typeof window.KNames.of === "function" ? window.KNames.of(a) : NAMES[a] || a.slice(0, 5) + "…" + a.slice(-4));
+  /** The lock countdown: minutes, then minutes:seconds in the last 10 minutes (it ticks every second then). */
+  const lockText = (lk) => lk < 60000 ? "Locked" : lk < 600000 ? `Locks in ${Math.floor(lk / 60000)}:${String(Math.floor((lk % 60000) / 1000)).padStart(2, "0")}` : `Locks in ${dur(lk)}`;
   const dur = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min` : `${m} min`; };
   const hm = (t) => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   const lineText = (line) => `${Math.floor(line / 2)}.5`;
@@ -99,6 +101,20 @@ function start() {
     if (draft.get(s) === c) draft.delete(s); else draft.set(s, c);
     render();
   }
+  /** The status strip: the next open game and when its picks lock (owner standard: the page is never silent). */
+  function strip(now = Date.now()) {
+    const next = [...games.keys()].sort((a, b) => a - b).find((s) => games.get(s) && open(s, now));
+    $("ou-strip").textContent = next ? `Next game starts ${hm(next)} · picks lock in ${lockText(F.locksAt(next) - now).replace(/^Locks in /, "")}` : "No game is open right now. A new game starts every 30 minutes.";
+    $("ou-strip").hidden = !games.size && !$("status").hidden;
+  }
+  /** Every second: only the countdown texts move (no re-render, so a tap or focus is never lost). */
+  function tick() {
+    const now = Date.now();
+    for (const x of document.querySelectorAll(".ou-g-lock[data-lock]")) { const lk = Number(x.dataset.lock) - now; x.textContent = lockText(lk); x.classList.toggle("hot", lk < 300000); }
+    strip(now);
+  }
+  /** Starts whose pick was just sent: their cards flash once (owner default; none with reduced motion, see the CSS). */
+  const flashed = new Set();
   function render() {
     const now = Date.now(), starts = [...games.keys()].sort((a, b) => a - b), box = $("ou-games");
     if (!starts.length) { box.replaceChildren(el("p", { class: "ou-none", text: "No game is open right now. A new game starts every 30 minutes; picks open 2 hours before the start." })); }
@@ -106,21 +122,25 @@ function start() {
       const e = games.get(s), mine = saved.get(s), want = draft.get(s), lk = F.locksAt(s) - now;
       const head = el("div", { class: "ou-g-head" },
         el("span", { class: "ou-g-when", text: `Starts ${hm(s)}` }),
-        el("span", { class: "ou-g-lock", text: lk < 60000 ? "Locked" : `Locks in ${dur(lk)}` }));
-      if (!e) return el("article", { class: "ou-g" }, head, el("p", { class: "ou-none", text: "No game at this start: it was cancelled for everyone (no schedule file)." }));
+        e ? el("span", { class: "ou-g-lock" + (lk < 300000 ? " hot" : ""), "data-lock": String(F.locksAt(s)), text: lockText(lk) })
+          : el("span", { class: "ou-g-lock", text: "Cancelled" }));
+      if (!e) return el("article", { class: "ou-g ou-off" }, head, el("p", { class: "ou-none", text: "No game at this start: it was cancelled for everyone (no schedule file)." }));
       const label = F.formLabel(e.form);
-      const btn = (c, txt, cls) => el("button", { type: "button", class: cls, "aria-pressed": String((mine ? Number(mine) : want) === c),
-        "aria-label": `${txt} ${lineText(e.line)} for ${nameOf(e.producer)}`, disabled: !open(s, now) || !!mine ? "" : null, onclick: () => choose(s, c) }, txt);
-      return el("article", { class: "ou-g" + (want ? " on" : "") }, head,
+      const btn = (c, txt, sub, cls) => el("button", { type: "button", class: cls, "aria-pressed": String((mine ? Number(mine) : want) === c),
+        "aria-label": `${txt.toLowerCase()} than ${lineText(e.line)} blocks for ${nameOf(e.producer)}`, disabled: !open(s, now) || !!mine ? "" : null, onclick: () => choose(s, c) },
+        txt === "More" ? "▲ More" : "▼ Fewer", el("span", { text: sub }));
+      return el("article", { class: "ou-g" + (want ? " on" : "") + (flashed.has(s) ? " sent" : "") }, head,
         el("p", { class: "ou-g-who" }, el("b", { text: nameOf(e.producer) }), el("span", { class: "ou-form", text: ` · ${label}` })),
-        el("p", { class: "ou-g-line" }, el("span", { text: "Line: " }), el("b", { text: `${lineText(e.line)} blocks` }), el("span", { text: " in its next 14,400 blocks (about 12 hours)" })),
-        el("div", { class: "ou-btns" }, btn(F.OVER, "Over", "ou-o"), btn(F.UNDER, "Under", "ou-u")),
-        el("p", { class: "ou-small", text: mine ? `Your pick: ${mine === "1" ? "Over" : "Under"}. No changes.` : unread.has(s) ? "Couldn't read your pick for this game. Nothing is sent for it until it reads." : "" }));
+        el("p", { class: "ou-g-line" }, el("span", { text: "The number" }), el("span", { class: "ou-num" }, `${lineText(e.line)} `, el("small", { text: "blocks" })), el("span", { text: " in its next 14,400 blocks (about 12 hours)" })),
+        el("div", { class: "ou-btns" }, btn(F.OVER, "More", "than the number", "ou-o"), btn(F.UNDER, "Fewer", "than the number", "ou-u")),
+        el("p", { class: "ou-small", text: mine ? `Your pick: ${mine === "1" ? "More" : "Fewer"}. No changes.` : unread.has(s) ? "Couldn't read your pick for this game. Nothing is sent for it until it reads." : "" }));
     }));
     const n = [...draft.keys()].filter((s) => open(s, now) && games.get(s) && !unread.has(s)).length;
     $("ou-send").disabled = sending || !picks || n === 0;
+    $("ou-actions").classList.toggle("ready", n > 0);
+    strip(now);
     $("ou-send").textContent = !me() ? "Connect to send" : n > 1 ? `Send my ${n} picks` : "Send my pick";
-    $("ou-check").textContent = !me() ? "Connect a wallet to send picks." : n ? "A first pick is free: Knode's Mana sponsor pays. Picks can't be changed once sent." : "Tap Over or Under on any open game.";
+    $("ou-check").textContent = !me() ? "Connect a wallet to send picks." : n ? "A first pick is free: Knode's Mana sponsor pays. Picks can't be changed once sent." : "Tap More or Fewer on any open game.";
     renderLeague();
   }
 
@@ -140,14 +160,15 @@ function start() {
         const number = String(c), round = String(F.roundOfStart(s));
         let existing = null; try { existing = await readPick(s); } catch { throw new Error(READ_FAILED); }
         const { operation } = await picks.functions.pick({ player: me(), game: GAME, round, producers: [], number }, { onlyOperation: true });
-        items.push({ key: `${GAME}:${s}`, label: `Over Under, game at ${hm(s)}`, op: operation, existing, wanted: number, open: open(s) });
+        items.push({ key: `${GAME}:${s}`, label: `More or Fewer, game at ${hm(s)}`, op: operation, existing, wanted: number, open: open(s) });
       }
       const p = SP.plan(items, { maxChanges: F.MAX_CHANGES });
       if (!p.fresh.length) { pop("Nothing to send", p.same.length ? ["Those picks are already on chain."] : ["Those games have locked, or already have a pick (no changes in this game)."]); return; }
       const batch = p.fresh.slice(0, BATCH);
       say(W.kind === "guest" ? "Sending…" : `Confirm in ${W.label ? W.label() : "your wallet"}.`);
-      await SP.send(W, { ...p, changes: [], fresh: batch }, { label: "Over Under picks", stillOpen: (it) => open(Number(String(it.key).split(":")[1])) });
-      for (const it of batch) draft.delete(Number(String(it.key).split(":")[1]));
+      await SP.send(W, { ...p, changes: [], fresh: batch }, { label: "More or Fewer picks", stillOpen: (it) => open(Number(String(it.key).split(":")[1])) });
+      for (const it of batch) { const st = Number(String(it.key).split(":")[1]); draft.delete(st); flashed.add(st); }
+      setTimeout(() => { flashed.clear(); render(); }, 2000);
       say("");
       pop("Picks sent", ["Your picks are in. No changes in this game."]);
     } catch (e) {
@@ -178,9 +199,9 @@ function start() {
   function renderLeague() {
     if (!window.KBoard || !$("ou-board")) return;
     if (!lb) lb = window.KBoard.create($("ou-board"), {
-      label: "Over Under leaderboard", hide: ["today"], columns: [{ key: "pts", label: "Points", d: 0 }],
+      label: "More or Fewer leaderboard", hide: ["today"], columns: [{ key: "pts", label: "Points", d: 0 }],
       summary: (r) => `${r.pts} pts`, scored: (r) => r.pts > 0, name: nameOf,
-      unranked: "The Staked board is for wallets with at least 1 VHP staked in Over Under that week.",
+      unranked: "The Staked board is for wallets with at least 1 VHP staked in More or Fewer that week.",
       free: { show: 6, prize: "The Free play board pays no VHP prize for now." },
     });
     lb.set(boardData()); lb.setMe(me() || "");
@@ -188,8 +209,10 @@ function start() {
 
   // ── start ──
   $("ou-send").addEventListener("click", send);
+  $("ou-rules-link").addEventListener("click", () => { $("help").open = true; });
+  setInterval(tick, 1000);
   (async () => {
-    try { await boot(); await Promise.all([loadGames(), loadBoards()]); say(picks ? "" : "Over Under isn't live yet: its Picks game hasn't been added. You can read the rules below."); }
+    try { await boot(); await Promise.all([loadGames(), loadBoards()]); say(picks ? "" : "More or Fewer isn't live yet: its Picks game hasn't been added. You can read the rules below."); }
     catch (e) { say("Couldn't load the game files. Try again in a moment."); }
     await refreshMine();
     // every minute: the clock moves (locks, new games); a new game's file is fetched when it opens
