@@ -125,3 +125,9 @@
 .bx-queue { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--violet); border-radius: 12px; background: var(--violet-soft); }
 .bx-queue[hidden] { display: none; }
 .bx-queue span { flex: 1 1 180px; font-weight: 600; }
+/* Growth change 3: after a pick, when the result comes, a reminder and a share. */
+.bx-result-at { font-size: 17px; margin: 8px 0 4px; }
+.bx-after { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 2px; }
+.bx-remind { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bx-remind > span { color: var(--muted); font-size: 14px; }
+.bx-after .btn { font-size: 14px; padding: 7px 12px; }
