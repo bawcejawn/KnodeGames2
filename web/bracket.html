@@ -39,9 +39,6 @@
     .pr { max-width: 1000px; margin: 0 auto; padding: 28px 16px 60px; }
     .pr h1 { font-family: var(--display); font-size: clamp(28px, 4vw, 40px); margin: 0 0 6px; }
     .pr h2 { font-family: var(--display); font-size: 20px; margin: 0 0 8px; }
-    .pr .lede { color: var(--muted); margin: 0 0 18px; max-width: 70ch; }
-    .tools { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; margin-bottom: 16px; }
-    .tools a { color: var(--violet); }
     .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; box-shadow: var(--shadow); margin-bottom: 16px; }
     .status { font-size: 14px; color: var(--muted); min-height: 1.3em; margin: 0 0 8px; }
     .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
@@ -60,12 +57,6 @@
       background: repeating-linear-gradient(90deg, #fff 0 3px, transparent 3px 40px), repeating-linear-gradient(0deg, #fff 0 3px, transparent 3px 40px); border-radius: 50%; pointer-events: none; }
     .pr .bk-hero h1 { color: #fff; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .bk-tag { font-family: var(--body); font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: var(--sun); color: #1b1206; padding: 4px 10px; border-radius: 99px; }
-    .pr .bk-hero .lede { color: rgba(255,255,255,.88); font-size: 17px; margin: 0 0 14px; }
-    .bk-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; position: relative; z-index: 1; }
-    .bk-steps li { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18); border-radius: 14px; padding: 10px 12px; }
-    .bk-steps li > b { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--violet); font-family: var(--num); font-size: 15px; }
-    .bk-steps span { font-size: 13px; color: rgba(255,255,255,.85); line-height: 1.3; }
-    .bk-steps strong { display: block; color: #fff; font-size: 15px; }
     #week-box { background: linear-gradient(90deg, color-mix(in srgb, var(--tang) 16%, var(--surface)) 0%, var(--surface) 70%); border-left: 6px solid var(--tang); }
     #week-box .bx-head { font-size: 18px; font-weight: 800; margin: 0; }
     #week-box .tabs2 button[aria-pressed="true"] { background: var(--tang); border-color: var(--tang); color: #1b1206; }
@@ -160,14 +151,20 @@
     .bk-btns { display: flex; gap: 10px; align-items: center; }
     .bk-btns #bk-progress { flex: 1; font-weight: 700; color: var(--ink); }
     .bk-btns #bk-submit { flex: none; }
-    /* ── rules book ── */
-    .bk-rules details { border-top: 1px solid var(--line); }
-    .bk-rules details:first-of-type { margin-top: 10px; }
-    .bk-rules summary { cursor: pointer; padding: 12px 2px; font-weight: 700; list-style: none; display: flex; justify-content: space-between; }
-    .bk-rules summary::-webkit-details-marker { display: none; }
-    .bk-rules summary::after { content: "+"; font-weight: 800; color: var(--violet); }
-    .bk-rules details[open] summary::after { content: "–"; }
-    .bk-rules details p { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
+    /* ── closed rows (For the curious, Rules), links row, stake line: GAME-PAGE-STANDARD.md ── */
+    .bk-links { position: relative; z-index: 1; margin: 6px 0 0; font-size: 15px; font-weight: 700; }
+    .bk-links a { color: inherit; }
+    .pr .fold { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0; }
+    .pr .fold + .fold { border-top: 0; }
+    .pr .fold > summary { cursor: pointer; min-height: 52px; box-sizing: border-box; padding: 14px 2px; font-weight: 700; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+    .pr .fold > summary::-webkit-details-marker { display: none; }
+    .pr .fold > summary::after { content: "›"; font-size: 22px; line-height: 1; color: var(--muted); transition: transform .15s; }
+    .pr .fold[open] > summary::after { transform: rotate(90deg); }
+    .fold-body { padding: 0 2px 10px; }
+    .fold-body h3 { font-size: 15px; margin: 14px 0 4px; }
+    .fold-body p { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+    .bk-more { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+    .bk-stake { margin: 6px 0 0; font-weight: 700; }
     #bk-ruler { background: var(--violet-soft); color: var(--ink); padding: 10px 12px; border-radius: 12px; }
     .explain { font-size: 14px; color: var(--muted); }
     .explain p { margin: 8px 0; }
@@ -183,30 +180,26 @@
     .pk-spin { display: inline-block; width: 44px; height: 44px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--violet); animation: spin .9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .pk-spin { animation: none; } }
-    #bracket-box, #board-box, #how { scroll-margin-top: 80px; }
+    #bracket-box, #rules, #curious { scroll-margin-top: 80px; }
     @media (max-width: 760px) {
       .pr { padding-top: 16px; }
-      .pr .lede { font-size: 15px; margin-bottom: 12px; }
-      .lede-more, .tools .hide-sm { display: none; }
-      #bracket-box, #board-box, #how { scroll-margin-top: 124px; }
-      .tools { position: sticky; top: calc(60px + env(safe-area-inset-top, 0px)); z-index: 19; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; margin: 0 -16px 14px; padding: 8px 16px; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-      .tools::-webkit-scrollbar { display: none; }
-      .tools a { flex: none; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px; }
-      .tools a.go-pick { background: var(--tang); border-color: var(--tang); color: #1b1206; }
+      #bracket-box, #rules, #curious { scroll-margin-top: 72px; }
       .card { padding: 14px; border-radius: 18px; }
       .bk-list { grid-template-columns: 1fr; gap: 10px; }
-      .bk-rounds { position: sticky; top: calc(112px + env(safe-area-inset-top, 0px)); z-index: 6; background: var(--surface); padding: 6px 0; margin: -6px 0 8px; }
+      .bk-rounds { position: sticky; top: calc(60px + env(safe-area-inset-top, 0px)); z-index: 6; background: var(--surface); padding: 6px 0; margin: -6px 0 8px; }
       .bk-rounds button { font-size: 12px; padding: 7px 4px; }
-      .bk-hero { padding: 18px 16px 14px; border-radius: 18px; }
-      .pr .bk-hero .lede { font-size: 15px; }
+      .bk-hero { padding: 14px 16px 12px; border-radius: 18px; }
       .bk-actions { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-      .bk-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-      .bk-steps li { flex-direction: column; align-items: flex-start; gap: 6px; padding: 9px 9px; }
-      .bk-steps li > b { width: 26px; height: 26px; font-size: 13px; }
-      .bk-steps span { font-size: 11.5px; }
-      .bk-steps strong { font-size: 13.5px; }
       #week-box .bx-head { font-size: 16px; }
-      .bk-side { min-height: 56px; }
+      /* Game page standard (2.5 screens at 390 px): a tighter matchup card on phones. Same content and order, tap
+         targets stay 44 px or more; the decorative "vs" between the two buttons is dropped (they are already apart). */
+      .bk-list { gap: 8px; }
+      .bk-match { padding: 4px 5px 5px; gap: 3px; border-radius: 12px; }
+      .bk-game { font-size: 10px; line-height: 14px; padding: 0 4px; }
+      .bk-vs { display: none; }
+      .bk-side { min-height: 44px; padding: 3px 8px; }
+      #own-note { font-size: 13px; margin: 8px 0 0; }
+      .bk-name small { font-size: 11px; }
     }
   </style>
   <link rel="stylesheet" href="page-box.css">
@@ -264,21 +257,15 @@
   </header>
 
   <main class="pr">
-    <aside class="page-box" data-game="bracket"><p>Producer Bracket: pick the winner of every matchup in a weekly knockout, then send your bracket.</p></aside>
-    <div id="stake-badge" hidden></div>
+    <aside class="page-box" data-game="bracket"><p>Pick the winner of every matchup in a weekly knockout. Free to play. The more you get right, the higher you climb.</p></aside>
+    <!-- Game page standard (D-730, GAME-PAGE-STANDARD.md): box, then the play area; everything long is one tap away in a closed row. -->
     <section class="bk-hero">
       <h1>Producer Bracket <span class="bk-tag">Free</span></h1>
-      <p class="lede">Block producers go head to head, March Madness style. Pick who wins every matchup.</p>
-      <ol class="bk-steps">
-        <li><b>1</b><span><strong>Pick every winner</strong>by Monday night</span></li>
-        <li><b>2</b><span><strong>One round a day</strong>through Saturday, on real blocks</span></li>
-        <li><b>3</b><span><strong>Score points</strong>for every right pick</span></li>
-      </ol>
+      <p class="bk-links"><a href="#rules" id="rules-link">Rules</a> · <a href="index.html#results/bracket">Results</a> · <a href="index.html#leaderboard/bracket">Leaderboard</a> · <a href="ruler.html#bracket">Ruler</a></p>
     </section>
-    <p class="note practice" id="bk-practice" role="status" hidden></p>
-    <nav class="tools" aria-label="On this page"><a href="#bracket-box" class="go-pick">My bracket</a><a href="#board-box">Leaderboard</a><a href="#how">Rules</a><a href="games.html" class="hide-sm">All games</a></nav>
 
     <section class="card" id="week-box">
+      <p class="note practice" id="bk-practice" role="status" hidden></p>
       <p class="status" id="status" role="status">Loading the bracket…</p>
       <div class="tabs2" id="week-tabs" role="group" aria-label="Week"></div>
       <p class="bx-head" id="week-line">–</p>
@@ -309,28 +296,32 @@
       <p class="note" id="own-note" hidden>Disclosure: a Knode Games node is in this bracket. It is seeded and scored by the same rules as every other producer; Knode Games chooses nothing.</p>
     </section>
 
-    <section class="card" id="bracket-stake" hidden></section>
+    <details class="fold" id="curious">
+      <summary>For the curious</summary>
+      <div class="fold-body">
+        <h3>Reading the bracket</h3><p>Tap the producer you think wins each matchup. The number in the badge is its seed (1 = the most VHP). The % next to a producer during its day is its index so far: blocks signed ÷ blocks expected from its VHP. "Recent form" is the same over the last 2 days. "Upset" marks a lower seed beating, or picked to beat, a higher one.</p>
+      </div>
+    </details>
 
-    <section class="card" id="board-box" hidden>
-      <div class="head"><h2>Leaderboard</h2></div>
-      <div id="bk-board"></div>
-    </section>
+    <details class="fold bk-rules" id="rules">
+      <summary>Rules and how points work</summary>
+      <div class="fold-body">
+        <p class="note" id="bk-ruler" hidden></p>
+        <h3>How to play</h3><p><b>1. Pick every winner</b> by Monday night. <b>2. One round a day</b> through Saturday, on real blocks. <b>3. Score points</b> for every right pick. Block producers go head to head, March Madness style.</p>
+        <h3>The leaderboard</h3><p>Ranked by points; ties go to a right champion, then more right picks, then whoever sent their bracket first (the time of its last change). Brackets sent in the same block share a place, so a copy sent in the same block as the original ties it. The all-time board shares ties. Two boards: <b>Staked</b> (wallets with at least the vault's minimum stake, 1 VHP today, in the Bracket for the week; a wallet that withdrew during the week stays on this board but gets no share) and <b>Free play</b> (everyone else, guests too). The week's rewards go to the Staked board by the standard Knode Games rules: the top 30% with at least 1 point. On the Free play board, 1st and 2nd at the end of the week win 2 and 1 VHP, from Week 5 (the week of Mon 23 Nov), with at least 1 point; ties share the place.</p>
+        <h3>The week</h3><p>Sunday is review day: results are checked and paid from Monday. Seeding on Sunday 00:00 UTC, picks until Monday 23:55 UTC, one round a day, the final on Saturday. Sunday is the review day: the week's results are checked on chain and go final from Monday 00:00 UTC, and rewards can be claimed from Monday evening (Pacific time).</p>
+        <h3>The field</h3><p>At seeding, every producer's exact VHP is averaged over the day before (about 28,800 blocks), read from the chain on two nodes. A producer's seeding VHP is the lower of that average and its average at the last seeding (a producer that wasn't there counts zero), so VHP lent to a producer, or moved to a new address, for one day buys nothing. The producers expected to sign at least 10 blocks in a 6-hour race make the field, biggest first. The bracket is the largest of 8, 16 or 32 that fits: 32 or more play Tuesday to Saturday, 16 to 31 Wednesday to Saturday, 8 to 15 Thursday to Saturday. Under 8, there is no bracket that week.</p>
+        <h3>Your pick</h3><p>Fill in every winner, from the first round to the champion, between Sunday 00:00 and Monday 23:55 UTC. The whole bracket goes to the chain as one number in one transaction; you can change it until the lock.</p>
+        <h3>A matchup</h3><p>Each round is played on one UTC day. A producer's index is the blocks it signed that day ÷ the blocks it was expected to sign from the effective VHP it held as the day began, rebuilt exactly from the chain's own VHP records. Koinos picks each block's signer in proportion to VHP, so a producer that keeps its VHP and signs its fair share scores about 100% whatever its size: a small producer can beat a big one. A block signed while holding more than the starting VHP counts for less, in proportion, so VHP added during the day neither helps nor hurts. The higher index goes through; an exact tie goes to the lower seed.</p>
+        <h3>Forfeits</h3><p>A seed whose effective VHP, averaged over its round's day, is less than half its seeding VHP loses that matchup, whatever its blocks. Moving VHP away for a moment changes nothing; throwing a matchup costs a whole day of real VHP. If both seeds are under half, the blocks decide. No rule can stop a producer from losing on purpose (for example by signing from a second address of its own); it can never make itself win.</p>
+        <h3>The Knode Games Pool</h3><p>The vault, whose VHP is players' stakes, produces blocks as the Knode Games Pool and plays like any producer. Players can deposit and withdraw at any time, so it never forfeits, and it is judged on a rate that no deposit or withdrawal can move: each block it signs counts 1 ÷ its VHP at that block, against the same expected total as everyone's index.</p>
+        <h3>Points</h3><p>A right winner scores 1 point in the first round, then 2, 4, 8 (and 16 in a 32-producer bracket), plus 2 for the right champion.</p>
+        <h3>Fair checks</h3><p>Every hour of every round is recorded from irreversible blocks that match on two independent Koinos nodes, and read again in a later run before the week can go final. The publish job works every result and every point out again on its own before anything is published, and the scoring code is public: this page and the recorder run the same file. If the week's results or stakes can't be completed by Thursday 00:00 UTC after it, the week closes without rewards and the vault rolls them over.</p>
+      </div>
+    </details>
 
-    <section class="card bk-rules" id="how">
-      <h2>Rules book</h2>
-      <p class="note">Everything about how the Bracket works. Tap a topic to open it.</p>
-      <p class="note" id="bk-ruler" hidden></p>
-      <details><summary>Reading the bracket</summary><p>Tap the producer you think wins each matchup. The number in the badge is its seed (1 = the most VHP). The % next to a producer during its day is its index so far: blocks signed ÷ blocks expected from its VHP. "Recent form" is the same over the last 2 days. "Upset" marks a lower seed beating, or picked to beat, a higher one.</p></details>
-      <details><summary>The leaderboard</summary><p>Ranked by points; ties go to a right champion, then more right picks, then whoever sent their bracket first (the time of its last change). Brackets sent in the same block share a place, so a copy sent in the same block as the original ties it. The all-time board shares ties. Two boards: <b>Staked</b> (wallets with at least the vault's minimum stake, 1 VHP today, in the Bracket for the week; a wallet that withdrew during the week stays on this board but gets no share) and <b>Free play</b> (everyone else, guests too). The week's rewards go to the Staked board by the standard Knode Games rules: the top 30% with at least 1 point. On the Free play board, 1st and 2nd at the end of the week win 2 and 1 VHP, from Week 5 (the week of Mon 23 Nov), with at least 1 point; ties share the place.</p></details>
-      <details><summary>The week</summary><p>Sunday is review day: results are checked and paid from Monday. Seeding on Sunday 00:00 UTC, picks until Monday 23:55 UTC, one round a day, the final on Saturday. Sunday is the review day: the week's results are checked on chain and go final from Monday 00:00 UTC, and rewards can be claimed from Monday evening (Pacific time).</p></details>
-      <details><summary>The field</summary><p>At seeding, every producer's exact VHP is averaged over the day before (about 28,800 blocks), read from the chain on two nodes. A producer's seeding VHP is the lower of that average and its average at the last seeding (a producer that wasn't there counts zero), so VHP lent to a producer, or moved to a new address, for one day buys nothing. The producers expected to sign at least 10 blocks in a 6-hour race make the field, biggest first. The bracket is the largest of 8, 16 or 32 that fits: 32 or more play Tuesday to Saturday, 16 to 31 Wednesday to Saturday, 8 to 15 Thursday to Saturday. Under 8, there is no bracket that week.</p></details>
-      <details><summary>Your pick</summary><p>Fill in every winner, from the first round to the champion, between Sunday 00:00 and Monday 23:55 UTC. The whole bracket goes to the chain as one number in one transaction; you can change it until the lock.</p></details>
-      <details><summary>A matchup</summary><p>Each round is played on one UTC day. A producer's index is the blocks it signed that day ÷ the blocks it was expected to sign from the effective VHP it held as the day began, rebuilt exactly from the chain's own VHP records. Koinos picks each block's signer in proportion to VHP, so a producer that keeps its VHP and signs its fair share scores about 100% whatever its size: a small producer can beat a big one. A block signed while holding more than the starting VHP counts for less, in proportion, so VHP added during the day neither helps nor hurts. The higher index goes through; an exact tie goes to the lower seed.</p></details>
-      <details><summary>Forfeits</summary><p>A seed whose effective VHP, averaged over its round's day, is less than half its seeding VHP loses that matchup, whatever its blocks. Moving VHP away for a moment changes nothing; throwing a matchup costs a whole day of real VHP. If both seeds are under half, the blocks decide. No rule can stop a producer from losing on purpose (for example by signing from a second address of its own); it can never make itself win.</p></details>
-      <details><summary>The Knode Games Pool</summary><p>The vault, whose VHP is players' stakes, produces blocks as the Knode Games Pool and plays like any producer. Players can deposit and withdraw at any time, so it never forfeits, and it is judged on a rate that no deposit or withdrawal can move: each block it signs counts 1 ÷ its VHP at that block, against the same expected total as everyone's index.</p></details>
-      <details><summary>Points</summary><p>A right winner scores 1 point in the first round, then 2, 4, 8 (and 16 in a 32-producer bracket), plus 2 for the right champion.</p></details>
-      <details><summary>Fair checks</summary><p>Every hour of every round is recorded from irreversible blocks that match on two independent Koinos nodes, and read again in a later run before the week can go final. The publish job works every result and every point out again on its own before anything is published, and the scoring code is public: this page and the recorder run the same file. If the week's results or stakes can't be completed by Thursday 00:00 UTC after it, the week closes without rewards and the vault rolls them over.</p></details>
-    </section>
+    <nav class="bk-more" aria-label="Results and leaderboard"><a class="btn btn-ghost" href="index.html#leaderboard/bracket">Leaderboard →</a><a class="btn btn-ghost" href="index.html#results/bracket">Results →</a></nav>
+    <p class="bk-stake"><a href="stake.html#g9">Stake in Producer Bracket →</a></p>
   </main>
 
   <nav class="tabbar" aria-label="Main">

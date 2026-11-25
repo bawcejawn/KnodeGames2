@@ -496,7 +496,8 @@
   }
 
   // ── leaderboard (shared component) ──
-  const lb = window.KBoard ? window.KBoard.create($("bk-board"), {
+  // Game page standard: the full boards live on the Leaderboard page (links row); with no #bk-board on the page, none is built.
+  const lb = window.KBoard && $("bk-board") ? window.KBoard.create($("bk-board"), {
     label: "Bracket leaderboard", hide: ["today"],
     // Staked: wallets with 1 VHP or more staked in the Bracket that week (the Vault's player rule); Free play: the rest
     // owner 14 Nov: the free prize is ON from Week 5 (vault week 5; the recorder gives free-play medals only when game 9's switch is on)
@@ -544,6 +545,8 @@
 
   // ── start ──
   $("bk-submit").addEventListener("click", review);
+  // Game page standard: a "Rules" link (the hero's, the disclosure's) opens the closed Rules row and scrolls to it (no hash change, nothing reloads).
+  for (const a of document.querySelectorAll('a[href="#rules"]')) a.addEventListener("click", (e) => { const d = $("rules"); if (!d) return; e.preventDefault(); d.open = true; d.scrollIntoView({ block: "start" }); });
   $("bk-share").addEventListener("click", shareImage);
   $("bk-fill-chalk").addEventListener("click", () => autoFill("chalk"));
   $("bk-fill-form").addEventListener("click", () => autoFill("form"));

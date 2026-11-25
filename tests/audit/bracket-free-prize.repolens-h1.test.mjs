@@ -31,8 +31,11 @@ const explain = (() => {
 })();
 const GAME9 = { staked: true, free_prize: true, season_weeks: 1 };   // game-add 9 … --free (the vault's record)
 
-/** The page at `now`, index.json saying prizes start at `prizesFromWeek`; returns the options of the LAST panel mount. */
-async function mountOpts(now, prizesFromWeek) {
+// Game page standard (GAME-PAGE-STANDARD.md, Bracket row): the Bracket page has no stake panel any more, only a stake line
+// to the Stake page. So the risk H1-1 guarded (the panel promising the 2 + 1 VHP prize in a practice week) can't come back
+// through this page: no panel is mounted in any week, and the only free-prize sentence is the Rules row's, "from Week 5".
+/** The page at `now`, index.json saying prizes start at `prizesFromWeek`; returns every stake-panel mount. */
+async function mounts(now, prizesFromWeek) {
   const dom = new JSDOM(read("web/bracket.html"), { runScripts: "outside-only", url: "https://knodegames.com/bracket.html" });
   const w = dom.window; windows.push(w);
   w.Date.now = () => now;
@@ -43,21 +46,27 @@ async function mountOpts(now, prizesFromWeek) {
   };
   w.koilib = { Provider: class { async getHeadInfo() { return { head_block_time: String(now) }; } }, Contract: class { constructor() { this.functions = {}; } } };
   w.KWallet = { address: null, kind: null, label: () => "", init() {}, subscribe() {}, async send() { throw new Error("no"); } };
-  const mounts = [];
-  w.KStake = { badge() {}, mount: (root, opts) => { mounts.push({ ...opts }); return {}; } };
+  const out = [];
+  w.KStake = { badge: () => out.push("badge"), mount: (root, opts) => { out.push({ ...opts }); return {}; } };
   for (const f of ["web/vhp-standard.js", "web/bracket-math.js", "web/bracket.js"]) w.eval(read(f));
   await flush(w);
-  assert.ok(mounts.length >= 1, "the Bracket page mounts the stake panel");
-  return mounts[mounts.length - 1];
+  return { out, doc: w.document };
 }
 
-test("H1-1 (Low): in Week 1 (vault week 4, practice) the stake panel promises no free prize", async () => {
-  const opts = await mountOpts(BM.seedTime(4) + 3 * 3600000, 5);   // Sun 15 Nov, the week of Mon 16 Nov on show
-  const line = explain(GAME9, 100000000n, opts);
-  assert.doesNotMatch(line, /2 \+ 1 VHP|free players play for/, "practice week, switch off: " + line);
+test("H1-1 (Low), standard page: in Week 1 (vault week 4, practice) no stake panel or badge is shown, so nothing promises a free prize", async () => {
+  const { out, doc } = await mounts(BM.seedTime(4) + 3 * 3600000, 5);   // Sun 15 Nov, the week of Mon 16 Nov on show
+  assert.deepEqual(out, [], "no stake panel or badge on the Bracket page");
+  assert.equal(doc.getElementById("bracket-stake"), null);
+  assert.doesNotMatch(doc.querySelector("main").textContent.replace(doc.getElementById("rules").textContent, ""), /2 \+ 1 VHP|free players play for|win 2 and 1 VHP/, "no prize words outside the Rules row");
+  // the explain() line itself still keeps the prize off when told so (stake.html uses it)
+  assert.doesNotMatch(explain(GAME9, 100000000n, { game: 9, freePrize: false }), /2 \+ 1 VHP|free players play for/);
 });
 
-test("H1-1: from Week 2 (vault week 5) the stake panel names the free prize", async () => {
-  const opts = await mountOpts(BM.seedTime(5) + 3 * 3600000, 5);
-  assert.match(explain(GAME9, 100000000n, opts), /free players play for the 2 \+ 1 VHP prize/);
+test("H1-1, standard page: from Week 2 (vault week 5) the free prize is named in the closed Rules row, from Week 5, and staking is one line to the Stake page", async () => {
+  const { out, doc } = await mounts(BM.seedTime(5) + 3 * 3600000, 5);
+  assert.deepEqual(out, []);
+  assert.match(doc.getElementById("rules").textContent, /On the Free play board, 1st and 2nd at the end of the week win 2 and 1 VHP, from Week 5/);
+  const stake = doc.querySelector('main a[href="stake.html#g9"]');
+  assert.ok(stake, "one stake line to the Stake page, game 9");
+  assert.match(stake.textContent, /^Stake in Producer Bracket/);
 });
