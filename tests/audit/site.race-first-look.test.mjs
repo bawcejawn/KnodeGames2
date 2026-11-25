@@ -31,5 +31,5 @@ test("one change per race, own Mana: in the picks note and in the Rules; no 'cha
 test("R3-21: the page's tool row fits a 320 px phone: four short pills (Live race and 'a horse' hidden on phones); Results goes to the Results list", () => {
   assert.ok(html.includes('<nav class="tools" aria-label="On this page"><a href="#live" class="hide-sm">Live race</a><a href="#pick-zone" class="go-pick">Pick<span class="hide-sm"> a horse</span></a><a href="#board-box">Leaderboard</a><a href="#ruler-box">Results</a><a href="#how">Rules</a>'));
   assert.match(html, /\.tools \{ gap: 6px; padding: 8px 12px; margin: 0 -12px 14px; \}\n\s*\.tools a \{ padding: 6px 8px; font-size: 13px; \}/);
-  assert.match(html, /#live, #pick-zone, #board-box, #ruler-box, #history, #how \{ scroll-margin-top: 124px; \}/);
+  assert.match(html, /#live, #pick-zone, #race-types, #typed, #board-box, #ruler-box, #history, #how \{ scroll-margin-top: 124px; \}/);   // M-696 adds the tabs and the typed board
 });
