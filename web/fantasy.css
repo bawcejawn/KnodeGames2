@@ -342,3 +342,23 @@ table.fx-t { width: 100%; border-collapse: collapse; font-size: 14px; }
 /* Full transaction id in the saved dialog (owner, 16 Nov): wraps on phones. */
 .fx-tx .mono { overflow-wrap: anywhere; font-size: 0.8rem; }
 .fx-tx a { text-decoration: underline; }
+
+/* ── standard page (D-791): links under the title, closed rows, one stake line ── */
+.fx-links { margin: 10px 0 0; font-size: 14px; font-weight: 700; }
+.fx-links a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.fx .fold { margin-top: 14px; border-top: 1px solid var(--line, rgba(127, 127, 127, .3)); border-bottom: 1px solid var(--line, rgba(127, 127, 127, .3)); }
+.fx .fold > summary { min-height: 52px; display: flex; align-items: center; cursor: pointer; font-weight: 800; font-size: 16px; }
+.fx .fold[open] > summary { margin-bottom: 8px; }
+.fx-sub { margin-top: 10px; }
+.fx-sub > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 700; }
+.fx-stake-line { margin: 16px 0 4px; font-weight: 700; }
+.fx-stake-line a { color: inherit; }
+/* phones: the hero stays one screen-third so the court shows on the first screen (D-791) */
+@media (max-width: 520px) {
+  .fx-hero h1 { font-size: 30px; max-width: none; }
+  .fx-hero-in { gap: 10px; }
+  .fx-clock { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 10px; padding: 8px 12px; }
+  .fx-clock-n { font-size: 26px; }
+  .fx-next { margin-top: 10px; padding: 8px 12px; }
+  .fx-next-t { font-size: 14px; }
+}

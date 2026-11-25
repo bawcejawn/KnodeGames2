@@ -83,3 +83,16 @@ tr.gf-off td { color: var(--muted); font-style: italic; }
 .gf-club span { font-size: 14px; font-weight: 600; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--paper); }
 .gf-club .gf-club-on { color: var(--ink); border-color: var(--muted); }
 .gf-club .gf-club-off { color: var(--muted); }
+
+/* GAME-PAGE-STANDARD (M-607): one small links line under the title, and the leaderboard as a links row. */
+.gf-links { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.gf-links a { font-weight: 600; }
+.gf-links-row { margin: 0 0 18px; }
+details.fold > .gf-todo { margin: 12px 0; box-shadow: none; }
+/* Both closed rows look the same: one row, a line above and below (the shared .fold style replaces this once it lands). */
+main.gf details.fold { margin: 0; border-top: 1px solid var(--line); }
+main.gf details.fold + details.fold, main.gf details.fold:last-of-type { border-bottom: 1px solid var(--line); }
+main.gf details.fold > summary { cursor: pointer; min-height: 52px; display: flex; align-items: center; font-family: var(--display); font-weight: 700; font-size: 17px; }
+main.gf details.fold > summary::-webkit-details-marker { display: none; }
+main.gf details.fold > summary::after { content: "▾"; margin-left: auto; padding-left: 12px; color: var(--muted); transition: transform .15s; }
+main.gf details.fold[open] > summary::after { transform: rotate(180deg); }

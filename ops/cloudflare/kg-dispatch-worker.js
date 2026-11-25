@@ -40,9 +40,11 @@ export const JOBS = {
   "7,37 * * * *": [
     { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25, ownOnly: true },
     { workflow: "bot.yml", windowMin: 50 }, { workflow: "names.yml", windowMin: 50 }, { workflow: "golf.yml", windowMin: 50 },
-    { workflow: "lastnode.yml", windowMin: 10 },
+    { workflow: "lastnode.yml", windowMin: 10 }, { workflow: "watch.yml", windowMin: 25 },
   ],
 };
+// Wed 25 Nov: GitHub's own timer started the node watchdog (watch.yml, every 30 min) only 3 times in 29 hours, so a
+// dead PC would go unreported. The Worker starts it at :07 and :37 (window 25: its GitHub run, if it came, counts).
 // Tue 24 Nov (AB-072): GitHub's own timer started combo.yml once and lastnode.yml twice in 14 hours on Mon 23, so the
 // Worker starts them too: Combo once an hour at :22 (after the race at :37/:41 and Block X at :51 of the hour before;
 // none of the knode-games queue runs then), Last Node three times an hour (:07, :22, :37), as its own timer intends.

@@ -18,7 +18,7 @@ export const PAGES = [
   { file: "install.html", path: "install.html", title: "Get the Knode Games app · iPhone, Android and computer", short: "Get the Knode Games app",
     desc: "Install Knode Games on your phone or computer in three taps, straight from the website. No app store needed.", image: "og-knode.png", priority: "0.8" },
   { file: "swap.html", path: "swap.html", title: "Knode Games Swap · Swap VHP for KOIN on Koinos", short: "Knode Games Swap",
-    desc: "Swap VHP back into KOIN in one step on Koinos. A small 3% fee, paid out from Knode Games' own node.", image: "og-swap.png", priority: "0.7" },
+    desc: "Swap VHP back into KOIN in one step on Koinos. A 10% fee, paid out from Knode Games' own node.", image: "og-swap.png", priority: "0.7" },
   { file: "start.html", path: "start.html", title: "New to Koinos? Start here · Knode Games", short: "New to Koinos? Start here",
     desc: "From dollars in the bank to playing Knode Games: get a wallet, get KOIN, cross the Vortex bridge, and explore apps built on Koinos.", image: "og-knode.png", priority: "0.7" },
   { file: "learn.html", path: "learn.html", title: "Learn · Knode Games", short: "Learn how Knode Games works",
