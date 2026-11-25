@@ -191,6 +191,7 @@
           W.session = { sessionId: s.sessionId, secret: s.secret, expiresAt: s.expiresAt };
           store.set(sessionStorage, "kw-vault", null);           // the secret stays in this page's memory only
           setAddress("vault", st.address);
+          countWallet(false);
           watchVault();
           close();
           return st.address;
@@ -255,6 +256,7 @@
     close();
     const keep = W.kind === "kondor" && addrs.includes(W.address);
     setAddress("kondor", fresh.length ? fresh[0] : keep ? W.address : addrs[0]);
+    countWallet(false);
     if (before.size && fresh.length && W.toast) W.toast(`Added ${fresh.length === 1 ? "1 Kondor account" : fresh.length + " Kondor accounts"}. Now using ${W.address.slice(0, 5)}…${W.address.slice(-4)}. Switch any time from the wallet menu.`, 7000);
     return W.address;
   }
@@ -363,6 +365,7 @@
       g = await guestLib().create();
     }
     setAddress("guest", g.address);
+    countWallet(isNew);
     if (isNew) guestWelcome(g.address);
     return g.address;
   }
@@ -374,7 +377,7 @@
           h("button", { class: "kw-btn", type: "button", onclick: async () => { resolve(await restoreGuest()); } }, "Restore from backup"),
           h("button", { class: "kw-btn", type: "button", onclick: async () => {
             close();
-            try { const g = await guestLib().create(); setAddress("guest", g.address); guestWelcome(g.address); resolve(g.address); }
+            try { const g = await guestLib().create(); setAddress("guest", g.address); countWallet(true); guestWelcome(g.address); resolve(g.address); }
             catch (e) { W.toast && W.toast(String(e.message || e), 8000); resolve(null); }
           } }, "Start a new guest")));
       onClose = () => resolve(null);
@@ -423,7 +426,7 @@
           if (await guestLib().load() && !window.confirm("This replaces the guest already on this device. Make sure it's backed up. Continue?")) return;
           const g = await guestLib().restore(input.value);
           input.value = "";
-          setAddress("guest", g.address); close(); resolve(g.address);
+          setAddress("guest", g.address); countWallet(false); close(); resolve(g.address);
         } catch (e) { status.textContent = String(e.message || e); }
       } }, "Restore");
       open(h("h3", {}, "Restore a guest key"), h("p", {}, "Paste the guest key you backed up. It stays in this browser."), h("p", { class: "kw-warn" }, RESTORE_WARN), input, h("div", { class: "kw-row" }, go), status, h("p", { class: "kw-warn" }, GUEST_WARN));
@@ -566,8 +569,36 @@
 
   const MAINNET_CHAIN_ID = "EiBZK_GGVP0H_fXVAM3j6EAuz3-B-l3ejxRSewi7qIBfSA==";
 
-  /** Sign and send. Returns the transaction id once the network has it in a block (or null when it isn't seen yet).
-   *  Throws on rejection or failure, with a readable message. */
+  /** Sign and send (KWallet.send). Returns the transaction id once the network has it in a block (or null when it isn't
+   *  seen yet). Throws on rejection or failure, with a readable message. */
+  async function sendCounted(label, ops, opts = {}) {
+    const id = await send(label, ops, opts);
+    countSent(ops);
+    return id;
+  }
+  /** Growth (M-610, Vault's five conditions M-643): after a pick or answer has gone through, tell analytics.js how many
+   *  operations and which wallet kind, nothing else: no address, transaction id, payer, Mana, game or round. Fire and
+   *  forget: never awaited, inside try/catch, so it can't change what send() returns or throws. Only when every
+   *  operation is a pick on the Race or Picks contract or an answer on the game contract (the entry points checkGuestTx
+   *  allows); stake, withdraw, claim, move and swap send nothing. It sits here, in sendCounted (KWallet.send, what every
+   *  page and sendBatch call), so a refused sponsored try confirmed with the player's own Mana counts once, and a throw counts
+   *  nothing. No storage here: the counting dates live in analytics.js. */
+  function countSent(ops) {
+    try {
+      const game = guestGame(), race = guestRace(), picks = guestPicks();
+      const play = Array.isArray(ops) && ops.length > 0 && ops.every((o) => {
+        const c = o && o.call_contract;
+        if (!c) return false;
+        const e = Number(c.entry_point);
+        return (!!game && c.contract_id === game && e === ANSWER) || (!!race && c.contract_id === race && e === PICK) || (!!picks && c.contract_id === picks && e === PICK);
+      });
+      if (play) document.dispatchEvent(new CustomEvent("kg:sent", { detail: { n: ops.length, wallet: W.kind } }));
+    } catch { /* counting never affects a send */ }
+  }
+  /** Growth (M-610): a wallet was connected or a guest made by the player. Only the kind and whether the guest is new. */
+  function countWallet(newGuest) {
+    try { document.dispatchEvent(new CustomEvent("kg:wallet", { detail: { wallet: W.kind, new_guest: !!newGuest } })); } catch { /* never affects connecting */ }
+  }
   async function send(label, ops, opts = {}) {
     if (!W.address) throw new Error("Connect a wallet first.");
     // Audit Info: pin the chain. The chain id comes from the RPC; when the page knows the expected one (deployment.json
@@ -774,8 +805,8 @@
     const together = bt ? live.filter((o) => typeof bt[opKey(o)] === "string") : live.slice(0, 1);
     const alone = live.filter((o) => !together.includes(o));
     let id = null;
-    if (together.length) id = await send(label, together, rest);
-    for (const o of alone) id = await send(label, [o], rest);
+    if (together.length) id = await sendCounted(label, together, rest);
+    for (const o of alone) id = await sendCounted(label, [o], rest);
     return { id, sent: live.length, dropped: ops.length - live.length };
   }
   /** The calls' games for would_pay (audit SP-22, SP-38: as the sponsor's authorize reads them): race picks are game
@@ -930,7 +961,7 @@
   }
 
   window.KWallet = {
-    init, setGuestConfig, connect, disconnect, send, sendBatch, batchReady: batchReady, isPhone, manageGuest, guestInfo: () => { guestCant([]); }, switchTo, forget,
+    init, setGuestConfig, connect, disconnect, send: sendCounted, sendBatch, batchReady: batchReady, isPhone, manageGuest, guestInfo: () => { guestCant([]); }, switchTo, forget,
     accounts: () => remembered(), subscribe: (f) => { listeners.add(f); return () => listeners.delete(f); },
     get address() { return W.address; }, get kind() { return W.kind; },
     /** R-BX-21: true when this page sends through the Mana sponsor (deployment.json "payer": "sponsor"). */

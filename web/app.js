@@ -1265,6 +1265,7 @@
   async function openShare(week) {
     const dlg = $("#share-dialog");
     if (!dlg || !window.KnodeExtras || !S.account) return;
+    try { document.dispatchEvent(new CustomEvent("kg:share")); } catch { /* Growth count (M-610); never affects sharing */ }
     SH.week = week;
     const box = $("#share-addr");
     if (box) box.checked = false;

@@ -34,6 +34,7 @@ function world({ sponsor = {}, own = 0n, wouldPay = "yes", low = false } = {}) {
   vm.createContext(ctx);
   vm.runInContext(wallet.slice(s0, s1) + "\nthis.sendKondor = sendKondor; this.sendBatch = sendBatch; this.rcFor = rcFor;", ctx);
   ctx.send = async (label, ops, opts) => ctx.sendKondor(label, ops, opts);
+  ctx.sendCounted = ctx.send;   // Growth (M-610): sendBatch sends through KWallet.send's counted wrapper; same send here
   const op = (contract, entry) => ({ call_contract: { contract_id: contract, entry_point: entry, args: "" } });
   return { log, ctx, sp, op };
 }

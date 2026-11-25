@@ -584,8 +584,9 @@ import * as SP from "./js/lib/send-picks.js";
       try { const f = new File([b], "combo-card.png", { type: "image/png" }); if (navigator.canShare({ files: [f] })) { shareBlob = f; $("share-native").hidden = false; } } catch { /* no file sharing here */ }
     }, "image/png");
   }
-  $("share-native").onclick = async () => { if (!shareBlob) return; try { await navigator.share({ files: [shareBlob], text: shareText(), title: "My Combo Card" }); } catch { /* cancelled */ } };
+  $("share-native").onclick = async () => { if (!shareBlob) return; try { document.dispatchEvent(new CustomEvent("kg:share")); } catch { /* Growth count */ } try { await navigator.share({ files: [shareBlob], text: shareText(), title: "My Combo Card" }); } catch { /* cancelled */ } };
   $("share-copy").onclick = async () => {
+    try { document.dispatchEvent(new CustomEvent("kg:share")); } catch { /* Growth count (M-610); never affects sharing */ }
     try { await navigator.clipboard.writeText(shareText()); $("share-msg").textContent = "Copied."; }
     catch { $("share-msg").textContent = "Couldn't copy here. Download the image instead."; }
   };

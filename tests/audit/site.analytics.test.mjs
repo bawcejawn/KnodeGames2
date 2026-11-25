@@ -1,5 +1,5 @@
 // Visit counting (owner, 4 Nov: PostHog, cookieless, for advertising numbers). The library is our own pinned copy, so no
-// outside code runs on pages where wallets sign; the settings count page views only and store nothing in the browser.
+// outside code runs on pages where wallets sign; the settings count page views and seven plain counts (site.growth-counts.test.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -27,7 +27,10 @@ test("settings: cookieless always, page views only, nothing extra loaded or reco
     /api_host: "https:\/\/us\.i\.posthog\.com"/, /person_profiles: "identified_only"/]) assert.match(js, want);
   assert.match(js, /if \(!\/\(\^\|\\\.\)knodegames\\\.com\$\/\.test\(location\.hostname\)\) return;/, "only the live site counts");
   const code = js.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-  assert.doesNotMatch(code, /\.identify\(|\.capture\(|\.register\(|address|wallet\.|KWallet/, "no one is identified and nothing else is sent");
+  // Growth counts (M-610 / M-638): exactly one capture call, inside count(), with the allow-list pinned in
+  // site.growth-counts.test.mjs. Still: no one is identified, nothing registered, no wallet read.
+  assert.equal((code.match(/\.capture\(/g) || []).length, 1, "one capture call only (count())");
+  assert.doesNotMatch(code, /\.identify\(|\.register\(|address|wallet\.|KWallet/, "no one is identified and nothing else is sent");
   assert.match(js, /phc_[A-Za-z0-9]{40,}/, "the project's public key");
 });
 

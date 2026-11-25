@@ -464,6 +464,7 @@
 
   // ── share image: drawn on a canvas, saved or shared as a PNG ──
   function shareImage() {
+    try { document.dispatchEvent(new CustomEvent("kg:share")); } catch { /* Growth count (M-610); never affects sharing */ }
     const s = seeding(); if (!s || !filled()) return;
     const c = document.createElement("canvas"), W1 = 1080, H1 = 1350; c.width = W1; c.height = H1;
     const g = c.getContext("2d"); if (!g) return;
