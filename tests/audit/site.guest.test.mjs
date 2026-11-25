@@ -371,3 +371,47 @@ test("UI-8: after the first answer the guest is asked to save their progress, on
   await ans(); await new Promise((r) => setTimeout(r, 5));
   assert.equal(w.all.filter((e) => e.tag === "h3" && e.text.includes("Save your progress")).length, n, "asked only once");
 });
+
+// Hub PR "Back up or move my wallet" (Vault M-754): the key is hidden until the player confirms, is hidden again when the
+// sheet closes, and never reaches the address bar, the page title or a log. Storage, signing and the origin guard are untouched.
+test("Back up or move my wallet: the key shows only after Show, and is wiped when the sheet closes", async () => {
+  const w = world();
+  await connectAsGuest(w);
+  const wif = await w.KG.backupWif();
+  w.KW.manageGuest();
+  w.find(/Back up guest key/)[0].click();
+  await new Promise((r) => setTimeout(r, 5));
+  assert.ok(w.all.some((e) => e.tag === "h3" && e.text.includes("Back up or move my wallet")), "the sheet has the new name");
+  const keyEl = () => w.all.filter((e) => e.attrs.class === "kw-key").pop();
+  const shown = () => w.all.some((e) => e.text && e.text.includes(wif));
+  assert.equal(keyEl().textContent, ""); assert.equal(shown(), false, "the key is not in the sheet before the player asks");
+  w.find(/Tap to reveal/)[0].click();
+  assert.equal(keyEl().textContent, "", "Tap to reveal only asks: Show key? Anyone near your screen could see it.");
+  assert.ok(w.all.some((e) => /Show key\? Anyone near your screen could see it\./.test(e.text || "")));
+  w.find(/^\s*Cancel\s*$/)[0].click();
+  assert.equal(keyEl().textContent, "", "Cancel keeps it hidden");
+  w.find(/Tap to reveal/)[0].click();
+  w.find(/^\s*Show\s*$/)[0].click();
+  assert.equal(keyEl().textContent, wif); assert.equal(keyEl().hidden, false);
+  // closing the sheet hides and forgets it
+  const el = keyEl();
+  w.all.filter((e) => e.tag === "button" && e.attrs["aria-label"] === "Close").pop().click();
+  assert.equal(el.textContent, "", "the key is gone from the page when the sheet closes"); assert.equal(el.hidden, true);
+});
+
+test("Back up or move my wallet: after Copy a toast says where to paste it; the key never touches the URL, the title or a log", () => {
+  assert.match(walletSrc, /W\.toast && W\.toast\("Key copied\. Paste it only into Kondor's import screen\.", 8000\)/);
+  const start = walletSrc.indexOf("async function backupGuest()"), end = walletSrc.indexOf("async function restoreGuest()");
+  const sheet = walletSrc.slice(start, end);
+  for (const bad of [/\bconsole\./, /\blocation\b/, /history\./, /document\.title/, /\.hash\b/, /pushState|replaceState/, /sessionStorage|localStorage/]) assert.doesNotMatch(sheet, bad, String(bad));
+  const mentions = (walletSrc.match(/document\.title|history\.(push|replace)State|location\.hash/g) || []).length;
+  assert.equal(mentions, 0, "wallet.js never writes the title, the hash or the history");
+  assert.match(sheet, /Kondor's own import screen|GUEST_KEY_WARN/);
+  assert.match(walletSrc, /Anyone with this key controls this guest wallet\. Never share it\. Enter it only in Kondor's own import screen, or in \\"Restore a guest key\\" in this site's wallet menu\. Knode Games never asks you to send it, and no one from Knode Games ever will\./);
+  assert.match(sheet, /Import account|guestSteps\(\)/);
+  assert.match(fs.readFileSync(`${APP}/web/header-wallet.js`, "utf8"), /"Back up or move my wallet"/);
+});
+
+test("guest steps step 1 names every tap: Back up guest key, Tap to reveal, Show and Copy", () => {
+  assert.match(walletSrc, /h\("li", \{\}, "Tap ", h\("b", \{\}, "Back up guest key"\), ", then ", h\("b", \{\}, "Tap to reveal"\), ", ", h\("b", \{\}, "Show"\), " and ", h\("b", \{\}, "Copy"\), "\. Keep it private\."\),/);
+});

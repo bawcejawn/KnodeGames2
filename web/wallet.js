@@ -70,7 +70,10 @@
     return box;
   }
   let onClose = null;
-  function close(byUser = false) { if (modal) { modal.remove(); modal = null; } const f = onClose; onClose = null; if (byUser && f) f(); }
+  // The guest key is shown only inside the backup sheet. Closing the sheet (or opening another) hides and forgets it.
+  let keyView = null;
+  function wipeKey() { if (keyView) { keyView.el.textContent = ""; keyView.el.hidden = true; keyView.wif = null; keyView = null; } }
+  function close(byUser = false) { wipeKey(); if (modal) { modal.remove(); modal = null; } const f = onClose; onClose = null; if (byUser && f) f(); }
 
   // ── KOIN Vault API ──
   async function vaultApi(path, { body, query } = {}) {
@@ -281,6 +284,7 @@
   // ── Guest (site/guest.js) ──
   const GUEST_WARN = "Play-only wallet stored in this browser. Never send KOIN or VHP to it.";
   // Audit (guest) M-2: say plainly that the browser itself can delete the key.
+  const GUEST_KEY_WARN = "Anyone with this key controls this guest wallet. Never share it. Enter it only in Kondor's own import screen, or in \"Restore a guest key\" in this site's wallet menu. Knode Games never asks you to send it, and no one from Knode Games ever will.";
   const GUEST_EVICT = "Your browser can delete this guest by itself (Safari does after 7 days without a visit). Back up the key to keep your points.";
   // Audit (guest) L-1: a key someone hands you is theirs, not yours.
   const RESTORE_WARN = "Only paste a key you backed up yourself. Anyone who gives you a key can take it back.";
@@ -400,17 +404,28 @@
         h("p", {}, "The guest key stored on this device isn't the guest this page is connected as (it was changed in another tab). Reload the page, then back it up."));
       return;
     }
-    const key = h("div", { class: "kw-key", hidden: "" }, wif);
-    const reveal = h("button", { class: "kw-btn", type: "button", onclick: () => { key.hidden = false; reveal.hidden = true; copy.hidden = false; } }, "Tap to reveal");
-    const copy = h("button", { class: "kw-btn", type: "button", hidden: "", onclick: async () => { try { await navigator.clipboard.writeText(wif); copy.textContent = "Copied"; } catch { copy.textContent = "Select and copy it"; } } }, "Copy");
-    open(h("h3", {}, "Back up your guest key"),
-      h("p", { class: "kw-warn" }, "Anyone with this key controls this guest wallet. Keep it private: never paste it into a website or message."),
+    // Vault M-754: the key stays hidden until the player confirms, is hidden again when the sheet closes (wipeKey), is
+    // never put in the address bar, the page title or a log, and nothing about key storage or signing changes.
+    const key = h("div", { class: "kw-key", hidden: "" });
+    const ask = h("div", { class: "kw-row", hidden: "" });
+    const copy = h("button", { class: "kw-btn", type: "button", hidden: "", onclick: async () => {
+      if (!keyView || !keyView.wif) return;
+      try { await navigator.clipboard.writeText(keyView.wif); copy.textContent = "Copied"; W.toast && W.toast("Key copied. Paste it only into Kondor's import screen.", 8000); }
+      catch { copy.textContent = "Select and copy it"; }
+    } }, "Copy");
+    const reveal = h("button", { class: "kw-btn", type: "button", onclick: () => { reveal.hidden = true; ask.hidden = false; } }, "Tap to reveal");
+    ask.append(h("p", {}, "Show key? Anyone near your screen could see it."),
+      h("button", { class: "kw-btn", type: "button", onclick: () => { ask.hidden = true; reveal.hidden = false; } }, "Cancel"),
+      h("button", { class: "kw-btn", type: "button", onclick: () => { keyView = { el: key, wif }; key.textContent = wif; key.hidden = false; ask.hidden = true; copy.hidden = false; } }, "Show"));
+    open(h("h3", {}, "Back up or move my wallet"),
+      h("p", { class: "kw-warn" }, GUEST_KEY_WARN),
       h("p", {}, GUEST_WARN),
       h("p", {}, "Guest ", h("b", {}, keyAddress)),
-      reveal, key, h("div", { class: "kw-row" }, copy),
+      reveal, ask, key, h("div", { class: "kw-row" }, copy),
+      h("h4", { class: "kw-h" }, "Move it to Kondor (to collect prizes)"), guestSteps(),
+      h("p", {}, "More help: ", h("a", { href: "learn.html#guest-wallet" }, "Your guest wallet: keep it or move it"), "."),
       h("p", { class: "kw-warn" }, GUEST_EVICT),
-      h("p", {}, "To restore it on another phone: Connect wallet → Play as a guest → Restore a guest key."),
-      h("h4", { class: "kw-h" }, "Turn your guest into a real wallet (to collect prizes)"), guestSteps());
+      h("p", {}, "To restore it on another phone: Connect wallet → Play as a guest → Restore a guest key."));
   }
   async function restoreGuest() {
     const input = h("input", { class: "kw-in", type: "password", autocomplete: "off", autocapitalize: "off", spellcheck: "false", placeholder: "Paste your guest key (starts with K or L)" });
@@ -448,10 +463,10 @@
   /** Explain why a guest can't do something, instead of failing silently. */
   // Owner, 11 Nov: a guest's prize is claimed by turning the guest into a real wallet (same key, imported into Kondor).
   const guestSteps = () => h("ol", { class: "kw-steps" },
-    h("li", {}, "Tap ", h("b", {}, "Back up guest key"), ", then ", h("b", {}, "Tap to reveal"), " and ", h("b", {}, "Copy"), ". Keep it private."),
+    h("li", {}, "Tap ", h("b", {}, "Back up guest key"), ", then ", h("b", {}, "Tap to reveal"), ", ", h("b", {}, "Show"), " and ", h("b", {}, "Copy"), ". Keep it private."),
     h("li", {}, "On a computer, install the Kondor browser extension and set up your Kondor wallet."),
     h("li", {}, "In Kondor choose ", h("b", {}, "Import account"), " (private key), paste the key, and name the account."),
-    h("li", {}, "Keep a little KOIN in that account: collecting a prize uses a little Mana."),
+    h("li", {}, "Knode Games usually pays the Mana to collect a prize; a little KOIN in that wallet means you can always collect it yourself."),
     h("li", {}, "Back here tap ", h("b", {}, "Connect wallet → Kondor"), " and pick that account. Your points and prize are there: tap Collect."));
   function guestCant(ops) {
     const game = guestGame();

@@ -104,7 +104,7 @@
     kids.push(el("button", { class: "hw-item", type: "button", role: "menuitem", onclick: connect }, list.length ? "＋ Add another account" : "Connect a wallet"));
     if (W.address) {
       kids.push(el("button", { class: "hw-item", type: "button", role: "menuitem", onclick: async () => { try { await navigator.clipboard.writeText(W.address); toast("Address copied."); } catch { toast(W.address); } toggle(false); } }, "Copy address"));
-      if (W.kind === "guest" && W.manageGuest) kids.push(el("button", { class: "hw-item", type: "button", role: "menuitem", onclick: () => { toggle(false); W.manageGuest(); } }, "Guest wallet: back up, restore, forget"));
+      if (W.kind === "guest" && W.manageGuest) kids.push(el("button", { class: "hw-item", type: "button", role: "menuitem", onclick: () => { toggle(false); W.manageGuest(); } }, "Back up or move my wallet"));
     }
     if (list.length || W.address) kids.push(el("button", { class: "hw-item warn", type: "button", role: "menuitem", onclick: () => { toggle(false); W.disconnect(); toast("Disconnected. Nothing is remembered on this device."); } }, "Disconnect all"));
     kids.push(el("div", { class: "hw-note", text: "Kondor: “Add another account” shares more accounts from the same seed. Only addresses are remembered here, never keys." }));
