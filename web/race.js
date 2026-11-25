@@ -219,7 +219,7 @@
         if (t0 < nowT - 5000) { const old = M.standings(B, race, race.cards, t0); if (old && old.length) before6 = new Map(old.map((x, j) => [x.a, j + 1])); }
       }
       const latest6 = () => { const lr = raceObj(cur.index); return (lr.cards && M.cardForLeg(lr.cards, M.legOf(lr.start, nowT, M.legsOf(lr.cards)))) || prov; };
-      const ups = live && me() && raceContract ? [1, 2, 3].map((k) => { const ur = raceObj(cur.index + k); return { k, r: ur, c: (ur.cards && !ur.provisional && M.cardForLeg(ur.cards, 0)) || latest6() }; }) : [];
+      const ups = live && raceContract ? [1, 2, 3].map((k) => { const ur = raceObj(cur.index + k); return { k, r: ur, c: (ur.cards && !ur.provisional && M.cardForLeg(ur.cards, 0)) || latest6() }; }) : [];
       const grid6 = ups.length ? `grid-template-columns:minmax(0,230px) minmax(120px,1fr) 104px repeat(${ups.length},62px)` : "";
       if (ups.length) keep.push(el("div", { class: "pr-headrow rt-head", style: grid6 }, el("div", { text: "Producer" }), packView ? el("div", { class: "pr-packlbl", text: "← further back · leading →" }) : rulerEl(M.RACE, 3600000), el("div", { class: "pr-gap", text: "Standing" }),
         ...ups.map((u) => el("div", { class: "rt-pc" }, el("b", { text: clock(u.r.start) }), el("span", { text: `locks ${dur(u.r.start - nowT)}` })))));
@@ -271,6 +271,13 @@
           const mineP = myPicks.get(cur.index + u.k), dr = drafts.get(cur.index + u.k), chosen = (dr || mineP) === r.a, inField = !!(u.c && u.c.field.some((x) => x.a === r.a));
           // phones show each button's race time on the button itself (the time header is hidden there)
           const used = !chosen && mineP && !changesLeft(0, cur.index + u.k);   // D-745: the race's 1 change is used
+          if (!me()) {   // M-696: without a wallet each lane offers "Play free to pick", which starts the guest here
+            const g = el("button", { type: "button", class: "rt-pk free", "aria-label": `Play free to pick ${nameOf(r.a)} for the race at ${dayTime(u.r.start)}` }, el("span", { text: "Play free to pick" }), el("small", { class: "rt-pk-t", text: clock(u.r.start) }));
+            if (!W || !inField) g.disabled = true;
+            g.addEventListener("click", () => playFree());
+            lane.appendChild(g);
+            continue;
+          }
           const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(r.a)} for the race at ${dayTime(u.r.start)}` }, el("span", { text: chosen ? (dr && dr !== mineP ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: clock(u.r.start) }));
           if (sending || !inField || used) b.disabled = true;
           b.addEventListener("click", () => { if (batchOn() && !myPicks.get(cur.index + u.k)) { if (drafts.get(cur.index + u.k) === r.a) drafts.delete(cur.index + u.k); else drafts.set(cur.index + u.k, r.a); renderBar(); render(); return; } sendPick(cur.index + u.k, r.a); });
@@ -748,7 +755,7 @@
     renderRulerBox();
     renderPicks(); renderHistory(); if (rtype) rtRender();   // G28-1: the pick rows and the Results table now know the ruler's results
   }
-  if (W && W.subscribe) W.subscribe(() => { loadMine(); renderBoard(); });
+  if (W && W.subscribe) W.subscribe(() => { loadMine(); renderBoard(); if (stayAtPick && me()) { stayAtPick = false; if (rtype) rtRender(true); setTimeout(() => goPick(false), 0); } });
   // When the names list arrives or changes, redraw everything that shows a producer or player: the horses, card,
   // feed and results (render), the pick lists and the leaderboard.
   if (window.KNames && window.KNames.onChange) window.KNames.onChange(() => { render(); renderPicks(true); renderBoard(); });
@@ -867,9 +874,11 @@
       if (rk && before && before.has(a) && before.get(a) !== rk) { const d = before.get(a) - rk; pill = el("span", { class: `rt-pill ${d > 0 ? "up" : d < 0 ? "down" : ""}`, text: d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : "–", title: d === 0 ? "Same place" : `${d > 0 ? "Gained" : "Lost"} ${Math.abs(d)} place${Math.abs(d) === 1 ? "" : "s"}` }); }
       const cells = upc.map((u) => {
         const k = `${rtype}:${u.index}`, mine = rtPicks.get(k), draft = rtDrafts.get(k), chosen = (draft || mine) === a, used = !chosen && mine && !changesLeft(rtype, u.index);   // D-745
-        const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}`, "aria-pressed": String(chosen), "aria-label": `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
-          el("span", { text: chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
-        if (!who || !raceContract || sending || used) b.disabled = true;
+        const free = !who;   // M-696: without a wallet the button says "Play free to pick" and starts the guest
+        const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}${free ? " free" : ""}`, "aria-pressed": String(chosen), "aria-label": free ? `Play free to pick ${nameOf(a)} for the race at ${dayTime(u.start)}` : `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
+          el("span", { text: free ? "Play free to pick" : chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
+        if (free) { if (!W) b.disabled = true; b.addEventListener("click", () => playFree()); return b; }
+        if (!raceContract || sending || used) b.disabled = true;
         b.addEventListener("click", () => {
           if (batchOn() && !mine) { if (rtDrafts.get(k) === a) rtDrafts.delete(k); else rtDrafts.set(k, a); rtRender(true); return; }
           sendPick(u.index, a, rtype);
@@ -929,6 +938,46 @@
     }
     return { used: c.used(who, week, type), cap };
   }
+  /** M-696 (owner, 24 Nov): "Play free" (the header's #pick-zone link, or a link from another page) lands on the open
+   *  tab's pick area: the race-length tabs above the board (the 6-hour or a typed one), whose lanes carry the Pick buttons,
+   *  with the first Pick button on screen. Before, a typed tab hid #pick-zone after the browser had scrolled to it, so the page sat near the bottom. */
+  function pickTarget() {
+    const tabs = $("race-types");
+    return tabs && !tabs.hidden ? tabs : rtype ? $("typed") : $("live");
+  }
+  function goPick(smooth) {
+    const t = pickTarget();
+    if (!t || t.hidden || typeof window.scrollTo !== "function") return;
+    const margin = parseFloat(getComputedStyle(t).scrollMarginTop) || 0;
+    let y = t.getBoundingClientRect().top + window.scrollY - margin;
+    // The first Pick button must be on screen too: if it would sit below the fold, scroll just far enough for it.
+    const first = [...document.querySelectorAll(rtype ? "#rt-track .rt-pk" : "#track .rt-pk")].find((b) => b.offsetParent);
+    if (first) {
+      // Phones have a fixed bar at the bottom (the site's tab bar): keep the button above it. R3-32: measure that bar by its
+      // own selector; a header "Play free" tap opens the wallet sheet at the same moment, and its full-screen backdrop
+      // must not be taken for the bar.
+      const bar = document.querySelector("nav.tabbar");
+      // (getClientRects, not offsetParent: a position:fixed element has no offsetParent even when it is on screen.)
+      const barH = bar && bar.getClientRects().length ? Math.max(0, window.innerHeight - bar.getBoundingClientRect().top) : 0;
+      const bottom = first.getBoundingClientRect().bottom + window.scrollY, room = window.innerHeight - barH - 16;
+      if (bottom - y > room) y = bottom - room;
+    }
+    window.scrollTo({ top: Math.max(0, y), behavior: smooth ? "smooth" : "auto" });
+  }
+  let stayAtPick = false, landed = false, userScrolled = false;
+  for (const ev of ["wheel", "touchmove", "keydown"]) window.addEventListener(ev, () => { userScrolled = true; }, { passive: true, once: true });
+  /** A grey "Play free to pick" button: open the wallet sheet (guest first) and keep the player at the pick area. */
+  function playFree() {
+    stayAtPick = true;
+    if (W) W.connect();
+  }
+  document.addEventListener("click", (e) => {
+    const a = e.target && e.target.closest && e.target.closest('a[href="#pick-zone"]');
+    if (!a) return;
+    e.preventDefault();
+    try { history.replaceState(null, "", "#pick-zone"); } catch { /* the scroll still happens */ }
+    goPick(true);
+  });
   /** M-528 (owner, 23 Nov): the header's steps follow the open tab: that race's length and its real points (the chip). */
   const RACE_LEN = { 0: "6 hours", 1: "1 hour", 2: "2 hours", 3: "a day", 4: "a week (Monday to Saturday)" };
   function heroSteps(t) {
@@ -1026,6 +1075,7 @@
     await picksReady; renderPicks();
     rtTabs(); if (typesLive() && rtype) rtSelect(rtype); else rtype = 0;
     heroSteps(rtype);
+    if (location.hash === "#pick-zone" && !landed) { landed = true; setTimeout(() => goPick(false), 0); setTimeout(() => { if (window.scrollY > 0 && !userScrolled) goPick(false); }, 1500); }   // M-696: again once the board has its lanes
     loadBoard(); loadRuler();
     setInterval(() => { if (!document.hidden) { loadBoard(); loadRuler(); } }, 300000);
     setInterval(() => { if (!document.hidden && raceContract) loadMine(); }, 60000);
