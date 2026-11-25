@@ -453,10 +453,11 @@
     // the entry bar minK (whole expected blocks; 10 as approved) and the pool rule ("min": min(own, eff) per block, §3.2;
     // the only rule since Repo Lens #B-9 B9-1; the setting stays so every card says which rule it used)
     const minKBlocks = opts.minK ?? 10, poolRule = opts.poolRule ?? "min", mode = opts.mode;
-    const version = opts.version ?? RULE_VERSION, include = opts.include, noVoid = opts.noVoid;
+    const version = opts.version ?? RULE_VERSION, include = opts.include, noVoid = opts.noVoid, rowHistory = opts.rowHistory;
     if (!RULE_VERSIONS.includes(version)) throw new Error("version must be 4 or 5");
     if (include !== undefined) checkInclude(include);
     if (noVoid !== undefined && noVoid !== true) throw new Error("noVoid must be true");
+    if (rowHistory !== undefined && rowHistory !== true) throw new Error("rowHistory must be true");
     if (!Number.isSafeInteger(minKBlocks) || minKBlocks < 1 || minKBlocks > 100000) throw new Error("minK must be a whole number of blocks from 1");
     if (mode !== undefined && !MODES.includes(mode)) throw new Error("mode must be A, B, C or D");
     if (!POOL_RULES.includes(poolRule)) throw new Error("poolRule must be min");
@@ -478,7 +479,7 @@
       // full size whatever its level; anyone else needs form ≥ 0.80. Out is never for good: it re-enters once steady or
       // back above 0.80. rate is shown on the card (its steady 14-day rate, or 1) and changes no number
       const seen = actSet.has(a) || f.signed > 0;
-      return { a, own: o, avg: av, k, form: f.form, rate, entry: k >= minK && (steady || f.form >= FORM_GATE) && history && seen, pooled: pooled.has(a), isNew, quality: "ok", ...(actSet.has(a) ? {} : { listed: true }) };
+      return { a, own: o, avg: av, k, form: f.form, rate, entry: k >= minK && (steady || f.form >= FORM_GATE) && history && seen, pooled: pooled.has(a), isNew, ...(rowHistory ? { history } : {}), quality: "ok", ...(actSet.has(a) ? {} : { listed: true }) };
     }).sort((x, y) => (x.own > y.own ? -1 : x.own < y.own ? 1 : x.a < y.a ? -1 : 1));
     // quality, for the whole card: every producer's numbers feed everyone's total and form (Repo Lens #E-12 L-2), so a bad
     // range for any active producer in the look-back flags every producer. On a paying card, a rebuilt or unverified
@@ -489,7 +490,7 @@
     return {
       ruleVersion: version, game: Number(dec(opts.game, "game")), round: dec(opts.round, "round"), ownRule, paying,
       T, seedBlock, seedBlockId, seedProducer: L.signer(seedBlock),
-      window: { W0: w.W0, W1: w.W1, L: w.L, S0: w.S0, S1: w.S1 }, c, minK: minKBlocks, poolRule, ...(mode === undefined ? {} : { mode }), ...(include === undefined ? {} : { include: [...include] }), ...(noVoid === undefined ? {} : { noVoid: true }), total: tot, formFrom, producers,
+      window: { W0: w.W0, W1: w.W1, L: w.L, S0: w.S0, S1: w.S1 }, c, minK: minKBlocks, poolRule, ...(mode === undefined ? {} : { mode }), ...(include === undefined ? {} : { include: [...include] }), ...(noVoid === undefined ? {} : { noVoid: true }), ...(rowHistory === undefined ? {} : { rowHistory: true }), total: tot, formFrom, producers,
     };
   }
 
@@ -775,7 +776,7 @@
   /** recompute (§13): rebuild a published card FROM THE GAME'S OWN SETTINGS and compare byte for byte (Repo Lens #E-12
    *  M-1: never from the card's own settings, or a card made with the wrong window, c, own rule, paying flag or pooled
    *  list would pass). game = { game, round, window: { W0, W1, L, S0, S1 }, c, minK, poolRule, ownRule, paying, pooled }. */
-  const SETTINGS = ["game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"], OPTIONAL = ["mode", "include", "version", "noVoid"], WKEYS = ["W0", "W1", "L", "S0", "S1"];
+  const SETTINGS = ["game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"], OPTIONAL = ["mode", "include", "version", "noVoid", "rowHistory"], WKEYS = ["W0", "W1", "L", "S0", "S1"];
   /** The game's settings, strictly (Repo Lens #B-5 N-5): every key, no other key, each of its own type. Same in Python,
    *  with one difference JavaScript can't see: JSON.parse reads 1.0 and 0e0 as plain numbers, which Python refuses
    *  (#B-6 B6-2). The game's publish job runs the Python twin (recompute_main), so Python decides. */
@@ -787,6 +788,7 @@
     if ("version" in g && !RULE_VERSIONS.includes(g.version)) throw new Error("version must be 4 or 5");
     if ("include" in g) checkInclude(g.include);
     if ("noVoid" in g && g.noVoid !== true) throw new Error("noVoid must be true");
+    if ("rowHistory" in g && g.rowHistory !== true) throw new Error("rowHistory must be true");
     dec(g.game, "game"); dec(g.round, "round");
     const w = g.window;
     if (!w || typeof w !== "object" || Array.isArray(w) || Object.keys(w).sort().join() !== [...WKEYS].sort().join()) throw new Error(`window must have exactly: ${WKEYS.join(", ")}`);
@@ -810,7 +812,7 @@
     if (isDigest(pubD)) {   // the compact card: rebuild from the game's own settings, compare the sha256 of the exact bytes
       let mine;
       try {
-        mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("noVoid" in game ? { noVoid: game.noVoid } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}) });
+        mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("noVoid" in game ? { noVoid: game.noVoid } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}), ...("rowHistory" in game ? { rowHistory: game.rowHistory } : {}) });
         if (pubD.scored) mine = scoreCard(L, mine);
       } catch (e) { return { same: false, diff: `the data can't make this card: ${e.message}` }; }
       const d = cardDigest(mine).sha256;
@@ -818,12 +820,12 @@
     }
     const pub = typeof published === "string" ? JSON.parse(published) : published;
     const want = { game: Number(dec(game.game, "game")), round: dec(game.round, "round"), ownRule: game.ownRule, paying: game.paying, c: big(game.c).toString(10), minK: game.minK, poolRule: game.poolRule,
-      mode: game.mode, version: game.version ?? RULE_VERSION, include: JSON.stringify(game.include ?? null), noVoid: game.noVoid, W0: game.window.W0, W1: game.window.W1, L: game.window.L, S0: game.window.S0, S1: game.window.S1 };
-    const got = { game: pub.game, round: pub.round, ownRule: pub.ownRule, paying: pub.paying, c: String(pub.c), minK: pub.minK, poolRule: pub.poolRule, mode: pub.mode, version: pub.ruleVersion, include: JSON.stringify(pub.include ?? null), noVoid: pub.noVoid, ...(pub.window || {}) };
+      mode: game.mode, version: game.version ?? RULE_VERSION, include: JSON.stringify(game.include ?? null), noVoid: game.noVoid, rowHistory: game.rowHistory, W0: game.window.W0, W1: game.window.W1, L: game.window.L, S0: game.window.S0, S1: game.window.S1 };
+    const got = { game: pub.game, round: pub.round, ownRule: pub.ownRule, paying: pub.paying, c: String(pub.c), minK: pub.minK, poolRule: pub.poolRule, mode: pub.mode, version: pub.ruleVersion, include: JSON.stringify(pub.include ?? null), noVoid: pub.noVoid, rowHistory: pub.rowHistory, ...(pub.window || {}) };
     for (const k of Object.keys(want)) if (got[k] !== want[k]) return { same: false, diff: `setting ${k}: the card says ${JSON.stringify(got[k])}, the game says ${JSON.stringify(want[k])}` };
     let mine;
     try {
-      mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("noVoid" in game ? { noVoid: game.noVoid } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}) });
+      mine = makeCard(L, { game: game.game, round: game.round, window: game.window, c: big(game.c), minK: game.minK, poolRule: game.poolRule, ownRule: game.ownRule, paying: game.paying, pooled: game.pooled, ...("mode" in game ? { mode: game.mode } : {}), ...("noVoid" in game ? { noVoid: game.noVoid } : {}), ...("version" in game ? { version: game.version } : {}), ...("include" in game ? { include: game.include } : {}), ...("rowHistory" in game ? { rowHistory: game.rowHistory } : {}) });
       if ((pub.producers || []).some((p) => "credited" in p)) mine = scoreCard(L, mine);
     } catch (e) { return { same: false, diff: `the data can't make this card: ${e.message}` }; }
     const a = cardJson(mine), b = typeof published === "string" ? published : cardJson(published);
