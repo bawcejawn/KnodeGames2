@@ -101,3 +101,19 @@ test("R4-13: the live note no longer talks about ~ estimates", async () => {
   assert.doesNotMatch(live.all, /Rewards shown with ~|estimates if the week ended now/);
   assert.match(live.all, /Rewards are set when the week closes\./);
 });
+
+test("the week tabs always include last week, with the Results page's words (M-432)", async () => {
+  const { T, els } = harness();
+  // (no weeks.js here, so labels are "Week n+1") week 5 is live; the chain has finalized weeks 0 to 3 only (week 4 is paid from its results file and finalizes later)
+  T.S.st = { totals: { weeks_finalized: "4" }, config: {} }; T.S.week = 5; T.S.boardWeek = 5; T.S.lbKind = "main"; T.S.account = null;
+  T.S.board = { 5: board(true) };
+  await T.renderBoard(5);
+  const tabs = els.get("#lb-weeks").children.map(textOf);
+  assert.deepEqual(tabs, ["This week (Week 6)", "Last week (Week 5)", "Week 4", "Week 3", "Week 2", "Week 1"]);
+  // once week 4 is finalized too, it is still listed once
+  T.S.st = { totals: { weeks_finalized: "5" }, config: {} };
+  await T.renderBoard(5);
+  const again = els.get("#lb-weeks").children.map(textOf);
+  assert.equal(again.filter((t) => t === "Last week (Week 5)").length, 1);
+  assert.equal(new Set(again).size, again.length, "no week twice");
+});

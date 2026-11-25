@@ -22,9 +22,11 @@ import crypto from "node:crypto";
 import { spawn, exec, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ACTIONS, AREAS, KINDS, commandFor } from "./actions.ts";
-import { GAMES, VARIABLES, VARIABLES_URL, STANDARD_STEPS, LAUNCH } from "./switches.ts";
+import { GAMES, VARIABLES, VARIABLES_URL, STANDARD_STEPS, LAUNCH, LAUNCH_AS_OF, OTHER_GAMES } from "./switches.ts";
+import { recorderRows, siteData, readCalendar } from "./health.ts";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// The repo folder (this file is ops/admin/server.ts): commands run from here, so bot/… and .env are found (audit AB-073).
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PORT = Number(process.env.ADMIN_PORT ?? 8787);
 const HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
 const KEY = crypto.randomBytes(24).toString("hex");
@@ -32,7 +34,7 @@ const PREVIEW_MS = 10 * 60_000;
 const previews = new Map<string, number>();   // action + values → time of its dry run
 let busy = false;
 
-const page = fs.readFileSync(path.join(ROOT, "admin", "index.html"), "utf8");
+const page = fs.readFileSync(path.join(ROOT, "ops", "admin", "index.html"), "utf8");
 // What the page shows: every area of the platform, the kinds of control, and each action with its plain-words fields
 // and the command it runs (with {placeholders} for the values). The patterns stay on the server, which checks them.
 // Which version of the page this is (shown at the top), so it's easy to tell an old copy from a new one.
@@ -43,9 +45,9 @@ const VERSION = (() => {
 const catalog = JSON.stringify({
   version: VERSION, areas: AREAS, kinds: KINDS,
   // Every game and every GitHub switch, for the "Games at a glance" and "All switches" screens (plain data, no keys).
-  games: GAMES, variables: VARIABLES, variablesUrl: VARIABLES_URL, standardSteps: STANDARD_STEPS, launch: LAUNCH,
-  actions: ACTIONS.map(({ id, area, kind, label, what, when, signer, effect, timing, step, tool, params, sends, args }) => ({
-    id, area, kind, label, what, when, signer, effect, timing, step, sends,
+  games: GAMES, otherGames: OTHER_GAMES, launchAsOf: LAUNCH_AS_OF, variables: VARIABLES, variablesUrl: VARIABLES_URL, standardSteps: STANDARD_STEPS, launch: LAUNCH,
+  actions: ACTIONS.map(({ id, area, kind, label, what, when, signer, effect, timing, step, tool, params, sends, args, done }) => ({
+    id, area, kind, label, what, when, signer, effect, timing, step, sends, done,
     testnet: args.includes("--testnet"), command: `npm run ${tool} -- ${args.join(" ")}`,
     params: (params ?? []).map(({ name, label, hint, choices, value }) => ({ name, label, hint, choices, value })),
   })),
@@ -86,6 +88,16 @@ const server = http.createServer((req, res) => {
   const given = Buffer.from(String(req.headers["x-admin-key"] ?? ""), "utf8"), want = Buffer.from(KEY, "utf8");
   if (given.length !== want.length || !crypto.timingSafeEqual(given, want)) return send(res, 401, '{"error":"wrong or missing key: open the link printed in the terminal"}');
   if (req.method === "GET" && url.pathname === "/api/actions") return send(res, 200, catalog);
+  // Read-only rows (M-593): the calendar file on this PC, and public files read without a token. They never run a command.
+  if (req.method === "GET" && url.pathname === "/api/calendar") return send(res, 200, JSON.stringify(readCalendar(ROOT)));
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    recorderRows().then((rows) => send(res, 200, JSON.stringify({ now: new Date().toISOString(), rows })), () => send(res, 500, '{"error":"could not read the recorders"}'));
+    return;
+  }
+  if (req.method === "GET" && url.pathname === "/api/site") {
+    siteData(ROOT).then((d) => send(res, 200, JSON.stringify(d)), () => send(res, 500, '{"error":"could not read the site data"}'));
+    return;
+  }
   if (req.method !== "POST" || url.pathname !== "/api/run") return send(res, 404, '{"error":"not found"}');
   let body = "";
   req.on("data", (c) => { body += c; if (body.length > 10_000) req.destroy(); });

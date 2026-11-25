@@ -87,6 +87,9 @@
       open: String(Math.floor((G.AHEAD - G.LEAD) / G.ROUND)), cap: String(X.capAt(Math.min(Math.max(Date.now(), PERIOD.from), PERIOD.to - 1))) };   // B14-5: a past game's own cap
     for (const e of document.querySelectorAll("[data-bx]")) { const w = words[e.getAttribute("data-bx")]; if (w) e.textContent = w; }
   }
+  // D-730: the start box's "Rules" link opens the "How it works" fold-out and scrolls to it (no hash change, so nothing reloads).
+  const rulesLink = $("rules-link");
+  if (rulesLink) rulesLink.addEventListener("click", (e) => { const d = $("how"); if (!d) return; e.preventDefault(); d.open = true; d.scrollIntoView({ block: "start" }); });
   /** Testnet: one button per game in the settings (the real settings, and the fast test game). */
   function renderGameTabs() {
     const box = $("game-tabs");

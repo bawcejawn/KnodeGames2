@@ -9,7 +9,9 @@
  *   - silent longer than WATCH_MINUTES (default 30), and longer than pure bad luck would explain → the run FAILS,
  *     which makes GitHub email you;
  *   - the same outage emails once, then a reminder every 3 hours while it lasts;
- *   - if the public Koinos node can't be reached, it says so but does not alarm (that's not your node's fault).
+ *   - if the public Koinos node can't be reached, it says so but does not alarm at first (that's not your node's
+ *     fault); after READ_FAIL_MS (3 hours) of failed reads in a row it DOES alarm, once and then every 3 hours, because
+ *     a watchdog that can't see the chain can't report a dead PC either (Repo Lens R1-12, away window).
  *
  * State between runs (which outage was already emailed) is kept in watch-state.json, carried by the workflow's cache.
  */
@@ -24,6 +26,7 @@ const STATE = "watch-state.json";
 const SCAN = 1800;               // blocks to look back (~90 minutes at ~3 s per block)
 const BATCH = 300;
 const REMIND_MS = 3 * 3600_000;
+const READ_FAIL_MS = Number(process.env.WATCH_READ_FAIL_MS || 3 * 3600_000);
 
 const log = (...a) => console.log(...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -33,7 +36,7 @@ const writeState = (s) => fs.writeFileSync(STATE, JSON.stringify(s, null, 2));
 async function rpc(method, params) {
   for (let i = 1; ; i++) {
     try {
-      const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+      const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json", "user-agent": "knode-node-watchdog" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
       const j = await r.json();
       if (j.error) throw new Error(j.error.message || JSON.stringify(j.error));
       return j.result;
@@ -61,7 +64,7 @@ async function main() {
       items.push(...(res.block_items || []));
     }
   } catch (e) {
-    log(`::warning title=Node watchdog::Couldn't read blocks from ${RPC} (${e.message}). Not an alarm: the public node may be busy. Trying again next run.`);
+    readFailed(String(e?.message ?? e));
     return;
   }
   const h = Number(head.head_topology.height);
@@ -84,6 +87,8 @@ async function main() {
   if (last) log(`Alarm after ${limit.toFixed(0)} min of silence.`);
 
   const st = readState();
+  if (st.readFailSince) log(`✔ Reading the chain again (reads had failed since ${new Date(st.readFailSince).toISOString()}).`);
+  if ("readFailSince" in st || "readFailAlert" in st) { delete st.readFailSince; delete st.readFailAlert; writeState(st); }
   const down = last === 0 || gapMin > limit;
   if (!down) {
     if (st.outage) log(`✔ Back to normal (the outage first emailed at ${new Date(st.firstAlert).toISOString()} is over).`);
@@ -106,4 +111,28 @@ async function main() {
   process.exitCode = 1;   // a failed run makes GitHub email you
 }
 
-main().catch((e) => { log(`::warning title=Node watchdog::${e.message}`); });
+/** A failed read: a warning at first; after READ_FAIL_MS of failed reads in a row, an alarm (the run fails, so GitHub
+ *  emails you), then a reminder every REMIND_MS while it lasts. Any outage state already filed is kept. */
+function readFailed(msg) {
+  const st = readState(), now = Date.now();
+  const since = Number(st.readFailSince) || now;
+  const mins = Math.round((now - since) / 60000);
+  if (now - since < READ_FAIL_MS) {
+    writeState({ ...st, readFailSince: since });
+    log(`::warning title=Node watchdog::Couldn't read blocks from ${RPC} (${msg}). Not an alarm yet: the public node may be busy (failing for ${mins} min; the alarm comes after ${Math.round(READ_FAIL_MS / 60000)} min). Trying again next run.`);
+    return;
+  }
+  if (st.readFailAlert && now - st.readFailAlert < REMIND_MS) {
+    writeState({ ...st, readFailSince: since });
+    log(`(already emailed at ${new Date(st.readFailAlert).toISOString()}) Still can't read blocks from ${RPC} (${msg}), for ${mins} min.`);
+    return;
+  }
+  writeState({ ...st, readFailSince: since, readFailAlert: now });
+  const what = `The watchdog couldn't read the chain from ${RPC} for ${mins} minutes (${msg}), so it can't tell whether your node is producing.`;
+  const advice = "Check the node is producing another way (koinosblocks.com or npm run bot -- node-status personal); if the public node is down for long, ask Architecture to point the watchdog at another one.";
+  log(`::error title=Watchdog can't see the chain::${what} ${advice}`);
+  writeSummary({ workflow: "Node watchdog", lines: [`Watchdog can't see the chain. ${what} ${advice}`], section: 6 });
+  process.exitCode = 1;
+}
+
+main().catch((e) => readFailed(String(e?.message ?? e)));
