@@ -16,7 +16,7 @@
   "vs.html": ["vs", "Knode Games VS: pick which producers beat our node each day. A free test."],
   "combo.html": ["combo", "Build a card of 2 to 10 calls from races and Block X. Every leg has to hit. Free to play."],
   "survivor.html": ["survivor", "Pick one producer a day, and you have two lives. Free to play."],
-  "swap.html": ["tool", "Swap VHP for KOIN here. A small fee applies, so check the amount before you confirm."],
+  "swap.html": ["tool", "Swap VHP for KOIN here. A 10% fee applies, so check the amount before you confirm."],
   "get.html": ["tool", "Where to get KOIN and VHP. You can try the games as a guest first."],
   "names.html": ["tool", "Get an @name for your Koinos account and see who owns one."],
   "burn.html": ["tool", "Burn KOIN into VHP for your own wallet. Keep some KOIN for Mana."],
