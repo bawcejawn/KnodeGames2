@@ -22,7 +22,7 @@
       "line": "One producer a day, two lives, each producer once a season. Two-week seasons; Season 1 is practice from Mon 30 Nov, paid from Season 2 (Mon 14 Dec)." },
 
     { "id": "fantasy", "name": "Fantasy Producers", "kinds": ["free", "staked"], "status": "live", "href": "fantasy.html",
-      "line": "Draft 5 producers under a salary cap, with a captain who scores double. Weeks 4 and 5 are free play, with no stakes (to Sun 29 Nov, 7 PM ET)." },
+      "line": "Draft 5 producers under a salary cap, with a captain who scores double. Weeks 4 and 5 are free play. Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET)." },
     { "id": "golf", "name": "Block Golf", "kinds": ["free"], "status": "live", "href": "golf.html",
       "line": "Every Knode Games game is a hole: your place on each game's weekly board sets your strokes. Nothing to pick; lowest score wins.",
       "board": { "data": "games-data/golf/board.json", "unranked": "Block Golf is free to play: everyone is on one board.",
