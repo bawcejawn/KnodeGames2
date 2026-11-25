@@ -35,7 +35,8 @@ test("every public page loads the pinned copy then analytics.js last, and allows
   for (const p of pages) {
     const h = read(p);
     if (/<meta name="kg-network" content="testnet">/.test(h)) { assert.doesNotMatch(h, /posthog|analytics\.js/, `${p}: testnet pages don't count`); continue; }
-    assert.match(h, /<script src="vendor\/posthog-1\.438\.13\.js"><\/script>\s*<script src="analytics\.js"><\/script>\s*<\/body>/, `${p}: counter at the end`);
+    // Speed (24 Nov): the home page runs both deferred (after the page), together: both `defer` or neither.
+    assert.match(h, /<script src="vendor\/posthog-1\.438\.13\.js"( defer)?><\/script>\s*<script src="analytics\.js"\1><\/script>\s*<\/body>/, `${p}: counter at the end`);
     assert.doesNotMatch(h, /<script[^>]+src="https:\/\/[^"]*posthog/, `${p}: never PostHog's own hosted script`);
     const csp = h.match(/http-equiv="Content-Security-Policy" content="([^"]*)"/)[1];
     assert.match(csp, /connect-src [^;]*https:\/\/us\.i\.posthog\.com/, `${p}: connect-src`);

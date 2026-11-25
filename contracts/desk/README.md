@@ -1,11 +1,13 @@
 # Knode Swap Desk — VHP → KOIN
 
-People with VHP can swap it for KOIN right away on `swap.html`. They get **1:1 minus 3%**, paid in the same transaction.
+People with VHP can swap it for KOIN right away on `swap.html`. They get **1:1 minus the fee**, paid in the same transaction. The fee is set on chain by the owner: **10% since Wed 25 Nov 2026** (3% at launch). 10% is the most the contract allows.
+
+**The desk is a separate app, run by the owner.** It is not part of the Knode Games vault: its KOIN, VHP and fees never mix with players' stakes or the vault's 5% platform fee. The live fee is whatever the contract says (`npm run desk -- status`, or the Swap page, which reads it from the chain).
 
 ## How the money moves
 
 ```
-            ┌──────────── swap: VHP in, KOIN out (−3%) ────────────┐
+            ┌──────────── swap: VHP in, KOIN out (−fee) ───────────┐
   user ─────┤                                                       ├───── user
             └───────────────────────────────────────────────────────┘
                                    │ VHP (fee included) stays in the desk
@@ -18,8 +20,8 @@ People with VHP can swap it for KOIN right away on `swap.html`. They get **1:1 m
 
 - **The desk is a separate contract.** It is completely apart from the game pool, so customers' money never mixes with players' money.
 - **Available KOIN** is the smaller of two numbers: the desk's KOIN and the desk's Mana. Sending KOIN on Koinos needs Mana at least equal to the amount. The website always shows the largest swap possible right now.
-- **The pool grows on its own.** It grows with every block the node produces, and the 3% fee stays in the node as extra VHP.
-- **Your income** is the 3% plus block rewards. Both pile up inside the desk. You take them out with `withdraw`.
+- **The pool grows on its own.** It grows with every block the node produces, and the fee stays in the node as extra VHP.
+- **Your income** is the fee plus block rewards. Both pile up inside the desk. You take them out with `withdraw`.
 
 ## Safety rules (enforced by the contract)
 
@@ -66,7 +68,7 @@ npm run desk -- deploy           ← dry run: read what it will do
 npm run desk -- deploy --send
 ```
 The bot wallet pays the Mana for the upload, about 20 KOIN of Mana. The desk starts with these settings:
-- fee 3%
+- fee 3% (the launch setting; raised to 10% on 25 Nov 2026 with `fee 10`)
 - smallest swap 1 VHP
 - no fixed largest swap
 - 48-hour timelock
@@ -76,7 +78,7 @@ The bot wallet pays the Mana for the upload, about 20 KOIN of Mana. The desk sta
 ```
 npm run desk -- fund koin 20 --send       ← a little liquidity
 npm run desk -- try-swap 1 --send         ← swap 1 VHP from your test player wallet, exactly like the website would
-npm run desk -- status                    ← 1 swap, 0.97 KOIN out, 1 VHP in
+npm run desk -- status                    ← 1 swap, 1 VHP in, KOIN out = 1 minus the fee
 npm run desk -- withdraw koin 5 --send    ← lands in the treasury
 ```
 
@@ -95,7 +97,7 @@ Then watch the desk produce its first blocks on https://koinosscan.com.
 |---|---|
 | `npm run desk -- status` | KOIN available, VHP producing, swaps and fees earned |
 | `npm run desk -- withdraw koin 50 --send` | Takes profit to the treasury |
-| `npm run desk -- fee 3 --send` | Sets the fee in percent (0–10) |
+| `npm run desk -- fee 10 --send` | Sets the fee in percent (0–10). Raising it takes effect at once; a lower fee waits 48 h, then `settings apply` |
 | `npm run desk -- limits 1 5000 --send` | Smallest and largest single swap in VHP (largest 0 = no cap) |
 | `npm run desk -- pause on --send` / `pause off --send` | Stops or restarts swaps |
 | `npm run desk -- treasury schedule <address> --send`, then `treasury apply --send` 48 h later | Changes the treasury |
