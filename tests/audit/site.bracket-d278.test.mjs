@@ -26,7 +26,7 @@ const windows = [];
 after(() => { for (const w of windows) w.close(); });   // the page's refresh timers would keep the test alive
 const flush = async (w, n = 8) => { for (let i = 0; i < n; i++) await new Promise((r) => w.setTimeout(r, 0)); };
 
-async function openPage({ now, chainNow = now, picksDeployment = PINNED, kind = "kondor", sentBefore = null } = {}) {
+async function openPage({ now, chainNow = now, picksDeployment = PINNED, kind = "kondor", sentBefore = null, readFails = false } = {}) {
   const W = 4;   // shown week: seeded Sunday, picks until Monday 23:55
   const weekFile = { v: BM.FILE_V, week: W, start: BM.weekStart(W), end: BM.weekStart(W + 1), status: "open",
     seeding: { at: BM.seedTime(W), cardAt: 1, size: 8, seeds, vhp: seeds.map((_, i) => 8 - i), totalVhp: 36, out: [], outVhp: [], raw: {}, pooled: [], hash: "x" },
@@ -52,7 +52,7 @@ async function openPage({ now, chainNow = now, picksDeployment = PINNED, kind = 
       constructor(o) {
         this.id = o.id;
         this.functions = {
-          get_pick: async () => ({ result: chainPick === null ? {} : { pick: { number: String(chainPick), time: "1" } } }),
+          get_pick: async () => { if (readFails) throw new Error("node down"); return { result: chainPick === null ? {} : { pick: { number: String(chainPick), time: "1" } } }; },
           pick: async (args) => { picks.push({ ...args, contract: o.id }); return { operation: { args } }; },
         };
       }
@@ -134,4 +134,12 @@ test("no request for next week's file before its seeding (no 404 on every load)"
   assert.ok(SUNDAY < BM.seedTime(5));
   assert.equal(p.asked.some((u) => u.endsWith("W005.json")), false);
   assert.ok(p.asked.some((u) => u.endsWith("W004.json")));
+});
+
+test("Repo Lens 4 M-1: reading the sent bracket fails and the week file doesn't list it: nothing is sent (fail closed)", async () => {
+  const p = await openPage({ now: SUNDAY, sentBefore: 5, readFails: true });   // a bracket IS on chain, but it can't be read
+  await p.fill(); await p.review();
+  assert.match(p.modalText(), /Couldn't read your sent bracket\. Nothing was sent: try again\./);
+  assert.equal(p.button("Confirm in wallet"), undefined);
+  assert.equal(p.sent.length, 0); assert.equal(p.picks.length, 0);
 });

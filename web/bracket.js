@@ -53,7 +53,9 @@
   const LIVE_EST = "live estimate (blocks against expected so far, updated hourly); the VHP Ruler decides at the end of the day, and its result can differ";
   let rulerFrom;                    // index.json rulerFrom (R-BR-7): the ruler's first "on" week; null = not set; undefined = not read
   const shadows = new Map();        // week → its shadow summary (ruler/W<week>.json), when there is one
-  let picksContract = null, mine = null, sending = false;
+  // mineUnknown (Repo Lens 4 M-1): reading the sent bracket failed and the week file doesn't list it either, so we
+  // can't tell a first bracket from a change: nothing may be sent (fail closed; a change must never go to the sponsor)
+  let picksContract = null, mine = null, mineUnknown = false, sending = false;
   let gameLive = null;              // Picks game 9 on chain: true live, false not (yet) there or paused, null unknown
   let draft = null, draftWeek = null; // winner seeds per round for the bracket being filled in
 
@@ -206,16 +208,17 @@
     // the old draft), and while a bracket is being sent nothing is reloaded (the send reloads when it's done)
     if (sending) return;
     if (checking) { checking = null; close(); }
-    mine = null;
+    mine = null; mineUnknown = false;
     const who = me();
     if (picksContract && who && seeding()) {
       try {
         const x = await picksContract.functions.get_pick({ game: BM.GAME_ID, round: String(BM.picksRound(view)), player: who });
         const p = x.result && x.result.pick;
         if (p && p.number !== undefined && (p.height || p.time)) mine = Number(p.number);
-      } catch { /* unknown */ }
+      } catch { mineUnknown = true; }
     }
     if (mine === null && wf() && wf().picks && who) { const row = wf().picks.rows.find((r) => r[0] === who); if (row) mine = row[1]; }
+    if (mine !== null) mineUnknown = false;   // the week file knows it: a change, for sure
     draftWeek = null; startDraft(); render();
   }
 
@@ -380,6 +383,7 @@
   // card's own text by tests/audit/site.bracket-d278.test.mjs. (bracket.js still builds its own operation: it is a
   // classic script the tests load directly; it moves onto SP.send with the page-script split, plan step 5.)
   const GUEST_CHANGE = "A guest wallet can't change a pick (a change uses your own Mana). Connect a wallet to change a pick.";
+  const MINE_UNKNOWN = "Couldn't read your sent bracket. Nothing was sent: try again.";
   const CHANGE_MANA = "A change is paid with your own Mana (Knode's free Mana sponsor pays only for a first pick).";
   const LOCK_MARGIN = 120000;   // too close to the lock: two minutes, by the chain's clock at send time (#E-3 L-2)
   let checking = null;          // { n, account, week, seeds } frozen when "Check your bracket" opens (#E-3 C-2)
@@ -418,6 +422,7 @@
     const lockedUntil = openLockUntil(who, view);
     if (Date.now() < lockedUntil) return pop("info", "A bracket request is still open in your wallet", [`Approve or reject it in your wallet first. If it goes through, that bracket is the one that counts; this page shows it once it's on the chain. You can send a new one after it's settled, or after ${dayTime(lockedUntil)}.`], [btn("OK", close)]);
     if (BM.lockTime(view) - Date.now() < LOCK_MARGIN) return pop("bad", "Too close to the lock", [`Brackets lock ${dayTime(BM.lockTime(view))}. This one can't make it in time.`], [btn("OK", close)]);
+    if (mineUnknown) return pop("bad", "Couldn't read your sent bracket", [MINE_UNKNOWN], [btn("OK", close)]);
     const change = mine !== null;
     if (change && W.kind === "guest") return pop("info", "Your bracket is already sent", [GUEST_CHANGE], [btn("OK", close)]);
     const frozen = { n, account: who, week: view, seeds: s.seeds.join(","), size: s.size, change };
@@ -435,6 +440,7 @@
       checking = null; return pop("bad", "Your bracket changed", ["Your bracket, wallet or week changed while you were checking it. Nothing was sent: check it again."], [btn("OK", close)]);
     }
     checking = null;
+    if (mineUnknown) return pop("bad", "Couldn't read your sent bracket", [MINE_UNKNOWN], [btn("OK", close)]);
     if ((mine !== null) !== frozen.change) return pop("bad", "Your bracket changed", ["Your sent bracket changed while you were checking this one. Nothing was sent: check it again."], [btn("OK", close)]);
     if (frozen.change && W.kind === "guest") return pop("info", "Your bracket is already sent", [GUEST_CHANGE], [btn("OK", close)]);
     if (BM.lockTime(frozen.week) - (await chainNow()) < LOCK_MARGIN) return pop("bad", "Too close to the lock", [`Brackets lock ${dayTime(BM.lockTime(frozen.week))} by the chain's clock. Nothing was sent.`], [btn("OK", close)]);
