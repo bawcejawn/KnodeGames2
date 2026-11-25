@@ -26,8 +26,8 @@ test("the home page hero no longer loads a question; wallet users' row hides onc
 });
 test("All the games lists every game; only the open ones are links; no 'Coming soon' label, no 'Never miss a day' box (owner, 10 Nov)", () => {
   const g = welcome.slice(welcome.indexOf('id="welcome-games"'), welcome.indexOf('class="welcome-actions"'));
-  for (const [name, href] of [["Producer Race", "race.html"], ["Daily Questions", "#play"], ["Who Signs Block X", "blockx.html"], ["Producer Bracket", "bracket.html"], ["Block Golf", "golf.html"], ["Fantasy Producers", "fantasy.html"]]) assert.match(g, new RegExp(`<a class="also-card gtile" href="${href.replace(".", "\\.")}"><span[^>]*>[^<]*</span><div><b>${name}</b>`), name);
-  assert.match(g, /<a class="also-card gtile" href="survivor\.html">[\s\S]*?<b>Survivor<\/b>/, "Survivor is a link (practice from Mon 30 Nov)");
+  for (const [name, href] of [["Producer Race", "race.html"], ["Daily Questions", "#play"], ["Who Signs Block X", "blockx.html"], ["Producer Bracket", "bracket.html"], ["Block Golf", "golf.html"], ["Fantasy Producers", "fantasy.html"]]) assert.match(g, new RegExp(`<a class="also-card gtile" href="${href.replace(".", "\\.")}"(?: data-game="[a-z]+")?><span[^>]*>[^<]*</span><div><b>${name}</b>`), name);
+  assert.match(g, /<a class="also-card gtile" href="survivor\.html"(?: data-game="survivor")?>[\s\S]*?<b>Survivor<\/b>/, "Survivor is a link (practice from Mon 30 Nov)");
   assert.match(g, /<a class="also-card gtile" href="swap\.html">[\s\S]*Knode Games Swap/);
   assert.match(g, /<a class="also-card gtile" href="run-node\.html">[\s\S]*Run a node/);
   assert.match(g, /Block Golf[\s\S]*?Practice in Week 4 \(from Mon 16 Nov\)/);   // owner, 10 Nov: Golf is clickable, practice in Week 4
