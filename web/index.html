@@ -40,11 +40,10 @@
   <link rel="stylesheet" href="vault-card.css">
   <link rel="stylesheet" href="board.css">
   <link rel="stylesheet" href="page-box.css">
-  <link rel="stylesheet" href="hub-ui.css">
   <!-- Speed (Tue 24 Nov): start every script download now, all at once. The CSP tag above stops the browser looking
        ahead, so without these lines the 23 scripts at the end of the page download one after another (~15 s on a slow
-       phone, ~5.5 s with them). These are only hints: the <script> tags below still load and run each file in the same
-       order, so a missing or failed hint changes nothing but speed. Keep one line per <script src> below (tested by
+       phone, ~5.5 s with them). These are only hints: the script tags at the end of the page still load and run each file in the same
+       order, so a missing or failed hint changes nothing but speed. Keep one line per script tag at the end of the page (tested by
        tests/audit/site.speed-budget.test.mjs). PostHog last, at low priority. -->
   <link rel="preload" as="script" href="data-source.js">
   <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js" integrity="sha384-IAL9o3r4bQJvWhvszkorFINY2ct4LBA/LvyXE9NSOPCyYB25BsFV12JITA7Gxbk6" crossorigin="anonymous">
@@ -69,6 +68,7 @@
   <link rel="preload" as="script" href="start-sheet.js">
   <link rel="preload" as="script" href="vendor/posthog-1.438.13.js" fetchpriority="low">
   <link rel="preload" as="script" href="analytics.js" fetchpriority="low">
+  <link rel="stylesheet" href="hub-ui.css">
 </head>
 <body class="play-wait">
   <a class="skip" href="#main">Skip to the game</a>
