@@ -122,7 +122,7 @@
 .fx-slot .acts button { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .34); background: rgba(10, 18, 36, .35); color: var(--navy-ink); }
 .fx-slot .acts button:hover { background: rgba(10, 18, 36, .6); }
 .fx-slot .acts .x { width: 26px; height: 26px; padding: 0; display: grid; place-items: center; font-size: 11px; }
-.fx-capt { font-size: 12px; font-weight: 800; color: var(--gold); padding: 4px 2px; }
+.fx-capt { font-size: 12px; font-weight: 800; color: var(--gold); background: rgba(10, 18, 36, .72); border-radius: 99px; padding: 3px 9px; }
 .fx-open { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; border: 0; background: transparent; color: var(--navy-ink); padding: 0; }
 .fx-open .fx-kit.ghost { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-family: var(--wide); font-size: 30px; font-weight: 700; color: #fff; border: 2px dashed rgba(255, 255, 255, .85); background: rgba(40, 18, 4, .42); }
 .fx-slot.p0 .fx-open .fx-kit.ghost { border-color: var(--gold); color: var(--gold); width: 74px; height: 74px; }

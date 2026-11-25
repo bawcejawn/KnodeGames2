@@ -26,6 +26,7 @@ test("court look: wood, chalk and the paint; darker wood in the dark theme (both
   assert.match(css, /:root\[data-theme="dark"\] \.fx \{ --wood: #8A5A2F;/);
   assert.match(css, /@media \(prefers-color-scheme: dark\) \{ :root:not\(\[data-theme="light"\]\) \.fx \{ --wood: #8A5A2F;/);
   assert.doesNotMatch(css, /#2F6B4F|#2A6147/, "the old grass is gone");
+  assert.match(css, /\.fx-capt \{[^}]*background:/, "the gold Captain ×2 line sits on a dark chip (Repo Lens 4, L-1)");
 });
 
 test("players wear sleeveless jerseys; the kit is still built node by node with the same parts", () => {
