@@ -373,7 +373,64 @@
         el("p", {}, el("a", { class: "btn btn-primary", href: "lastnode.html", text: "Open Last Node Standing" }))));
     },
   };
-  const ADAPTERS = { race, blockx, bracket, lastnode };
+  // Block Golf (M-436, M-446): each week's round from the Golf recorder (games-data branch: golf/index.json + golf/W###.json),
+  // display only. A week is one round: the holes (one per game on the course) and every player's card (place, strokes,
+  // to par, points). Free to play from vault week 5 (D-586): one board, no prizes.
+  const toPar = (n) => (!Number.isFinite(n) ? "–" : n === 0 ? "E" : n > 0 ? `+${n}` : `−${-n}`);   // as golf-math.js toParText
+  const golf = {
+    weeks: null, files: new Map(), week: null,
+    async open(box) {
+      this.box = box;
+      if (!this.weeks) {
+        box.replaceChildren(el("p", { class: "muted", text: "Loading Block Golf results…" }));
+        try {
+          const ix = await fetchJson(RAW + "games-data/golf/index.json");
+          this.weeks = (ix && Array.isArray(ix.weeks) ? ix.weeks : []).filter((w) => Number.isInteger(w) && w >= 0 && w < 10000).sort((a, b) => b - a);
+        } catch { box.replaceChildren(el("p", { class: "muted", text: "Couldn't load Block Golf results right now. Try again in a moment." })); return; }
+      }
+      if (!this.weeks.length) { box.replaceChildren(el("div", { class: "empty", text: "No Block Golf rounds recorded yet." })); return; }
+      if (this.week == null || !this.weeks.includes(this.week)) this.week = this.weeks[0];
+      await this.load(this.week);
+      this.draw();
+    },
+    async load(w) {
+      if (this.files.has(w)) return;
+      try {
+        const f = await fetchJson(RAW + `games-data/golf/W${String(w).padStart(3, "0")}.json`);
+        if (f && f.v === 1 && f.week === w && Array.isArray(f.holes) && Array.isArray(f.cards)) this.files.set(w, f);
+      } catch { /* drawn as "couldn't load" */ }
+    },
+    draw() {
+      const f = this.files.get(this.week), box = this.box, now = Date.now();
+      const cards = f ? f.cards.filter((c) => c && ADDR.test(c.a) && Number.isInteger(c.place)).slice().sort((a, b) => a.place - b.place || (a.a < b.a ? -1 : 1)) : [];
+      const mine = me() ? cards.find((c) => c.a === me()) : null;
+      const kind = f ? (f.practice && this.week < 5 ? "Practice" : "Free play") : "";   // D-586: free from vault week 5
+      const score = mine ? el("p", { class: "rband-score" }, el("b", { text: `${toPar(mine.toPar)} (${fmt(mine.strokes)})` }), ` · ${fmt(mine.pts)} pts · place ${fmt(mine.place)} of ${fmt(cards.length)}`)
+        : el("p", { class: "rband-score", text: f ? `${fmt(cards.length)} scorecard${cards.length === 1 ? "" : "s"} · ${kind}` : "" });
+      const weeks = el("div", { class: "rweeks", role: "group", "aria-label": "Week" }, ...this.weeks.map((w) => {
+        const b = el("button", { type: "button", "aria-pressed": String(w === this.week), text: w === M.weekOf(now) ? `This week (${WS(w)})` : `${WL(w)}` });
+        b.addEventListener("click", async () => { this.week = w; await this.load(w); this.draw(); });
+        return b;
+      }));
+      const band = el("div", { class: "rband" }, el("div", { class: "rband-top" }, el("h1", { text: "Block Golf results" }), score), weeks);
+      if (!f) { box.replaceChildren(band, el("div", { class: "empty", text: "Couldn't load this week's round. Try again in a moment." })); return; }
+      const state = el("span", { class: `rr-pill ${f.final ? "final" : "wait"}`, text: f.final ? "Final" : "In play" });
+      const winners = cards.filter((c) => c.place === 1);
+      const holes = f.holes.filter((h) => h && typeof h.name === "string").map((h) => el("li", {}, `${h.name}: `, h.status === "skipped" ? el("span", { class: "muted", text: "skipped" }) : `${fmt(h.field)} player${h.field === 1 ? "" : "s"}${h.status === "final" ? "" : " so far"}`));
+      const head = el("article", { class: "res rr" },
+        el("div", { class: "rr-head" }, el("h3", { text: `${WL(this.week)} · ${kind}` }), state),
+        winners.length ? el("p", { class: "res-line" }, winners.length === 1 ? "Leader: " : "Leaders: ", ...winners.flatMap((c, i) => [i ? ", " : "", link(c.a)]), ` · ${toPar(winners[0].toPar)}`) : el("p", { class: "res-line muted", text: "No scorecards this week (a card needs two holes played)." }),
+        mine ? el("p", { class: "res-line rr-mine ok" }, el("b", { text: "You: " }), `place ${fmt(mine.place)} · ${toPar(mine.toPar)} · ${fmt(mine.strokes)} strokes · ${fmt(mine.pts)} pts`) : null,
+        el("details", { class: "res-how" }, el("summary", {}, `The holes (${f.holes.length})`), el("ul", {}, ...holes)));
+      const shown = cards.slice(0, 200);
+      const table = cards.length ? el("div", { class: "table-wrap" }, el("table", { class: "board rr-table" },
+        el("thead", {}, el("tr", {}, el("th", { class: "num", text: "Place" }), el("th", { text: "Player" }), el("th", { class: "num", text: "To par" }), el("th", { class: "num", text: "Strokes" }), el("th", { class: "num", text: "Points" }))),
+        el("tbody", {}, ...shown.map((c) => el("tr", { class: c.a === me() ? "me" : null }, el("td", { class: "num", text: fmt(c.place) }), el("td", {}, link(c.a)), el("td", { class: "num", text: toPar(c.toPar) }), el("td", { class: "num", text: fmt(c.strokes) }), el("td", { class: "num", text: fmt(c.pts) })))))) : null;
+      box.replaceChildren(band, el("div", { class: "results rr-list" }, head, table, cards.length > shown.length ? el("p", { class: "muted", text: `Top 200 of ${fmt(cards.length)}; the full list is on the leaderboard.` }) : null),
+        el("p", { class: "muted res-foot" }, "Your place on each game's weekly board becomes your strokes on that hole; your worst hole is dropped. Lowest score wins. ", el("a", { href: "golf.html", text: "Your scorecard" }), " · ", el("a", { href: "index.html#leaderboard/golf", text: "Block Golf leaderboard" })));
+    },
+  };
+  const ADAPTERS = { race, blockx, bracket, lastnode, golf };
   let games = [{ id: "questions", name: "Daily Questions", href: "#play" }], current = "questions";
   const qPart = $("res-q"), gPart = $("res-g");
 

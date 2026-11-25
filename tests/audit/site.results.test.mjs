@@ -12,7 +12,7 @@ test("results.js only reads and draws: no sending, storage, eval or HTML from da
   assert.doesNotMatch(js, /innerHTML|insertAdjacentHTML|document\.write|eval\(|new Function|localStorage|sessionStorage|indexedDB|sendTransaction|\.send\(|signTransaction/);
   assert.match(js, /RAW \+ "race-data\/index\.json"/);
   assert.match(js, /race-data\/W\$\{String\(w\)\.padStart\(3, "0"\)\}\.json/, "week files by number only");
-  assert.match(js, /const ADAPTERS = \{ race, blockx, bracket, lastnode \};/, "a game needs a drawing here before it gets a tab");
+  assert.match(js, /const ADAPTERS = \{ race, blockx, bracket, lastnode, golf \};/, "a game needs a drawing here before it gets a tab");
 });
 
 test("the results view has a game switcher and keeps the question results whole", () => {
@@ -53,4 +53,18 @@ test("Last Node Standing has a Results tab that points to its page (owner's thre
   assert.equal(g.results, true);
   const js = read("web/results.js");
   assert.match(js, /const lastnode = \{[\s\S]*?href: "lastnode\.html", text: "Open Last Node Standing"/);
+});
+
+test("Block Golf results (M-436, M-446): its own tab, read from games-data/golf by week number only, display only", () => {
+  const js = read("web/results.js");
+  assert.match(js, /RAW \+ "games-data\/golf\/index\.json"/);
+  assert.match(js, /games-data\/golf\/W\$\{String\(w\)\.padStart\(3, "0"\)\}\.json/, "week files by number only");
+  assert.match(js, /f\.v === 1 && f\.week === w && Array\.isArray\(f\.holes\) && Array\.isArray\(f\.cards\)/, "only a well-formed week file is drawn");
+  assert.match(js, /const toPar = \(n\) => \(!Number\.isFinite\(n\) \? "–" : n === 0 \? "E" : n > 0 \? `\+\$\{n\}` : `−\$\{-n\}`\);/, "to par as golf-math.js shows it");
+  assert.match(js, /No scorecards this week \(a card needs two holes played\)\./);
+  assert.match(js, /el\("a", \{ href: "index\.html#leaderboard\/golf", text: "Block Golf leaderboard" \}\)/);
+  assert.doesNotMatch(js.slice(js.indexOf("const golf = {"), js.indexOf("const ADAPTERS")), /VHP|prize|stake|paid/i, "free to play: no prize words (D-586)");
+  const g = JSON.parse(read("web/games.json")).games.find((x) => x.id === "golf");
+  assert.equal(g.results, true);
+  assert.equal(g.status, "live");
 });
