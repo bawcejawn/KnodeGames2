@@ -48,7 +48,7 @@ export async function boot({ app, now, files = {}, vhp = {}, blocks = null, type
   };
   if (race) {
     race.sent = race.sent || [];
-    win.KWallet = { address: race.wallet, kind: race.kind || "kondor", init() {}, connect() {}, label: () => "Kondor", batchReady: () => false,
+    win.KWallet = { address: race.wallet, kind: race.kind || "kondor", init() {}, connect() { race.connects = (race.connects || 0) + 1; }, label: () => "Kondor", batchReady: () => false,
       send: async (label, ops, opts = {}) => { race.sent.push({ label, opts }); for (const o of ops) { const k = String(o.args.race), old = race.picks[k]; race.picks[k] = { horse: o.args.horse, changes: old ? (old.changes || 0) + 1 : 0 }; } return "0x1220aa"; } };
   }
   const B = blocks || { ts: [T - 1000], sig: [0], signers: [A], from: 1, top: 1 };
