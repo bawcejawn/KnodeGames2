@@ -50,7 +50,7 @@
   let board = null, form = new Map(), view = null, round = 0;
   let prizesFrom;                   // index.json prizesFromWeek: the first paid week; null = none yet; undefined = not read
   // M-741: the words under a live estimate (the Ruler chat to confirm them, M-739 point 3); one place to change them
-  const LIVE_EST = "live estimate (blocks against expected so far, updated hourly); the VHP ruler decides at the end of the day";
+  const LIVE_EST = "live estimate (blocks against expected so far, updated hourly); the VHP Ruler decides at the end of the day, and its result can differ";
   let rulerFrom;                    // index.json rulerFrom (R-BR-7): the ruler's first "on" week; null = not set; undefined = not read
   const shadows = new Map();        // week → its shadow summary (ruler/W<week>.json), when there is one
   let picksContract = null, mine = null, sending = false;
