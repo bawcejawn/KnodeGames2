@@ -153,6 +153,28 @@
     }
   }
 
+  /** The "Staked" tag follows the vault, like the Stake page (D-768): shown where the vault takes stakes now, gone where
+   *  it doesn't, added where it does. If the vault can't be read, the tags stay as games.json says. games.json's kinds
+   *  stay as they are for the Rules text. */
+  async function stakedTags(games) {
+    const K = window.KStake;
+    if (!K || !K.stakeable) return;
+    let open;
+    try { open = await K.stakeable(); } catch { return; }
+    if (!Array.isArray(open)) return;
+    for (const g of games) {
+      const vid = VAULT_IDS[g.id], a = document.querySelector(`.g[data-game="${g.id}"] .g-t`);
+      if (!vid || !a || g.status !== "live") continue;
+      const tag = a.querySelector(`[data-staked-pill="${g.id}"]`), on = open.includes(vid);
+      if (tag && !on) tag.remove();
+      else if (!tag && on) {
+        const t = el("span", { class: "pill staked", text: KINDS.staked, "data-staked-pill": g.id });
+        const free = a.querySelector(".pill.free");
+        if (free) free.after(t); else a.querySelector(".g-name").after(t);
+      }
+    }
+  }
+
   async function loadRace() {
     try { const b = await fetchJson(RACE_DATA + "board.json"); if (b && b.v === 1) raceBoard = b; } catch { /* no board yet */ }
     refresh();
@@ -173,7 +195,7 @@
   function card(g) {
     const live = g.status === "live", preview = g.status === "preview";
     // "preview" (Combo, owner 15 Nov): the page opens, but nothing is live yet: no status, stake or prize, just a link
-    const pills = [...g.kinds.map((k) => el("span", { class: `pill ${k}`, text: KINDS[k] })), live ? el("span", { class: "pill", "data-prize": g.id, hidden: "" })
+    const pills = [...g.kinds.map((k) => el("span", { class: `pill ${k}`, text: KINDS[k], ...(k === "staked" ? { "data-staked-pill": g.id } : {}) })), live ? el("span", { class: "pill", "data-prize": g.id, hidden: "" })
       : preview ? el("span", { class: "pill preview", text: g.opens ? `Preview · ${g.opens}` : "Preview" }) : el("span", { class: "pill soon", text: "Soon" })];
     const body = el("span", { class: "g-bd" },
       el("span", { class: "g-t" }, el("span", { class: "g-name", text: g.name }), ...pills),
@@ -195,6 +217,7 @@
     const free = games.filter((g) => g.status === "live" && g.kinds.includes("free"));
     const stakedOnly = games.filter((g) => g.status === "live" && !g.kinds.includes("free"));
     $("g-live").replaceChildren(...free.map(card), ...stakedOnly.map(card));
+    stakedTags(games);
     // Every live game's own leaderboard, one tap away (the Leaderboards page, a tab per game).
     const boards = games.filter((g) => g.status === "live" && (g.id === "questions" || (g.board && typeof g.board === "object")));
     if (boards.length) {

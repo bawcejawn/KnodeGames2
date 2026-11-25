@@ -292,6 +292,17 @@ test("the status line says when a new stake starts counting, as a date", async (
   assert.doesNotMatch(e.root.textContent, /week 6/i);
 });
 
+test("last week, in words: the pot shared by the VHP staked; a rolled-over or voided week says its pot moved on (D-768)", () => {
+  const w = { closed: true, finalized: true, weight_set: true, weight: String(500n * UNIT), bucket: String(2n * UNIT) };
+  assert.equal(T.lastText(T.lastWeek(w)), "Last week's pot: 2 VHP; 500 VHP was staked");
+  assert.equal(T.lastText(T.lastWeek({ ...w, finalized: false })), "Last week's pot: 2 VHP (winners decided by Wednesday night)");
+  assert.equal(T.lastText(T.lastWeek({ ...w, rolled_over: true, bucket: String(3674n * UNIT / 100n), weight: "0" })), "No winners last week: its pot (36.74 VHP) rolled into this week");
+  assert.equal(T.lastText(T.lastWeek({ ...w, voided: true })), "No winners last week: its pot (2 VHP) rolled into this week");
+  assert.equal(T.lastWeek({ ...w, closed: false }), null);
+  assert.equal(T.lastWeek({ ...w, weight: "0" }), null, "no stake counted: unknown");
+  assert.equal(T.lastWeek(null), null);
+});
+
 test("last week per 100 VHP: the game's bucket ÷ the stake counted for it, only once that week closed", () => {
   assert.equal(T.per100({ closed: true, weight_set: true, weight: String(500n * UNIT), bucket: String(2n * UNIT) }), 40000000n);   // 0.4 VHP
   assert.equal(T.per100({ closed: false, weight_set: true, weight: String(UNIT), bucket: String(UNIT) }), null);
@@ -307,7 +318,7 @@ test("last week per 100 VHP: the game's bucket ÷ the stake counted for it, only
 
 test("Where to stake: every staked game side by side; each opens its card on the Stake page (owner, 4 Nov); hidden until live", async () => {
   const games = [GAME({ id: 1, name: "Daily Questions", stake: String(900n * UNIT) }), GAME({ id: 7 }), GAME({ id: 2, name: "Who Signs Block X", stake: "0" }), GAME({ id: 4, name: "Fantasy Producers", staked: false })];
-  const weeks = { 4: { gw: { closed: true, weight_set: true, weight: String(200n * UNIT), bucket: String(1n * UNIT) } } };
+  const weeks = { 4: { gw: { closed: true, finalized: true, weight_set: true, weight: String(200n * UNIT), bucket: String(1n * UNIT) } } };
   let e = env({ state: LIVE({ v6_rule_week_plus_one: "0" }), games, weeks });
   e.K.mountList(e.root, { links: { 1: "index.html#play", 7: "race.html#stake" } });
   await e.tick();
@@ -319,7 +330,7 @@ test("Where to stake: every staked game side by side; each opens its card on the
   const items = e.root.all().filter((n) => n.tagName === "li").map((n) => n.textContent);
   assert.equal(items.length, 3, "only games that take stakes");
   assert.match(items[0], /Daily Questions.*Staked 900 VHP.*Yours 10 VHP.*Last week see its page/);
-  assert.match(items[1], /Producer Race.*Staked 250 VHP.*Yours 3 VHP.*Last week 0\.5 VHP per 100/);
+  assert.match(items[1], /Producer Race.*Staked 250 VHP.*Yours 3 VHP.*Last week's pot: 1 VHP; 200 VHP was staked/);
   assert.match(items[0], /Manage →/, "staked there: Manage");
   assert.match(items[2], /Who Signs Block X(Stake|Manage) →/);
   const btns = e.root.all().filter((n) => n.tagName === "a" && /→$/.test(n.textContent)).map((n) => n.attrs.href);
