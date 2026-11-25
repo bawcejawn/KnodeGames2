@@ -132,3 +132,31 @@ test("every menu page has the one short box at the top, from tools/page-box.json
     assert.match(h, /href="page-box\.css"/, `${f}: box styles`);
   }
 });
+
+test("Leaderboards and Results: the box is game-neutral, every game is listed (greyed when it has no board or results), and the tabs follow the game", () => {
+  const box = JSON.parse(read("tools/page-box.json"));
+  assert.match(box["index.html#leaderboard"][1], /^Every game has its own board\. Pick a game below\.$/);
+  for (const f of ["web/leaders.js", "web/results.js"]) {
+    const js = read(f);
+    assert.match(js, /g\.status === "live" \|\| g\.status === "preview"/, `${f}: every live or preview game is listed`);
+    assert.match(js, /class: [^}]*"soon"/, `${f}: a game with nothing yet is greyed, not hidden`);
+    assert.match(js, /first\.textContent = q \? "Questions" : "Play"/, `${f}: the first tab follows the game`);
+    assert.match(js, /nav\.setAttribute\("aria-label", g\.name\)/, `${f}: the tabs' label follows the game`);
+  }
+  assert.match(read("web/stake-page.js"), /Only games that take a stake are listed here\. New games appear once they open for staking\. Free-play games don't need a stake\./);
+  // Play link: only a same-site page address ever reaches href (Repo Lens 4, I-1)
+  for (const f of ["web/leaders.js", "web/results.js"]) assert.match(read(f), /\^\[a-z0-9-\]\+\\\.html\(#\[a-z0-9-\]\+\)\?\$\/\.test\(g\.href/, `${f}: the Play link only takes a *.html address`);
+});
+
+test("the All games \"Staked\" tag follows the vault's list_games, the same list as the Stake page (D-768)", () => {
+  const js = read("web/games.js"), panel = read("web/stake-panel.js"), page = read("web/stake-page.js");
+  assert.match(js, /K\.stakeable\(\)/, "games.js asks the vault");
+  assert.match(js, /data-staked-pill/, "each Staked tag can be taken away or added");
+  assert.match(panel, /async function stakeable\(\)[\s\S]{0,400}g\.staked && \(g\.active \|\| big\(g\.stake\) > 0n\)/, "the same filter as the Stake page");
+  assert.match(panel, /window\.KStake = \{[^}]*stakeable/, "stake-panel.js offers it");
+  // read only: no send in that path
+  assert.doesNotMatch(panel.match(/async function stakeable\(\)[\s\S]*?\n  }/)[0], /send|sign/i);
+  assert.doesNotMatch(page + panel, /VHP per 100/, "no per-100 wording on the stake pages");
+  // games.json's kinds still drive the Rules text
+  assert.ok(games.every((g) => Array.isArray(g.kinds)));
+});

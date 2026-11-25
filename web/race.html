@@ -9,12 +9,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Producer Race · Handicapped races between Koinos block producers</title>
   <!-- seo:start (written by tools/site-seo.mjs; edit there) -->
-  <meta name="description" content="Every Koinos block producer is a horse. The Race also has 1-hour, 2-hour, daily and weekly races, handicapped by VHP so every horse has the same chance. Free, live from the chain.">
+  <meta name="description" content="Every Koinos block producer is a horse. The Race also has 6-hour, 1-hour, 2-hour, daily and weekly races, handicapped by VHP so every horse has the same chance. Free, live from the chain.">
   <link rel="canonical" href="https://knodegames.com/race.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Knode Games">
   <meta property="og:title" content="Koinos Producer Race">
-  <meta property="og:description" content="Every Koinos block producer is a horse. The Race also has 1-hour, 2-hour, daily and weekly races, handicapped by VHP so every horse has the same chance. Free, live from the chain.">
+  <meta property="og:description" content="Every Koinos block producer is a horse. The Race also has 6-hour, 1-hour, 2-hour, daily and weekly races, handicapped by VHP so every horse has the same chance. Free, live from the chain.">
   <meta property="og:url" content="https://knodegames.com/race.html">
   <meta property="og:image" content="https://knodegames.com/media/og-knode.png">
   <meta property="og:image:width" content="1200">
@@ -22,7 +22,7 @@
   <meta property="og:image:alt" content="Koinos Producer Race">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Koinos Producer Race">
-  <meta name="twitter:description" content="Every Koinos block producer is a horse. The Race also has 1-hour, 2-hour, daily and weekly races, handicapped by VHP so every horse has the same chance. Free, live from the chain.">
+  <meta name="twitter:description" content="Every Koinos block producer is a horse. The Race also has 6-hour, 1-hour, 2-hour, daily and weekly races, handicapped by VHP so every horse has the same chance. Free, live from the chain.">
   <meta name="twitter:image" content="https://knodegames.com/media/og-knode.png">
   <!-- seo:end -->
   <link rel="icon" href="media/icon.svg?v=2" type="image/svg+xml">
@@ -42,6 +42,9 @@
     .rl td.rl-when b { display: block; }
     .rl td.rl-when span { font-size: 13px; color: var(--muted); }
     .rl td.rl-when .void-chip { margin-top: 4px; color: var(--ink); }
+    .curious > summary { cursor: pointer; font-weight: 700; padding: 2px 0; }
+    .curious[open] > summary { margin-bottom: 10px; }
+    .curious .cols > .card { margin: 0; }
     .rl-void { font-size: 12.5px; color: var(--muted); }
     .rl-you { font-size: 12.5px; }
     .pr-viewnote { flex-basis: 100%; font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -211,11 +214,14 @@
       .pr { padding-top: 16px; }
       .pr .lede { font-size: 15px; margin-bottom: 12px; }
       .lede-more, .tools .hide-sm { display: none; }
-      #live, #pick-zone, #board-box, #history, #how { scroll-margin-top: 124px; }
+      #live, #pick-zone, #board-box, #ruler-box, #history, #how { scroll-margin-top: 124px; }
       .tools { position: sticky; top: calc(60px + env(safe-area-inset-top, 0px)); z-index: 19; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; margin: 0 -16px 14px; padding: 8px 16px; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
       .tools::-webkit-scrollbar { display: none; }
       .tools a { flex: none; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px; }
       .tools a.go-pick { background: var(--tang); border-color: var(--tang); color: #1b1206; }
+      /* R3-21 (Repo Lens 3): the four pills fit a 320 px phone, so no link sits past the right edge. */
+      .tools { gap: 6px; padding: 8px 12px; margin: 0 -12px 14px; }
+      .tools a { padding: 6px 8px; font-size: 13px; }
       .card { padding: 14px; border-radius: 18px; }
     }
     @media (max-width: 640px) { .pr-lane { grid-template-columns: 1fr 96px; } .pr-who { grid-column: 1 / -1; } .pr-meta { padding-left: 0; } .hist .hide-sm { display: none; } }
@@ -324,7 +330,7 @@
             <a href="lastnode.html">Last Node Standing</a>
             <a href="survivor.html">Survivor</a>
             <a href="vs.html">Knode Games VS</a>
-            <a href="overunder.html">Over Under</a>
+            <a href="overunder.html">More or Fewer</a>
             <a href="combo.html">Combo Card · Preview</a>
           </div>
         </details>
@@ -355,19 +361,19 @@
   </header>
 
   <main class="pr">
-    <aside class="page-box" data-game="race"><p>Producer Race: pick the producers you think will run best, then send your picks. Free to play as a guest.</p></aside>
+    <aside class="page-box" data-game="race"><p>Pick the producer you think finishes first, then watch the race run live on real blocks. Free to play.</p></aside>
     <div id="stake-badge" hidden></div>
     <section class="rc-hero">
       <img class="rc-hero-horse" src="media/animals/horse.png" alt="" aria-hidden="true" width="120" height="120">
       <h1>Producer Race <span class="rc-tag">Free</span></h1>
-      <p class="lede">Block producers race on real blocks. Pick the horse you think wins.</p>
+      <p class="lede">Pick your producer. Watch it run. Real blocks, live races.</p>
       <ol class="rc-steps">
         <li><b>1</b><span><strong>Pick a horse</strong>free, before the race starts</span></li>
         <li><b>2</b><span><strong>Watch it run</strong><span id="rc-step-len">6 hours, live, block by block</span></span></li>
         <li><b>3</b><span><strong>Score points</strong><span id="rc-step-pts">when it finishes top 3</span></span></li>
       </ol>
     </section>
-    <nav class="tools" aria-label="On this page"><a href="#live">Live race</a><a href="#pick-zone" class="go-pick">Pick a horse</a><a href="#board-box">Leaderboard</a><a href="#history">Results</a><a href="#how">Rules</a><a href="node.html" class="hide-sm">Producer lookup</a></nav>
+    <nav class="tools" aria-label="On this page"><a href="#live" class="hide-sm">Live race</a><a href="#pick-zone" class="go-pick">Pick<span class="hide-sm"> a horse</span></a><a href="#board-box">Leaderboard</a><a href="#ruler-box">Results</a><a href="#how">Rules</a><a href="node.html" class="hide-sm">Producer lookup</a></nav>
 
     <!-- D-166: race types. Hidden until the Race contract v2 is live (TYPES_FROM_WEEK in race-math.js). -->
     <nav class="rt-tabs" id="race-types" aria-label="Race type" hidden></nav>
@@ -411,7 +417,7 @@
       <div class="head"><h2>My picks</h2><span class="note" id="picks-left" style="margin:0"></span></div>
       <p class="note" style="margin-top:0" id="picks-who"></p>
       <div class="pk-list" id="pk-list"></div>
-      <p class="note">Free: one horse per race, for the next 4 races. You can change a pick until its race starts; then the chain locks it. <span id="pk-limit-note">Up to 5 picks a day (changes count).</span> The Mana is paid by Knode Games' Mana sponsor.</p>
+      <p class="note">Free: one horse per race, for the next 4 races; Knode Games pays the Mana for a first pick. You can change a pick once per race, with your own Mana (about 0.9), until its race starts; then the chain locks it. <span id="pk-limit-note">Up to 5 picks a day (changes count).</span></p>
       <p class="note pk-msg" id="pk-msg" role="status"></p>
     </section>
     </div>
@@ -431,6 +437,9 @@
 
     <section class="card" id="stake" hidden></section>
 
+    <!-- D-730 (owner): the page is the game and its results; the handicap card and the block feed are for the curious. -->
+    <details class="card curious" id="curious">
+      <summary>For the curious: the handicap card and the latest blocks</summary>
     <div class="cols">
       <section class="card">
         <h2 id="card-title">Handicap card</h2>
@@ -446,6 +455,7 @@
         <ul class="list feed" id="feed"></ul>
       </section>
     </div>
+    </details>
 
     <section class="card" id="history">
       <div class="head"><h2>Results</h2></div>
@@ -457,6 +467,7 @@
       <h2>Rules book</h2>
       <p class="note">Everything about how the Race works. Tap a topic to open it.</p>
       <details><summary>The races</summary><p>Every Koinos block producer is a horse. Each block it signs moves it forward, and smaller producers get a handicap so every horse has the same chance. Four 6-hour races a day, every day, starting at 00:00, 06:00, 12:00 and 18:00 UTC. There are also 1-hour races (every hour), 2-hour races (every 2 hours), a daily race (the UTC day) and a weekly race (Monday to Saturday, UTC); the tabs above the board switch between them. Free, just for fun.</p></details>
+      <details><summary>Picks and changes</summary><p>Pick one producer per race before it starts; the chain locks the pick when the race starts. Your first pick in a race is free: Knode Games pays the Mana. You can change it once per race, and a change is paid with your own Mana (about 0.9 Mana); a guest wallet, or one without enough Mana, can't change a pick, and the first pick stays.</p></details>
       <details><summary>Points, boards and prizes</summary><p><span id="pts-note">A pick on the winner is a win (3 points). A pick on the horse that finishes 2nd or 3rd is a show (1 point).</span> Ranked by points; ties go to more wins, then more picks placed. Wallets still tied share the place. <b>Who gets paid:</b> on the Staked board, exactly the top 30% of staked players with a point share the Race's bucket, and tied wallets share their level. If a tie crosses that line, the wallets that reached the score first (their last scoring pick was earlier) get the spots. On the Free play board, 1st and 2nd each go to at most 10 wallets, with ties broken the same way. Weeks are Knode Games weeks (Monday 00:00 UTC). Races run every day. Monday to Saturday count for the week. <b>Sunday is review day</b>: the week's results are checked on chain while you keep playing. Sunday's races are <b>fun races</b>: they score on the Today and All time boards, but never on a week's board, medals or prizes. The week's results go final from Monday 00:00 UTC, and rewards can be claimed from Monday evening (Americas) / Tuesday UTC. The <b>Staked</b> board is for wallets with VHP staked in the Producer Race that week; they share the Race's weekly reward bucket. Everyone else plays on the <b>Free play</b> board, where 1st and 2nd win the weekly free-play prize (2 VHP and 1 VHP). Prizes and bucket shares are paid from Week 4 (the week of Mon 16 Nov); winners claim them from the vault. If your Race stake drops below 1 VHP during a week, you sit out that week's share (your VHP stays yours and can always be withdrawn).</p></details>
       <details><summary>Results</summary><p>Results are final once every block of the race is irreversible and matches on two independent Koinos nodes, the same check the question game uses. Days are UTC days; weeks are the Knode Games weeks.</p></details>
       <details><summary>Reading the board</summary><p>Each lane is a producer, in a fixed order (most VHP first), so the line-up never jumps around. <b>Pack view</b> zooms in on the pack: last place at the left, the leader at the right, so you can see who is ahead. <b>Whole race</b> shows the track from the start line to the finish, with the time passed shaded. The ▲ / ▼ pills are places gained or lost over the last 1 or 3 hours, or since the last race (against where each producer finished it).</p></details>
@@ -485,7 +496,7 @@
       <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
       <a href="survivor.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path><path d="M9 12l2 2 4-4"></path></svg><span>Survivor</span></a>
       <a href="vs.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h12l-3-3"></path><path d="M20 17H8l3 3"></path></svg><span>Knode Games VS</span></a>
-      <a href="overunder.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M7 9l5-5 5 5"></path><path d="M7 15l5 5 5-5"></path></svg><span>Over Under</span></a>
+      <a href="overunder.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M7 9l5-5 5 5"></path><path d="M7 15l5 5 5-5"></path></svg><span>More or Fewer</span></a>
       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>

@@ -22,7 +22,7 @@
       "line": "One producer a day, two lives, each producer once a season. Two-week seasons; Season 1 is practice from Mon 30 Nov, paid from Season 2 (Mon 14 Dec)." },
 
     { "id": "fantasy", "name": "Fantasy Producers", "kinds": ["free", "staked"], "status": "live", "href": "fantasy.html",
-      "line": "Draft 5 producers under a salary cap, with a captain who scores double. Weeks 4 and 5 are free play, with no stakes (to Sun 29 Nov, 7 PM ET)." },
+      "line": "Draft 5 producers under a salary cap, with a captain who scores double. Weeks 4 and 5 are free play. Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET)." },
     { "id": "golf", "name": "Block Golf", "kinds": ["free"], "status": "live", "href": "golf.html",
       "line": "Every Knode Games game is a hole: your place on each game's weekly board sets your strokes. Nothing to pick; lowest score wins.",
       "board": { "data": "games-data/golf/board.json", "unranked": "Block Golf is free to play: everyone is on one board.",
@@ -43,10 +43,10 @@
                     { "key": "jumps", "label": "Jumps", "wide": true }, { "key": "events", "label": "Events", "wide": true }] } },
     { "id": "vs", "name": "Knode Games VS", "kinds": ["free"], "status": "live", "href": "vs.html",
       "line": "Pick which producers beat our node. One call a day." },
-    { "id": "overunder", "name": "Over Under", "kinds": ["free"], "status": "live", "href": "overunder.html",
-      "line": "Over or under the line on a producer's blocks. A new game every 30 minutes; one point for each right call.",
+    { "id": "overunder", "name": "More or Fewer", "kinds": ["free"], "status": "live", "href": "overunder.html",
+      "line": "Call whether a producer signs more or fewer blocks than the number shown. A new game every 30 minutes; one point for each right call.",
       "board": { "data": "games-data/overunder/board.json",
-        "free": { "show": 6, "prize": "Over Under is free play and pays no prizes yet." },
+        "free": { "show": 6, "prize": "More or Fewer is free play and pays no prizes yet." },
         "columns": [{ "key": "pts", "label": "Points" }] } },
     { "id": "combo", "name": "Combo Card", "kinds": ["free", "staked"], "status": "preview", "href": "combo.html", "opens": "Opens Mon 7 Dec",
       "line": "Build a card of 2 to 10 calls from the races and Block X. Every leg must hit; harder legs pay more. Preview: build and share cards now; sending opens Mon 7 Dec." }

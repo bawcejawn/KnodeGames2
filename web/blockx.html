@@ -142,7 +142,7 @@
             <a href="lastnode.html">Last Node Standing</a>
             <a href="survivor.html">Survivor</a>
             <a href="vs.html">Knode Games VS</a>
-            <a href="overunder.html">Over Under</a>
+            <a href="overunder.html">More or Fewer</a>
             <a href="combo.html">Combo Card · Preview</a>
           </div>
         </details>
@@ -173,13 +173,11 @@
   </header>
 
     <main class="bx">
-    <aside class="page-box" data-game="blockx"><p>Who Signs Block X: pick the producer you think signs the milestone block, then send your pick.</p></aside>
+    <aside class="page-box" data-game="blockx"><p>Pick which producer signs the next milestone block. Free to play. Correct calls climb the weekly board.</p></aside>
     <div id="stake-badge" hidden></div>
     <div class="bx-intro">
-      <div>
-        <h1>Who Signs Block X</h1>
-        <p>A target about every hour (every 1,200 blocks, from Mon 9 Nov). Guess which producer signs it. Smaller producers score more, up to <span data-bx="capx">×5</span>. Free to play.</p>
-      </div>
+      <h1>Who Signs Block X</h1>
+      <p class="bx-links"><a href="#how" id="rules-link">Rules</a> · <a href="ruler.html">Ruler</a></p>
     </div>
     <p class="status" id="status" role="status">Reading the chain…</p>
 
@@ -203,11 +201,6 @@
       <div><b id="you-rank">–</b><span>your place this week</span></div>
       <div><b id="you-mana">–</b><span>your Mana (the sponsor pays for picks)</span></div>
     </div>
-    <ol class="bx-steps" id="steps">
-      <li><span><b>Connect a wallet</b>Kondor, KOIN Vault, or a free guest wallet. Picks cost you nothing: the Knode Games Mana sponsor pays.</span></li>
-      <li><span><b>Pick who signs a target</b>About <span data-bx="open">24</span> targets are always open. Change your pick until it locks.</span></li>
-      <li><span><b>Score when you're right</b>×1 for the biggest producer, up to ×5 for small ones (×3 before Mon 9 Nov). The Free play board's top 2 win 2 and 1 VHP each week, from Week 4 (the week of Mon 16 Nov).</span></li>
-    </ol>
 
     <section class="bx-sec" id="targets-box">
       <div class="bx-sec-head"><h2>Open targets</h2><p id="game-rules"></p></div>
@@ -235,26 +228,30 @@
       </section>
     </div>
 
-    <section class="bx-sec bx-panel" id="mults">
-      <h2>Who signs most often</h2>
-      <p class="note" id="mult-sub"></p>
-      <div id="mult-rows"></div>
-    </section>
+    <!-- D-730 (owner): the page is the pick, the live hour, results and the board; these two are details. -->
+    <details class="bx-how bx-more" id="more">
+      <summary>Who signs most often, and the VHP ruler</summary>
+      <section class="bx-sec bx-panel" id="mults">
+        <h2>Who signs most often</h2>
+        <p class="note" id="mult-sub"></p>
+        <div id="mult-rows"></div>
+      </section>
 
-    <!-- The VHP ruler (owner, 11 Nov 2026; bot/blockx-ruler.ts): shown only once a ruler day file (X<week>-<d>.json) says shadow or on. -->
-    <section class="bx-sec bx-panel" id="ruler-box" hidden>
-      <h2>Measured by the VHP ruler</h2>
-      <p class="note" style="margin-top:0" id="ruler-when"></p>
-      <p class="note">The ruler sizes every producer by its own VHP, from a moment before the lock that nobody can time. A right pick scores <span class="formula">min(120, the biggest full-signing producer's size ÷ your producer's size)</span>: every producer in the field has the same expected payout per pick, so picking a small one is never a worse choice than picking a big one. <b>Capped at ×120.</b> A producer with too little VHP to sign about 10 blocks in 6 hours isn't in the field (a pick on it is a miss).</p>
-      <p class="note"><b>Void:</b> a producer whose VHP at the target block is more than 5% below, or more than 25% above, its size on the card is void for that target only. <b>A pick on a voided producer counts as a miss.</b> VHP added after the card adds nothing extra.</p>
-      <div id="ruler-list"></div>
-    </section>
+      <!-- The VHP ruler (owner, 11 Nov 2026; bot/blockx-ruler.ts): shown only once a ruler day file (X<week>-<d>.json) says shadow or on. -->
+      <section class="bx-sec bx-panel" id="ruler-box" hidden>
+        <h2>Measured by the VHP ruler</h2>
+        <p class="note" style="margin-top:0" id="ruler-when"></p>
+        <p class="note">The ruler sizes every producer by its own VHP, from a moment before the lock that nobody can time. A right pick scores <span class="formula">min(120, the biggest full-signing producer's size ÷ your producer's size)</span>: every producer in the field has the same expected payout per pick, so picking a small one is never a worse choice than picking a big one. <b>Capped at ×120.</b> A producer with too little VHP to sign about 10 blocks in 6 hours isn't in the field (a pick on it is a miss).</p>
+        <p class="note"><b>Void:</b> a producer whose VHP at the target block is more than 5% below, or more than 25% above, its size on the card is void for that target only. <b>A pick on a voided producer counts as a miss.</b> VHP added after the card adds nothing extra.</p>
+        <div id="ruler-list"></div>
+      </section>
+    </details>
 
     <details class="bx-how" id="how">
       <summary>How it works</summary>
       <div class="explain">
-        <p><b>The targets.</b> From Mon 9 Nov 2026, every block whose number is a multiple of 1,200 is a target, about every hour (before that, every 2,400 blocks). About a day of targets is always open. Nobody chooses them.</p>
-        <p><b>The lock.</b> The Picks contract refuses a pick once the chain reaches 100 blocks before the target, so every pick is in before anyone can know who signs it. You can change a pick <span data-bx="changesw">once</span>, and make up to <span data-bx="perday">48</span> picks a day (a change counts).</p>
+        <p><b>The targets.</b> From Mon 9 Nov 2026, every block whose number is a multiple of 1,200 is a target, about every hour (before that, every 2,400 blocks). About <span data-bx="open">24</span> targets are always open. Nobody chooses them.</p>
+        <p><b>The lock.</b> The Picks contract refuses a pick once the chain reaches 100 blocks before the target, so every pick is in before anyone can know who signs it. You can change a pick <span data-bx="changesw">once</span>, with your own Mana, until it locks (the Knode Games Mana sponsor pays first picks only). You can make up to <span data-bx="perday">48</span> picks a day (a change counts).</p>
         <p><b>The score.</b> Koinos picks who signs each block in proportion to VHP, so big producers sign more often. A right pick scores</p>
         <p><span class="formula">min(<span data-bx="cap">5</span>, top producer's VHP ÷ your producer's VHP)</span></p>
         <p>The cap is ×5 from Mon 9 Nov and was ×3 before.</p>
@@ -283,7 +280,7 @@
       <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
       <a href="survivor.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path><path d="M9 12l2 2 4-4"></path></svg><span>Survivor</span></a>
       <a href="vs.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h12l-3-3"></path><path d="M20 17H8l3 3"></path></svg><span>Knode Games VS</span></a>
-      <a href="overunder.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M7 9l5-5 5 5"></path><path d="M7 15l5 5 5-5"></path></svg><span>Over Under</span></a>
+      <a href="overunder.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M7 9l5-5 5 5"></path><path d="M7 15l5 5 5-5"></path></svg><span>More or Fewer</span></a>
       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
