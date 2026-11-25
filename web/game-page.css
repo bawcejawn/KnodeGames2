@@ -1,0 +1,29 @@
+/* game-page.css: the shared look for every game page (UI lead PR C; claude/gamespage/GAME-PAGE-STANDARD.md).
+   A game page links this file and uses two pieces:
+   1. Closed fold-out rows, one row high (52 px), for "For the curious", "Rules and how points work" and any
+      "Show all (N)" list:  <details class="fold" id="curious"><summary>For the curious</summary> … </details>
+      Never add the `open` attribute: every row is closed on load (only the page's Rules link may open #rules).
+   2. The game's colour on its hero:  <section class="game-hero" data-accent="blue"> … </section>
+      `data-accent` is the game's "accent" in web/games.json (blue, violet, mint, sun, hot), the same colour as its icon.
+   Style only: no script, no data. */
+
+/* ── 1. fold-out rows ── */
+.fold { border-top: 1px solid var(--line); }
+.fold:last-of-type { border-bottom: 1px solid var(--line); }
+.fold > summary { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-weight: 800; font-size: 16px; color: var(--ink); cursor: pointer; list-style: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: "›"; font-size: 22px; line-height: 1; color: var(--muted); transition: transform .15s ease; }
+.fold[open] > summary::after { transform: rotate(90deg); }
+.fold > summary:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; border-radius: 8px; }
+.fold > :not(summary) { margin-bottom: 14px; max-width: 100%; overflow-x: auto; }
+@media (prefers-reduced-motion: reduce) { .fold > summary::after { transition: none; } }
+
+/* ── 2. the game's colour on its hero: a band along the top, the same gradient as the game's icon badge ── */
+.game-hero { position: relative; border-radius: var(--r-md, 18px); overflow: hidden; }
+.game-hero::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 6px; background: var(--hero-acc, var(--tile-violet)); }
+.game-hero[data-accent="blue"] { --hero-acc: var(--tile-blue); }
+.game-hero[data-accent="violet"] { --hero-acc: var(--tile-violet); }
+.game-hero[data-accent="mint"] { --hero-acc: var(--tile-mint); }
+.game-hero[data-accent="sun"] { --hero-acc: var(--tile-sun); }
+.game-hero[data-accent="hot"] { --hero-acc: var(--tile-hot); }
