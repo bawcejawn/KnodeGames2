@@ -1,0 +1,177 @@
+# Knode Games X poster (design: claude/marketing/X-POSTING-SYSTEM-DESIGN-2026-11-25.md; plain words: docs/SOCIAL.md).
+# OFF until the owner sets the repository variable X_POSTING_ENABLED to the exact text "true" (Settings → Secrets and variables
+# → Actions → Variables). It stays a DRY RUN (prints what it would post, posts nothing, writes nothing) until X_DRY_RUN is the
+# exact text "false". Only queue posts with status exactly "approved" can ever be sent; every shipped post is "draft".
+#
+# Four jobs, so the job that holds the X keys never has a write token and the jobs that hold a write token never run repository code:
+#   plan    contents: read, no secrets   runs social/x-post.mjs plan: picks the due approved posts, makes the intent lines
+#   intent  contents: write, no repo code  writes the intent lines to the social-data branch BEFORE anything is sent
+#   send    contents: read, X keys       sends each post once, no retries, makes the result lines
+#   record  contents: write, no repo code  writes the result lines to social-data (never main)
+# An intent with no result (a crash between send and record) is never retried: the next run sees it, marks it unknown and stops.
+# The log lives on the social-data branch (social-data:log.json), so a merge to main can never overwrite it.
+name: X poster
+
+on:
+  schedule:
+    - cron: "2,32 * * * *"       # the kg-dispatch Worker checks at :07 and :37 and starts it if this run did not happen (window 25)
+  workflow_dispatch: {}
+
+concurrency:
+  group: knode-x-post
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    if: ${{ vars.X_POSTING_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      X_POSTING_ENABLED: ${{ vars.X_POSTING_ENABLED }}
+      X_DRY_RUN: ${{ vars.X_DRY_RUN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Read the log (public branch, no token)
+        run: |
+          set -euo pipefail
+          repo="https://github.com/${GITHUB_REPOSITORY}.git"
+          echo '{"events":[]}' > "$RUNNER_TEMP/log.json"
+          if git ls-remote --exit-code --heads "$repo" social-data >/dev/null; then
+            git fetch -q --depth 1 "$repo" social-data
+            git show FETCH_HEAD:log.json > "$RUNNER_TEMP/log.json"
+          else
+            rc=$?
+            if [ "$rc" -ne 2 ]; then echo "::error::Could not read social-data (git exit $rc); posting nothing."; exit 1; fi
+          fi
+      - name: Plan
+        run: node social/x-post.mjs plan social/queue.json "$RUNNER_TEMP/log.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: x-plan
+          path: |
+            plan.json
+            new-events.json
+          retention-days: 3
+
+  intent:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write         # push the social-data branch (never main)
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: x-plan
+          path: ${{ runner.temp }}/x
+      - name: Check the lines
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/x"
+          # Only known shapes go in the log: a kind from the list, an id like P012 or P006b (or "-").
+          jq -e 'all(.[]; (.kind|IN("intent","missed","pause")) and (.id|test("^(P[0-9]{3}[a-z]?|-)$")))' new-events.json >/dev/null
+      - name: Push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/x"
+          n=$(jq 'length' new-events.json); [ "$n" = 0 ] && exit 0
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for try in 1 2 3; do
+            rm -rf w && git init -q w && cd w
+            if git fetch -q --depth 1 "$remote" social-data 2>/dev/null; then parent=$(git rev-parse FETCH_HEAD); git show FETCH_HEAD:log.json > log.json; else parent=""; echo '{"events":[]}' > log.json; fi
+            jq --slurpfile n ../new-events.json '.events += $n[0]' log.json > log2.json
+            blob=$(git hash-object -w log2.json)
+            if [ -n "$parent" ]; then git read-tree FETCH_HEAD; else git read-tree --empty; fi
+            git update-index --add --cacheinfo 100644 "$blob" log.json
+            tree=$(git write-tree)
+            commit=$(GIT_AUTHOR_NAME=kg-social GIT_AUTHOR_EMAIL=noreply@github.com GIT_COMMITTER_NAME=kg-social GIT_COMMITTER_EMAIL=noreply@github.com git commit-tree "$tree" ${parent:+-p "$parent"} -m "social: log")
+            if git push -q "$remote" "$commit:refs/heads/social-data"; then exit 0; fi
+            cd ..
+            if [ "$try" = 3 ]; then echo "::error::Could not write the intent to social-data; nothing will be sent."; exit 1; fi
+          done
+
+  send:
+    needs: intent
+    if: ${{ always() && needs.intent.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      X_POSTING_ENABLED: ${{ vars.X_POSTING_ENABLED }}
+      X_DRY_RUN: ${{ vars.X_DRY_RUN }}
+      X_API_KEY: ${{ secrets.X_API_KEY }}
+      X_API_SECRET: ${{ secrets.X_API_SECRET }}
+      X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+      X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: x-plan
+          path: ${{ runner.temp }}/x
+      - name: Send
+        run: node social/x-post.mjs send "$RUNNER_TEMP/x/plan.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() }}
+        with:
+          name: x-results
+          path: results.json
+          retention-days: 3
+
+  record:
+    needs: [intent, send]
+    if: ${{ always() && needs.intent.result == 'success' && vars.X_DRY_RUN == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write         # push the social-data branch (never main)
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        continue-on-error: true
+        with:
+          name: x-results
+          path: ${{ runner.temp }}/r
+      - name: Write the results to social-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/r"
+          [ -f results.json ] || { echo "No results file: the intent stays open, so the next run stops and shows it."; exit 0; }
+          jq -e 'all(.[]; (.kind|IN("sent","error","skipped","unknown","pause")) and (.id|test("^(P[0-9]{3}[a-z]?|-)$")))' results.json >/dev/null
+          cp results.json new-events.json
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for try in 1 2 3; do
+            rm -rf w && git init -q w && cd w
+            git fetch -q --depth 1 "$remote" social-data
+            parent=$(git rev-parse FETCH_HEAD); git show FETCH_HEAD:log.json > log.json
+            jq --slurpfile n ../new-events.json '.events += $n[0]' log.json > log2.json
+            blob=$(git hash-object -w log2.json)
+            git read-tree FETCH_HEAD
+            git update-index --add --cacheinfo 100644 "$blob" log.json
+            tree=$(git write-tree)
+            commit=$(GIT_AUTHOR_NAME=kg-social GIT_AUTHOR_EMAIL=noreply@github.com GIT_COMMITTER_NAME=kg-social GIT_COMMITTER_EMAIL=noreply@github.com git commit-tree "$tree" -p "$parent" -m "social: result")
+            if git push -q "$remote" "$commit:refs/heads/social-data"; then exit 0; fi
+            cd ..
+            if [ "$try" = 3 ]; then echo "::error::Could not write the result to social-data."; exit 1; fi
+          done

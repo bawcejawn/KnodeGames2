@@ -68,6 +68,10 @@ test("(guard) no workflow holds an issues permission (R-HUB-5: the name-claim fl
  *  that never runs on pull requests. It can't move funds or post anything: a sealed file still has to match the chain. */
 const SEAL_SECRET = "RESULTS_SEAL_KEY";
 const SEAL_JOBS = { "race.yml": "publish", "games.yml": "publish", "golf.yml": "publish", "combo.yml": "publish", "kit-games.yml": "publish-kit" };
+/** The X poster (docs/SOCIAL.md, Wed 25 Nov 2026): its four X keys, each once and spelled plainly, only in x-post.yml's send
+ *  job. That job has contents: read and no write token; the workflow never runs on pull requests. The keys can post to X
+ *  and nothing else: no wallet, no vault, no repository write. Repo Lens 1 reviews this exception (PR A). */
+const X_FILE = "x-post.yml", X_JOB = "send", X_SECRETS = ["X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"];
 
 test("(guard) secrets live only in bot.yml's tick job, never in a workflow that runs on pull requests", () => {
   for (const { f, y } of workflows) {
@@ -76,6 +80,10 @@ test("(guard) secrets live only in bot.yml's tick job, never in a workflow that 
       // Only the seal key, exactly once, and only inside that file's publish job.
       assert.deepEqual(uses, [SEAL_SECRET], `${f} uses secrets other than ${SEAL_SECRET} once`);
       assert.equal([...job(y, SEAL_JOBS[f]).matchAll(/secrets\./gi)].length, 1, `${f}: ${SEAL_SECRET} outside its ${SEAL_JOBS[f]} job`);
+    } else if (f === X_FILE) {
+      assert.deepEqual(uses, X_SECRETS, `${f} uses secrets other than the four X keys once each`);
+      assert.equal([...job(y, X_JOB).matchAll(/secrets\./gi)].length, X_SECRETS.length, `${f}: an X key outside its ${X_JOB} job`);
+      assert.match(job(y, X_JOB), /permissions:\s*\n\s*contents:\s*read\s*\n(?!\s*\w+:\s*write)/, `${f}: the ${X_JOB} job must be read-only`);
     } else if (f !== "bot.yml") assert.deepEqual(uses, [], `${f} uses secrets`);
     if (/\n\s*pull_request:/.test(y)) { assert.deepEqual(uses, [], `${f}: secrets on PRs`); assert.match(y, /contents:\s*read/, `${f}: PR token must be read-only`); }
   }
@@ -177,7 +185,8 @@ test("(guard, parsed YAML) secrets are never handed on whole, and only bot.yml u
     const all = strings(doc).join("\n");
     assert.doesNotMatch(all, /tojson\s*\(\s*secrets\s*\)|secrets\s*\[|\bsecrets\s*\}\}/i, `${f}: all secrets in an expression`);
     // Audit AB-058: a publish job's one plain `${{ secrets.RESULTS_SEAL_KEY }}` (placed and counted by the test above).
-    const rest = SEAL_JOBS[f] ? all.split(`\${{ secrets.${SEAL_SECRET} }}`).join("") : all;
+    let rest = SEAL_JOBS[f] ? all.split(`\${{ secrets.${SEAL_SECRET} }}`).join("") : all;
+    if (f === X_FILE) for (const k of X_SECRETS) rest = rest.split(`\${{ secrets.${k} }}`).join("");   // placed and counted above
     if (f !== "bot.yml") assert.doesNotMatch(rest, /\$\{\{[^}]*\bsecrets\./i, `${f}: uses secrets`);
   }
 });
@@ -225,6 +234,8 @@ const WRITES = {
   "golf.yml": { publish: ["contents"] },        // Block Golf pushes only games-data/golf, like games.yml (R-GO-3)
   "lastnode.yml": { publish: ["contents"] },    // Last Node Standing pushes only games-data/lastnode, like games.yml
   "combo.yml": { publish: ["contents"] },       // Combo Card pushes only games-data/combo, after the read-only verify job (FC3-3)
+  // X poster: intent and record push only the social-data branch (log.json) and run no repository code (docs/SOCIAL.md).
+  "x-post.yml": { intent: ["contents"], record: ["contents"] },
   "pages.yml": { deploy: ["pages", "id-token"] }, // website only, and only when KG_ENABLE_PAGES is true
 };
 const onOf = (doc) => doc && (doc.on ?? doc[true] ?? doc["true"]);
@@ -240,7 +251,8 @@ test("(guard, expressions) the secrets context, in any spelling, only in bot.yml
       if (f === "bot.yml" && j === "tick") continue;
       // Audit AB-058: the publish job may read exactly `secrets.RESULTS_SEAL_KEY`, spelled plainly, and nothing else.
       const sealOk = (e) => SEAL_JOBS[f] === j && e === `secrets.${SEAL_SECRET.toLowerCase()}`;   // expressions() lower-cases
-      for (const e of exprsOf(v)) if (SECRETS_ANY.test(e) && !sealOk(e)) bad.push(`${f}: secrets outside bot.yml's tick job: \${{ ${e} }}`);
+      const xOk = (e) => f === X_FILE && j === X_JOB && X_SECRETS.some((k) => e === `secrets.${k.toLowerCase()}`);
+      for (const e of exprsOf(v)) if (SECRETS_ANY.test(e) && !sealOk(e) && !xOk(e)) bad.push(`${f}: secrets outside bot.yml's tick job: \${{ ${e} }}`);
     }
     for (const [j, v] of jobsOf(doc)) {
       const env = v && v.environment, name = env && typeof env === "object" ? env.name : env;

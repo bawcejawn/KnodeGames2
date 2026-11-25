@@ -41,6 +41,7 @@ export const JOBS = {
     { workflow: "race-samples.yml", windowMin: 30 }, { workflow: "kit-games.yml", windowMin: 25, ownOnly: true },
     { workflow: "bot.yml", windowMin: 50 }, { workflow: "names.yml", windowMin: 50 }, { workflow: "golf.yml", windowMin: 50 },
     { workflow: "lastnode.yml", windowMin: 10 }, { workflow: "watch.yml", windowMin: 25 },
+    { workflow: "x-post.yml", windowMin: 25 },   // X poster (off unless X_POSTING_ENABLED is "true"); its own timer is :02 and :32
   ],
 };
 // Wed 25 Nov: GitHub's own timer started the node watchdog (watch.yml, every 30 min) only 3 times in 29 hours, so a

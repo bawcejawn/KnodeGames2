@@ -13,6 +13,8 @@ const TIMERS = {
   "race-samples.yml": ["*/15 * * * *"], "watch.yml": ["*/30 * * * *"], "capacity.yml": ["23 13 * * *"],
   // Last Node Standing (game 13): three times an hour, all day (23 Nov: GitHub skipped most runs of the old 5-minute ranges).
   "lastnode.yml": ["2,22,42 * * * *"],
+  // X poster (off unless X_POSTING_ENABLED is "true"); the kg-dispatch Worker backs it up at :07 and :37 (docs/SOCIAL.md).
+  "x-post.yml": ["2,32 * * * *"],
 };
 const say = (m) => problems.push(m);
 
