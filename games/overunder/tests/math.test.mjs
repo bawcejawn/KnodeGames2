@@ -27,10 +27,22 @@ test("3 or 4 games open for picks at any minute, never more than 4", () => {
   assert.ok(min >= 3 && max <= 4, `open games ${min}..${max}`);
 });
 
-test("write window: 3 h 33 min to 3 h 3 min before the start", () => {
+test("write window: 3 h 33 min to 2 h 20 min before the start (D-732)", () => {
   const [a, b] = R.writeWindow(T0);
   assert.equal(T0 - a, (3 * 60 + 33) * 60000);
-  assert.equal(T0 - b, (3 * 60 + 3) * 60000);
+  assert.equal(T0 - b, (2 * 60 + 20) * 60000);
+  // still before picks open (2 h) and before the cancel time (2 h 15 min)
+  assert.ok(R.SCHEDULE_TO_MIN > R.CANCEL_AFTER_MIN && R.CANCEL_AFTER_MIN > 120);
+});
+
+test("every game gets at least 2 tries: two runs of the half-hourly kit fall in its window, whatever the run minute (M-468)", () => {
+  for (let runMin = 0; runMin < 30; runMin++)
+    for (let k = 0; k < 48; k++) {
+      const start = T0 + k * 30 * 60000, [a, b] = R.writeWindow(start);
+      let tries = 0;
+      for (let t = Math.ceil((a - runMin * 60000) / 1800000) * 1800000 + runMin * 60000; t < b; t += 1800000) if (t >= a) tries++;
+      assert.ok(tries >= 2, `start +${k * 30} min, runs at :${runMin}: ${tries} tries`);
+    }
 });
 
 function run(listedFor, n, from = T0, state = R.emptyState()) {

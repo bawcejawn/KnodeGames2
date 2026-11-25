@@ -42,6 +42,7 @@
     .pr h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.02; margin: 0 0 8px; letter-spacing: -.01em; }
     .pr h2 { font-family: var(--display); font-size: 20px; margin: 0 0 8px; }
     .lede { color: var(--muted); margin: 0 0 16px; max-width: 62ch; font-size: 17px; }
+    .cb-links { margin: 0 0 14px; font-size: 15px; }
     .soon { border-left: 4px solid var(--tang); background: var(--surface); border-radius: 0 12px 12px 0; padding: 10px 14px; font-size: 14px; margin: 0 0 16px; color: var(--muted); }
     .soon b { color: var(--ink); }
     .cb-modal { position: fixed; inset: 0; z-index: 1000; background: rgba(8, 14, 30, .6); display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -293,9 +294,8 @@
   <main class="pr">
     <aside class="page-box" data-game="combo"><p>Build a card of 2 to 10 calls from races and Block X. Every leg has to hit. Free to play.</p></aside>
     <h1>Combo Card</h1>
-    <p class="lede">Stack 2 to 10 calls on one card from the next day's races and Block X targets. Every leg has to hit. Harder legs and longer cards pay more points. Anyone can play: staked players (at least 1 VHP staked in the Combo Card) rank on the Staked board, everyone else on the Free play board.</p>
-    <p class="soon" id="practice-note" hidden><b>Practice week.</b> Free play only: nothing is paid. Staking opens later, when the Combo Card is ready. A first card is free (Knode pays the Mana); a change to a card is paid with your own Mana.</p>
-    <p class="soon" id="cards-soon"><b>Preview.</b> Build and share cards now. Sending them opens when the Combo upgrade of the Knode Games Picks contract is live.</p>
+    <p class="cb-links"><a href="#rules" id="rules-link">Rules</a> · <a href="ruler.html">Ruler</a></p>
+    <p class="soon" id="practice-note" hidden><b>Practice week.</b> Practice weeks run until Sun 6 Dec, 7 PM ET: free play only, nothing is paid. Staking starts that evening. A first card is free (Knode pays the Mana); a change to a card is paid with your own Mana.</p>
     <p class="status" id="status" role="status">Reading the chain…</p>
 
     <div class="cb" id="build">
@@ -336,7 +336,6 @@
             </div>
           </div>
         </div>
-        <p class="rules">Up to 3 legs a race (one Win, one Show, one Top half) and one per block. Each producer can be on your card once. Races lock 25 minutes before the start, Block X 500 blocks (about 25 minutes) before the block. 3 cards a day, each changeable up to 3 times before it locks, and only on the UTC day you made it. A leg's worth can drop (never rise) if its producer's chance rises by more than 10% before the leg locks.</p>
       </aside>
     </div>
 
@@ -357,8 +356,11 @@
       <p class="note">A week is the sum of your best 10 cards. Ties go to more cards that hit, then the earlier last hit. The top 30% of staked players with at least 1 point share the Combo Card bucket. The Free play board ranks everyone else; <b>it pays no VHP for now</b>. A week is final 12 hours after it ends, once every leg is final.</p>
     </section>
 
-    <details class="card explain" id="how">
-      <summary><h2 style="color:var(--ink);display:inline">How it works</h2></summary>
+    <details class="card explain fold" id="rules">
+      <summary><h2 style="color:var(--ink);display:inline">Rules and how points work</h2></summary>
+      <p>Stack 2 to 10 calls on one card from the next day's races and Block X targets. Every leg has to hit. Harder legs and longer cards pay more points. Anyone can play: staked players (at least 1 VHP staked in the Combo Card) rank on the Staked board, everyone else on the Free play board.</p>
+      <p class="soon" id="cards-soon"><b>Preview.</b> Build and share cards now. Sending them opens with practice play, about Wed 25 Nov.</p>
+      <p>Up to 3 legs a race (one Win, one Show, one Top half) and one per block. Each producer can be on your card once. Races lock 25 minutes before the start, Block X 500 blocks (about 25 minutes) before the block. 3 cards a day, each changeable up to 3 times before it locks, and only on the UTC day you made it. A leg's worth can drop (never rise) if its producer's chance rises by more than 10% before the leg locks.</p>
       <p><b>The legs.</b> <b>Win</b>: the horse wins the race. <b>Show</b>: it finishes in the top 3. <b>Top half</b>: it finishes in the top half of the field. <b>Block X</b>: the producer signs that block (every 2,400th block). A horse must sign at least one block to count. More games add their own legs as they launch.</p>
       <p><b>What a leg is worth.</b> Each leg is priced from its chance, using the Producer Race's latest handicap card when your card is sent:</p>
       <p><span class="formula">race leg worth = 0.5 ÷ chance, from ×0.25 to ×3</span></p>

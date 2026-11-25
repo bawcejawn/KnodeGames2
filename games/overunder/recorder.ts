@@ -1,6 +1,6 @@
 // Over Under (game 16, TEST): the game's own part of the recorder, a rolling GameModule on the Shared Game Kit (#38).
 // A new game starts every 30 minutes (:00 and :30 UTC): one producer, 14,400 blocks from blockAt(start), one Picks round.
-// Picks 1 = Over, 2 = Under; no changes. The kit makes each round's write-once schedule file (3 h 3 min to 3 h 33 min before
+// Picks 1 = Over, 2 = Under; no changes. The kit makes each round's write-once schedule file (3 h 33 min to 2 h 20 min before
 // the start) from scheduleFor: who plays (the queue, math.js step; the queue travels in every file) and the line
 // (form-based, D-383). A round with no file by 2 h 15 min before its start is cancelled for everyone by the kit (D-344).
 // Every rule is in math.js.
