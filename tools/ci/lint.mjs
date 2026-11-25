@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../.
 const problems = [];
 const TIMERS = {
   "bot.yml": ["7 * * * *", "48 11 * * 1-6", "48 23 * * 0-5"],
-  "race.yml": ["37 * * * *"], "games.yml": ["47 * * * *"], "combo.yml": ["52 * * * *"], "golf.yml": ["57 * * * *"],
+  "race.yml": ["37 * * * *"], "games.yml": ["47 * * * *"], "combo.yml": ["22 * * * *"], "golf.yml": ["57 * * * *"],
   "kit-games.yml": ["27,57 * * * *"], "vhp-ruler.yml": ["12 * * * *"], "names.yml": ["4 * * * *"], "stats.yml": ["17 */2 * * *"],
   "race-samples.yml": ["*/15 * * * *"], "watch.yml": ["*/30 * * * *"], "capacity.yml": ["23 13 * * *"],
   // Last Node Standing (game 13): three times an hour, all day (23 Nov: GitHub skipped most runs of the old 5-minute ranges).

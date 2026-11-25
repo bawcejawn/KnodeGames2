@@ -374,34 +374,55 @@
     },
   };
   const ADAPTERS = { race, blockx, bracket, lastnode };
-  let games = [{ id: "questions", name: "Daily Questions" }], current = "questions";
+  let games = [{ id: "questions", name: "Daily Questions", href: "#play" }], current = "questions";
   const qPart = $("res-q"), gPart = $("res-g");
 
   function buttons() {
     host.replaceChildren(...games.map((g) => {
-      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), text: g.name });
+      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), text: g.name, class: g.id !== "questions" && !g.ready ? "soon" : null });
       b.addEventListener("click", () => { location.hash = g.id === "questions" ? "#results" : `#results/${g.id}`; });
       return b;
     }));
+  }
+  /** The three tabs (Questions | Leaderboard | Results) follow the chosen game: "Play" opens that game's page. */
+  function tabs(g) {
+    const nav = document.querySelector && document.querySelector("#view-results .qtabs"), first = nav && nav.querySelector('a[data-view="play"]');
+    if (!first) return;
+    const q = g.id === "questions";
+    nav.setAttribute("aria-label", g.name);
+    first.textContent = q ? "Questions" : "Play";
+    first.setAttribute("href", q || !/^[a-z0-9-]+\.html(#[a-z0-9-]+)?$/.test(g.href || "") ? "#play" : g.href);
   }
   function show(id) {
     if (!games.some((g) => g.id === id)) id = "questions";
     current = id; buttons();
     qPart.hidden = id !== "questions"; gPart.hidden = id === "questions";
-    if (id !== "questions") ADAPTERS[id].open(gPart);
+    const g = games.find((x) => x.id === id);
+    tabs(g);
+    if (id === "questions") return;
+    if (!g.ready) {
+      // No results drawing for this game yet: say so and point to its page, instead of hiding it.
+      gPart.replaceChildren(el("div", { class: "empty" },
+        el("p", { text: `${g.name}'s results are listed here once its first week is final. Until then, see its own page.` }),
+        /^[a-z0-9-]+\.html(#[a-z0-9-]+)?$/.test(g.href || "") ? el("p", {}, el("a", { class: "btn btn-primary", href: g.href, text: `Open ${g.name}` })) : null));
+      return;
+    }
+    ADAPTERS[id].open(gPart);
   }
   function route() { const [view, sub] = (location.hash || "").slice(1).split("/"); if (view === "results") show(sub || "questions"); }
   async function load() {
     try {
       const list = (await fetchJson("games.json")).games;
-      const extra = (Array.isArray(list) ? list : []).filter((g) => g && g.status === "live" && g.results === true && ADAPTERS[g.id]
-        && typeof g.name === "string" && g.name.length <= 40).map((g) => ({ id: g.id, name: g.name }));
+      // Every live or preview game, in the games list's order; a game with no results drawing yet is greyed, not hidden.
+      const extra = (Array.isArray(list) ? list : []).filter((g) => g && (g.status === "live" || g.status === "preview") && g.id !== "questions"
+        && typeof g.id === "string" && /^[a-z0-9-]{1,24}$/.test(g.id) && typeof g.name === "string" && g.name.length <= 40)
+        .map((g) => ({ id: g.id, name: g.name, href: typeof g.href === "string" ? g.href : "", ready: g.status === "live" && g.results === true && !!ADAPTERS[g.id] }));
       games = [games[0], ...extra];
     } catch { /* only the question game */ }
     buttons(); route();
   }
-  if (window.KNames) window.KNames.onChange(() => { if (current !== "questions" && ADAPTERS[current]) ADAPTERS[current].open(gPart); });
+  if (window.KNames) window.KNames.onChange(() => { const cg = games.find((g) => g.id === current); if (current !== "questions" && cg && cg.ready) ADAPTERS[current].open(gPart); });
   window.addEventListener("hashchange", route);
-  if (W && W.subscribe) W.subscribe(() => { const a = ADAPTERS[current]; if (current !== "questions" && a && a.weeks) a.draw(); });
+  if (W && W.subscribe) W.subscribe(() => { const a = ADAPTERS[current]; const cg = games.find((g) => g.id === current); if (current !== "questions" && cg && cg.ready && a && a.weeks) a.draw(); });
   load();
 })();
