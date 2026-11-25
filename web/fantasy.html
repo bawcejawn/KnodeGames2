@@ -95,8 +95,8 @@
       <div class="fx-hero-in">
         <div class="fx-hero-copy">
           <p class="fx-kicker" id="fx-weekline">Fantasy Producers</p>
-          <h1 id="fx-title">Pick five. Captain one. Beat the league.</h1>
-          <p class="fx-lede">Draft Koinos block producers under a salary cap of 100. Every day they score on how reliably they sign their share of blocks. One change a day, a weekly league and a Weekly Rival.</p>
+          <h1 id="fx-title">Draft your five</h1>
+          <p class="fx-links"><a href="#rules" id="fx-rules-link">Rules</a> · <a href="#curious" data-open="curious">League</a> · <a href="ruler.html">Ruler</a></p>
         </div>
         <div class="fx-clock" aria-live="polite">
           <span class="fx-clock-l" id="fx-kick-l">Next lineup lock</span>
@@ -112,33 +112,9 @@
       </div>
       <div class="fx-next" id="fx-next" role="status"></div>
     </section>
-
-    <nav class="fx-nav" aria-label="Fantasy sections">
-      <a href="#sheet" aria-current="true">My team</a>
-      <a href="#pool-box">Players</a>
-      <a href="#week-box">My week</a>
-      <a href="#rival-box">Rival</a>
-      <a href="#league-box">League</a>
-      <a href="#help">Help</a>
-    </nav>
-
     <p class="status" id="status" role="status">Loading…</p>
-    <p class="fx-remind" id="fx-testweeks" role="note"><b>Week 4 is a free test week.</b> Teams and points from Sun 15 Nov, 7 PM ET to Sun 22 Nov, 7 PM ET are practice, with no rewards or prizes; test play starts with the Tue 17 Nov round (first lock Mon 16 Nov, 6:55 PM ET). Week 5 (Sun 22 Nov, 7 PM ET to Sun 29 Nov, 7 PM ET) is free play too. Week 5 starts with no teams: pick yours before Sun 22 Nov, 6:55 PM ET. <b>Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET). Weeks 4 and 5 are free play.</b></p>
     <p class="fx-remind" id="fx-remind" role="status" hidden></p>
-    <p class="fx-tip" id="fx-save-early" role="note"><b>Save your team early.</b> Each day locks at 6:55 PM ET. The free Mana that sends your team resets at 7 PM ET and can run out late in the day, so save well before 6:55 PM ET; a wallet with its own Mana can always save.</p>
-
-    <section class="fx-steps" id="fx-guide" aria-labelledby="steps-h">
-      <div class="fx-steps-top"><h2 id="steps-h">New here? It takes a minute</h2><button type="button" class="fx-ghost-d" id="fx-guide-x">Got it, hide this</button></div>
-      <ol>
-        <li><b>Draft five producers</b><span>Tap <i>Add</i> on any five in the players list. Together they must cost 100 or less.</span></li>
-        <li><b>Name a captain</b><span>Tap <i>Make C</i>. Your captain's points count double.</span></li>
-        <li><b>Save before the lock</b><span>Teams lock 5 minutes before each day starts. Your team keeps playing until you change it.</span></li>
-        <li><b>Make one change a day</b><span>Swap one producer, or move the C. Most points by the end of the week wins.</span></li>
-      </ol>
-    </section>
-
-    <div class="fx-grid">
-      <section class="fx-sheet" id="sheet" aria-label="Your team">
+    <section class="fx-sheet" id="sheet" aria-label="Your team">
         <div class="fx-sheet-top">
           <div><h2 id="fx-for">Your team</h2></div>
           <span class="fx-lock" id="fx-lock"></span>
@@ -159,9 +135,49 @@
           <span class="fx-btns"><button type="button" class="fx-ghost" id="fx-reset">Undo changes</button><button type="button" class="fx-save" id="fx-save">Save team</button></span>
         </div>
       </section>
-
-      <aside class="fx-side">
-        <section class="card fx-stake" id="fantasy-stake" hidden></section>
+    <details class="fold" id="curious">
+      <summary>For the curious</summary>
+      <section class="fx-card fx-draft" id="pool-box" aria-labelledby="pool-h">
+        <div class="fx-head"><h2 id="pool-h">Players</h2><p id="pool-sub"></p></div>
+        <div class="fx-tools">
+          <label class="fx-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fx-q" type="search" placeholder="Find a producer" aria-label="Find a producer" autocomplete="off" spellcheck="false"></label>
+          <div class="fx-filter" role="group" aria-label="Sort the players">
+            <span class="fx-filter-l">Sort by</span>
+            <button type="button" data-sort="price" aria-pressed="true">Cost</button>
+            <button type="button" data-sort="form" aria-pressed="false">Form</button>
+            <button type="button" data-sort="value" aria-pressed="false">Best value</button>
+            <button type="button" data-sort="history" aria-pressed="false">History</button>
+          </div>
+        </div>
+        <details class="fx-legend" id="fx-legend" open>
+          <summary>What these numbers mean</summary>
+          <dl>
+            <div><dt>Cost</dt><dd>What the producer takes from your budget of 100. Set before the week starts and fixed all week.</dd></div>
+            <div><dt>Form</dt><dd>Its average day over the 7 days before the prices were made, measured by the VHP Ruler. <b>100 means it signed every block it was due.</b> Cost follows it: about 20 for a typical producer, up to 40, down to 8.</dd></div>
+            <div><dt>History</dt><dd>How many of those 7 days count. A day the producer was void (its VHP moved outside the ruler's band) is left out. Fewer than 7 shows <i>Little history</i>: its price is less certain.</dd></div>
+            <div><dt>Swings</dt><dd>A small producer is due only a few blocks a day, so one block more or less swings its score a lot (3 when due 2 is 150; none is 0). A big producer stays near 100 unless it misses blocks.</dd></div>
+          </dl>
+          <p class="fx-tip"><b>Picking tip:</b> above 100 is mostly luck and tends not to last. Below 90 usually means the node missed blocks. Cheap, steady producers near 100 are often the best value.</p>
+        </details>
+        <div class="fx-scroll">
+          <table class="fx-t fx-pool" id="fx-pool">
+            <thead><tr><th>Producer</th><th class="num">Cost</th><th class="fx-th-form">Form</th><th class="num hide-sm">History</th><th><span class="sr">Add or remove</span></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note" id="pool-note"></p>
+        <p class="fx-disclose" id="fx-disclose">Two producers in the pool are Knode's own nodes (marked <span class="fx-own">Knode</span>). They are drafted and scored like any other: their blocks come from the chain, not from us.</p>
+      </section>
+      <details class="fx-sub" id="fx-week-more">
+        <summary>My week, day by day</summary>
+        <section class="fx-card" id="week-box" aria-labelledby="week-h">
+          <div class="fx-head"><h2 id="week-h">My week</h2><p id="week-sub"></p></div>
+          <div class="fx-days" id="fx-days"></div>
+          <p class="note" id="week-note"></p>
+        </section>
+      </details>
+      <details class="fx-sub" id="fx-rival-more">
+        <summary>Weekly Rival</summary>
         <section class="fx-card fx-match-card" id="rival-box" aria-labelledby="rival-h">
           <div class="fx-head"><h2 id="rival-h">Weekly Rival</h2><p>One rival a week, just for bragging rights</p></div>
           <div id="fx-match"></div>
@@ -174,91 +190,62 @@
           </div>
           <p class="note" id="rival-note"></p>
         </section>
-
-        <section class="fx-card" id="week-box" aria-labelledby="week-h">
-          <div class="fx-head"><h2 id="week-h">My week</h2><p id="week-sub"></p></div>
-          <div class="fx-days" id="fx-days"></div>
-          <p class="note" id="week-note"></p>
-        </section>
-      </aside>
-    </div>
-
-    <section class="fx-card fx-draft" id="pool-box" aria-labelledby="pool-h">
-      <div class="fx-head"><h2 id="pool-h">Players</h2><p id="pool-sub"></p></div>
-      <div class="fx-tools">
-        <label class="fx-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><input id="fx-q" type="search" placeholder="Find a producer" aria-label="Find a producer" autocomplete="off" spellcheck="false"></label>
-        <div class="fx-filter" role="group" aria-label="Sort the players">
-          <span class="fx-filter-l">Sort by</span>
-          <button type="button" data-sort="price" aria-pressed="true">Cost</button>
-          <button type="button" data-sort="form" aria-pressed="false">Form</button>
-          <button type="button" data-sort="value" aria-pressed="false">Best value</button>
-          <button type="button" data-sort="history" aria-pressed="false">History</button>
-        </div>
-      </div>
-      <details class="fx-legend" id="fx-legend" open>
-        <summary>What these numbers mean</summary>
-        <dl>
-          <div><dt>Cost</dt><dd>What the producer takes from your budget of 100. Set before the week starts and fixed all week.</dd></div>
-          <div><dt>Form</dt><dd>Its average day over the 7 days before the prices were made, measured by the VHP Ruler. <b>100 means it signed every block it was due.</b> Cost follows it: about 20 for a typical producer, up to 40, down to 8.</dd></div>
-          <div><dt>History</dt><dd>How many of those 7 days count. A day the producer was void (its VHP moved outside the ruler's band) is left out. Fewer than 7 shows <i>Little history</i>: its price is less certain.</dd></div>
-          <div><dt>Swings</dt><dd>A small producer is due only a few blocks a day, so one block more or less swings its score a lot (3 when due 2 is 150; none is 0). A big producer stays near 100 unless it misses blocks.</dd></div>
-        </dl>
-        <p class="fx-tip"><b>Picking tip:</b> above 100 is mostly luck and tends not to last. Below 90 usually means the node missed blocks. Cheap, steady producers near 100 are often the best value.</p>
       </details>
-      <div class="fx-scroll">
-        <table class="fx-t fx-pool" id="fx-pool">
-          <thead><tr><th>Producer</th><th class="num">Cost</th><th class="fx-th-form">Form</th><th class="num hide-sm">History</th><th><span class="sr">Add or remove</span></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="note" id="pool-note"></p>
-      <p class="fx-disclose" id="fx-disclose">Two producers in the pool are Knode's own nodes (marked <span class="fx-own">Knode</span>). They are drafted and scored like any other: their blocks come from the chain, not from us.</p>
-    </section>
-
-    <div class="fx-cols">
-      <section class="fx-card" id="league-box" aria-labelledby="league-h">
-        <div class="fx-head"><h2 id="league-h">League</h2><p id="league-sub">Staked and Free play boards: Today, This week, Last week and All time</p></div>
-        <div id="fx-board"></div>
-        <p class="note" id="league-note">Staked: wallets with at least 1 VHP staked in Fantasy that week; the top 30% share Fantasy's part of the vault's weekly reward. <b>Weeks 4 and 5 (to Sun 29 Nov, 7 PM ET) are free play: everyone plays on the Free play board. Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET).</b> Free play: everyone else, ranked on their own board. <b id="fx-free-prize">The Free play board pays no VHP for now.</b></p>
-      </section>
-
-    </div>
-
-    <section class="fx-help" id="help" aria-labelledby="help-h">
-      <div class="fx-head"><h2 id="help-h">Questions</h2><button type="button" class="fx-link" id="fx-guide-show">Show the quick guide again</button></div>
-      <div class="fx-faq">
-        <details><summary>How often can I change my team, or my captain?</summary><p>Once a day. Your one change is either swapping one producer for another, or moving the C to a different producer. So you can move your captain every day, as long as that's your only change that day. A producer you swap in can become captain in the same change. The team sheet shows how many changes you have left.</p></details>
-        <details><summary>What happens if I don't save anything?</summary><p>Your last saved team keeps playing, every day, until you change it. You never have to log in daily.</p></details>
-        <details><summary>When does my team lock?</summary><p>5 minutes before each day starts. The countdown at the top shows the next lock. Live game days are UTC days: they start at 5:00pm Pacific (4:00pm in winter).</p></details>
-        <details><summary>Can I set my team for later days now?</summary><p>Yes. Use the day buttons on the team sheet to plan any day up to a week ahead. You can still change a planned day until its own lock.</p></details>
-        <details><summary>Which days count?</summary><p>Monday to Saturday: 6 play days. <b>Sunday is review day: results are checked and paid from Monday.</b> On Sunday your Saturday team plays a <b>fun round</b>: it counts on the Today and All time boards, never the week. It's also the time to line up next week's team (its prices are out from Saturday). The week goes final from Monday 00:00 UTC, once two checks an hour apart agree.</p></details>
-        <details><summary>What's a new week?</summary><p>Each week starts on Monday with new prices, so Monday's team can be any five that fit the budget, with no limit on changes. Prices come out two days before.</p></details>
-        <details><summary>How many players can I challenge?</summary><p>One rival a week. You can change who until the week's first lock. Any number of players can challenge you. A match counts when you are both staked in Fantasy that week and both score. Whoever scores more that week wins. Rival is for bragging rights: no prize.</p></details>
-        <details><summary>Why does a producer show 150, or 0?</summary><p>Points compare the blocks it signed with the blocks it was due. A small producer is due only a few blocks, so luck moves it a lot: 3 signed when 2 were due is 150, and none is 0. Your team scores at most 150 from any producer in a day.</p></details>
-        <details><summary>How do I win?</summary><p>Your week's points are the total of your five producers' day scores, with the captain counted twice. Fantasy is a staked game from week 6 (Sun 29 Nov, 7 PM ET; weeks 4 and 5 are free play, and a stake made now counts from week 6): the top 30% of Fantasy stakers each week share Fantasy's part of the vault's weekly reward.</p></details>
-      </div>
-    </section>
-
-    <details class="fx-how" id="how">
-      <summary>Full rules</summary>
-      <div class="explain" id="how-text">
-        <p><b>The week.</b> Teams play Monday to Saturday, 6 days. <b>Sunday is review day: results are checked and paid from Monday.</b> Sunday is a fun round: your Saturday team plays on and scores on Today and All time only, not the week (no picks needed). It's the time to line up next week's team. The week goes final from Monday 00:00 UTC, once the stakes are read and two checks an hour apart agree.</p>
-        <p><b>Your team.</b> Five different producers from the week's price list, within a budget of 100 (the salary cap). The first one is your captain and scores double. Save a team for the next day; it carries on until you change it.</p>
-        <p><b>A fresh start every week.</b> New prices come out before each week, and Monday's team can be any team that fits them. Last week's team carries into Monday only if it still fits (all five on the list, within 100).</p>
-        <p><b>Then one change a day.</b> From one day to the next you may swap one producer, or move the captain's armband. The producer you bring in can also take the armband as part of that same swap, from whichever producer had it. A team with more changes, over the budget, or with a producer not on the list is ignored, and yesterday's team plays.</p>
-        <p><b>Points.</b> Koinos picks who signs each block in proportion to VHP, so every producer has a fair share of blocks. Each day a producer scores</p>
-        <p><span class="formula">100 × blocks it signed ÷ blocks it was expected to sign</span></p>
-        <p>(at most 150), both measured by the <a href="ruler.html">VHP Ruler</a> for that UTC day: the expected blocks follow the producer's VHP block by block. 100 means it signed exactly its share; a node that misses blocks, or is offline, scores less, and that counts in its form. <b>Void:</b> if a producer's VHP moves outside the ruler's band for the day (down more than 12% or up more than 50%), it scores 0 that day only, and the day is left out of its form. Your week is the sum of your 6 play days; a day before you join scores 0.</p>
-        <p><b>Prices.</b> The price list comes out Saturday 00:00 UTC (Friday evening in the Americas) for the next week, two days before it starts, and never changes after that. The list holds every producer that passes the VHP Ruler's form gate (it signed at least 80% of its share over the last 14 days, or signs steadily). A producer's price follows its form over the 7 days from the Friday to the Thursday before: 20 for the middle of the pool, up to 40 for the most reliable, down to 8 for the least. Its fingerprint (sha256) is checked on every run, so nobody can change it later.</p>
-        <p><b>Plan ahead.</b> Once the prices are out you can line up your team, and a change for any later day of the week, all at once. A planned day can still be changed until its own lock, so planning early never ties your hands. If changing an earlier day would make a planned one break the one-change rule, the page tells you.</p>
-        <p><b>Locks.</b> The Picks contract refuses a team 5 minutes before its UTC day starts, so nobody can pick knowing the blocks. Picking late gives no edge on prices (they're fixed) or on VHP moves (each producer's expected share follows its VHP block by block).</p>
-        <p><b>Prizes.</b> Weeks 4 and 5 (to Sun 29 Nov, 7 PM ET) are free play: everyone plays on the Free play board. Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET). From week 6, wallets with at least 1 VHP staked in Fantasy that week play on the Staked board: the Fantasy share of the Knode Games vault's weekly reward goes to the top 30% of them with at least 1 point. Everyone else plays on the Free play board, ranked on its own. <b>The Free play board pays no VHP for now.</b> The week goes final from Monday 00:00 UTC, once two checks on two nodes agree.</p>
-        <p><b>Weekly Rival.</b> Challenge one player for the coming week. Whoever scores more that week wins. Your record counts the challenges you made and those you received. A match counts only if both of you are staked in Fantasy and both score, so nobody piles up wins against throwaway wallets.</p>
-        <p><b>All time.</b> Every finished week adds your points to the all-time table: total, weeks played and best week. Bragging rights only; prizes are weekly.</p>
-        <p><b>Picks are public.</b> Teams are saved on the Koinos chain, so anyone can see them before the lock. That is how it works for now; hidden-until-lock picks may come later.</p>
-        <p><b>Fair checks.</b> Days are scored from irreversible blocks that match on two independent nodes, with the VHP Ruler's own code, and every card is rebuilt and checked before results are published. The page and the recorder run the same rules file (games/fantasy/math.js).</p>
-      </div>
+      <details class="fx-sub" id="fx-league-more">
+        <summary>League</summary>
+        <section class="fx-card" id="league-box" aria-labelledby="league-h">
+          <div class="fx-head"><h2 id="league-h">League</h2><p id="league-sub">Staked and Free play boards: Today, This week, Last week and All time</p></div>
+          <div id="fx-board"></div>
+          <p class="note" id="league-note">Staked: wallets with at least 1 VHP staked in Fantasy that week; the top 30% share Fantasy's part of the vault's weekly reward. <b>Weeks 4 and 5 (to Sun 29 Nov, 7 PM ET) are free play: everyone plays on the Free play board. Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET).</b> Free play: everyone else, ranked on their own board. <b id="fx-free-prize">The Free play board pays no VHP for now.</b></p>
+        </section>
+      </details>
     </details>
+    <details class="fold" id="rules">
+      <summary>Rules and how points work</summary>
+      <p class="fx-rules-intro">Draft Koinos block producers under a salary cap of 100. Every day they score on how reliably they sign their share of blocks. One change a day, a weekly league and a Weekly Rival.</p>
+      <p class="fx-remind" id="fx-testweeks" role="note"><b>Week 4 is a free test week.</b> Teams and points from Sun 15 Nov, 7 PM ET to Sun 22 Nov, 7 PM ET are practice, with no rewards or prizes; test play starts with the Tue 17 Nov round (first lock Mon 16 Nov, 6:55 PM ET). Week 5 (Sun 22 Nov, 7 PM ET to Sun 29 Nov, 7 PM ET) is free play too. Week 5 starts with no teams: pick yours before Sun 22 Nov, 6:55 PM ET. <b>Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET). Weeks 4 and 5 are free play.</b></p>
+      <p class="fx-tip" id="fx-save-early" role="note"><b>Save your team early.</b> Each day locks at 6:55 PM ET. The free Mana that sends your team resets at 7 PM ET and can run out late in the day, so save well before 6:55 PM ET; a wallet with its own Mana can always save.</p>
+      <section class="fx-steps" id="fx-guide" aria-labelledby="steps-h">
+        <div class="fx-steps-top"><h2 id="steps-h">How to play</h2></div>
+        <ol>
+          <li><b>Draft five producers</b><span>Tap <i>Add</i> on any five in the players list. Together they must cost 100 or less.</span></li>
+          <li><b>Name a captain</b><span>Tap <i>Make C</i>. Your captain's points count double.</span></li>
+          <li><b>Save before the lock</b><span>Teams lock 5 minutes before each day starts. Your team keeps playing until you change it.</span></li>
+          <li><b>Make one change a day</b><span>Swap one producer, or move the C. Most points by the end of the week wins.</span></li>
+        </ol>
+      </section>
+      <h3>Questions</h3>
+      <div class="fx-faq">
+          <details><summary>How often can I change my team, or my captain?</summary><p>Once a day. Your one change is either swapping one producer for another, or moving the C to a different producer. So you can move your captain every day, as long as that's your only change that day. A producer you swap in can become captain in the same change. The team sheet shows how many changes you have left.</p></details>
+          <details><summary>What happens if I don't save anything?</summary><p>Your last saved team keeps playing, every day, until you change it. You never have to log in daily.</p></details>
+          <details><summary>When does my team lock?</summary><p>5 minutes before each day starts. The countdown at the top shows the next lock. Live game days are UTC days: they start at 5:00pm Pacific (4:00pm in winter).</p></details>
+          <details><summary>Can I set my team for later days now?</summary><p>Yes. Use the day buttons on the team sheet to plan any day up to a week ahead. You can still change a planned day until its own lock.</p></details>
+          <details><summary>Which days count?</summary><p>Monday to Saturday: 6 play days. <b>Sunday is review day: results are checked and paid from Monday.</b> On Sunday your Saturday team plays a <b>fun round</b>: it counts on the Today and All time boards, never the week. It's also the time to line up next week's team (its prices are out from Saturday). The week goes final from Monday 00:00 UTC, once two checks an hour apart agree.</p></details>
+          <details><summary>What's a new week?</summary><p>Each week starts on Monday with new prices, so Monday's team can be any five that fit the budget, with no limit on changes. Prices come out two days before.</p></details>
+          <details><summary>How many players can I challenge?</summary><p>One rival a week. You can change who until the week's first lock. Any number of players can challenge you. A match counts when you are both staked in Fantasy that week and both score. Whoever scores more that week wins. Rival is for bragging rights: no prize.</p></details>
+          <details><summary>Why does a producer show 150, or 0?</summary><p>Points compare the blocks it signed with the blocks it was due. A small producer is due only a few blocks, so luck moves it a lot: 3 signed when 2 were due is 150, and none is 0. Your team scores at most 150 from any producer in a day.</p></details>
+          <details><summary>How do I win?</summary><p>Your week's points are the total of your five producers' day scores, with the captain counted twice. Fantasy is a staked game from week 6 (Sun 29 Nov, 7 PM ET; weeks 4 and 5 are free play, and a stake made now counts from week 6): the top 30% of Fantasy stakers each week share Fantasy's part of the vault's weekly reward.</p></details>
+        </div>
+      <h3>Full rules</h3>
+  <div class="explain" id="how-text">
+          <p><b>The week.</b> Teams play Monday to Saturday, 6 days. <b>Sunday is review day: results are checked and paid from Monday.</b> Sunday is a fun round: your Saturday team plays on and scores on Today and All time only, not the week (no picks needed). It's the time to line up next week's team. The week goes final from Monday 00:00 UTC, once the stakes are read and two checks an hour apart agree.</p>
+          <p><b>Your team.</b> Five different producers from the week's price list, within a budget of 100 (the salary cap). The first one is your captain and scores double. Save a team for the next day; it carries on until you change it.</p>
+          <p><b>A fresh start every week.</b> New prices come out before each week, and Monday's team can be any team that fits them. Last week's team carries into Monday only if it still fits (all five on the list, within 100).</p>
+          <p><b>Then one change a day.</b> From one day to the next you may swap one producer, or move the captain's armband. The producer you bring in can also take the armband as part of that same swap, from whichever producer had it. A team with more changes, over the budget, or with a producer not on the list is ignored, and yesterday's team plays.</p>
+          <p><b>Points.</b> Koinos picks who signs each block in proportion to VHP, so every producer has a fair share of blocks. Each day a producer scores</p>
+          <p><span class="formula">100 × blocks it signed ÷ blocks it was expected to sign</span></p>
+          <p>(at most 150), both measured by the <a href="ruler.html">VHP Ruler</a> for that UTC day: the expected blocks follow the producer's VHP block by block. 100 means it signed exactly its share; a node that misses blocks, or is offline, scores less, and that counts in its form. <b>Void:</b> if a producer's VHP moves outside the ruler's band for the day (down more than 12% or up more than 50%), it scores 0 that day only, and the day is left out of its form. Your week is the sum of your 6 play days; a day before you join scores 0.</p>
+          <p><b>Prices.</b> The price list comes out Saturday 00:00 UTC (Friday evening in the Americas) for the next week, two days before it starts, and never changes after that. The list holds every producer that passes the VHP Ruler's form gate (it signed at least 80% of its share over the last 14 days, or signs steadily). A producer's price follows its form over the 7 days from the Friday to the Thursday before: 20 for the middle of the pool, up to 40 for the most reliable, down to 8 for the least. Its fingerprint (sha256) is checked on every run, so nobody can change it later.</p>
+          <p><b>Plan ahead.</b> Once the prices are out you can line up your team, and a change for any later day of the week, all at once. A planned day can still be changed until its own lock, so planning early never ties your hands. If changing an earlier day would make a planned one break the one-change rule, the page tells you.</p>
+          <p><b>Locks.</b> The Picks contract refuses a team 5 minutes before its UTC day starts, so nobody can pick knowing the blocks. Picking late gives no edge on prices (they're fixed) or on VHP moves (each producer's expected share follows its VHP block by block).</p>
+          <p><b>Prizes.</b> Weeks 4 and 5 (to Sun 29 Nov, 7 PM ET) are free play: everyone plays on the Free play board. Stake now: it counts from week 6 (Sun 29 Nov, 7 PM ET). From week 6, wallets with at least 1 VHP staked in Fantasy that week play on the Staked board: the Fantasy share of the Knode Games vault's weekly reward goes to the top 30% of them with at least 1 point. Everyone else plays on the Free play board, ranked on its own. <b>The Free play board pays no VHP for now.</b> The week goes final from Monday 00:00 UTC, once two checks on two nodes agree.</p>
+          <p><b>Weekly Rival.</b> Challenge one player for the coming week. Whoever scores more that week wins. Your record counts the challenges you made and those you received. A match counts only if both of you are staked in Fantasy and both score, so nobody piles up wins against throwaway wallets.</p>
+          <p><b>All time.</b> Every finished week adds your points to the all-time table: total, weeks played and best week. Bragging rights only; prizes are weekly.</p>
+          <p><b>Picks are public.</b> Teams are saved on the Koinos chain, so anyone can see them before the lock. That is how it works for now; hidden-until-lock picks may come later.</p>
+          <p><b>Fair checks.</b> Days are scored from irreversible blocks that match on two independent nodes, with the VHP Ruler's own code, and every card is rebuilt and checked before results are published. The page and the recorder run the same rules file (games/fantasy/math.js).</p>
+        </div>
+    </details>
+    <p class="fx-stake-line" id="fx-stake-line" hidden><a href="stake.html#g4">Stake in Fantasy Producers →</a></p>
   </main>
 
   <nav class="tabbar" aria-label="Main">

@@ -37,6 +37,8 @@
       url: RAW + b.data,
       columns: cols.map((c) => ({ key: c.key, label: c.label, wide: c.wide === true })),
       unit: typeof b.unit === "string" && b.unit.length <= 12 ? b.unit : "pts",
+      // `soon`: a line shown instead of a load error while the game's data file doesn't exist yet (remove it once the game is live).
+      soon: typeof b.soon === "string" && b.soon.length <= 100 ? b.soon : "",
       unranked: typeof b.unranked === "string" && b.unranked.length <= 160 ? b.unranked : "",
       // `scale`: the recorder stores the points column in whole hundredths (Block X: pts 179 = 1.79 points). Only 100 is
       // allowed; the points column (the first) is divided by it and shown with 2 decimals. Count columns stay as they are.
@@ -107,7 +109,9 @@
 
   function buttons() {
     host.replaceChildren(...games.map((g) => {
-      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), text: g.name, class: g.id !== "questions" && !g.cfg ? "soon" : null });
+      // Icon from games.json (D-748), drawn as text and hidden from screen readers; the name stays the button label.
+      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), class: g.id !== "questions" && !g.cfg ? "soon" : null },
+        g.icon ? el("span", { class: "mi", "aria-hidden": "true", text: g.icon }) : null, g.name);
       b.addEventListener("click", () => { if (location.hash !== `#leaderboard/${g.id}`) location.hash = g.id === "questions" ? "#leaderboard" : `#leaderboard/${g.id}`; else show(g.id); });
       return b;
     }));
@@ -164,7 +168,7 @@
     panel.replaceChildren(b.note, b.box);
     b.lb.setMe(me());
     try { const d = await fetchJson(cfg.url); if (d && d.v === 1) { b.data = d; b.lb.set(scaled(d, cfg)); } }
-    catch { if (!b.data) b.note.textContent = "Couldn't load this leaderboard right now. Trying again when you come back to it."; }
+    catch { if (!b.data) b.note.textContent = cfg.soon || "Couldn't load this leaderboard right now. Trying again when you come back to it."; }
   }
 
   function route() {
@@ -172,14 +176,16 @@
     if (view === "leaderboard") show(sub || "questions");
   }
 
+  /** A game's icon from games.json (D-748): a short emoji, checked; "" when missing or not an emoji. */
+  const iconOf = (g) => (g && typeof g.icon === "string" && g.icon.length >= 1 && g.icon.length <= 8 && !/[<>&"'A-Za-z0-9\s]/.test(g.icon) ? g.icon : "");
   async function load() {
     try {
       const list = (await fetchJson("games.json")).games;
       // Every live or preview game, in the games list's order; a game with no board yet is greyed, not hidden.
       const extra = (Array.isArray(list) ? list : []).filter((g) => g && (g.status === "live" || g.status === "preview") && g.id !== "questions"
         && typeof g.id === "string" && /^[a-z0-9-]{1,24}$/.test(g.id) && typeof g.name === "string" && g.name.length <= 40)
-        .map((g) => ({ id: g.id, name: g.name, href: typeof g.href === "string" ? g.href : "", cfg: g.status === "live" ? boardOf(g) : null }));
-      games = [games[0], ...extra];
+        .map((g) => ({ id: g.id, name: g.name, icon: iconOf(g), href: typeof g.href === "string" ? g.href : "", cfg: g.status === "live" ? boardOf(g) : null }));
+      games = [{ ...games[0], icon: iconOf((Array.isArray(list) ? list : []).find((g) => g && g.id === "questions")) }, ...extra];
     } catch { /* only the question game */ }
     buttons();
     route();
