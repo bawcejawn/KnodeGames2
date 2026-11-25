@@ -162,3 +162,12 @@ test("the All games \"Staked\" tag follows the vault's list_games, the same list
   // games.json's kinds still drive the Rules text
   assert.ok(games.every((g) => Array.isArray(g.kinds)));
 });
+
+test("the Leaderboards picker has Knode Games VS and More or Fewer, with their 'soon' lines until data exists", () => {
+  const vs = games.find((g) => g.id === "vs"), ou = games.find((g) => g.id === "overunder");
+  assert.equal(vs.board.data, "games-data/vs/board.json");
+  assert.equal(vs.board.soon, "Producer lists from Mon 30 Nov (picks open Fri 27, 7 PM ET).");
+  assert.equal(ou.board.soon, "First results Mon 30 Nov.");
+  assert.match(read("web/leaders.js"), /cfg\.soon \|\| "Couldn't load this leaderboard/);
+  assert.match(read("web/leaders.js"), /soon: typeof b\.soon === "string" && b\.soon\.length <= 100 \? b\.soon : "",/);
+});

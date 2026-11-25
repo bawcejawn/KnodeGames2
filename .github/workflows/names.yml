@@ -42,13 +42,14 @@ jobs:
           node-version: 22
       - run: npm ci --no-audit --no-fund --ignore-scripts
       # The current names.json and the producer evidence (public branches, read without a token). Plain JSON files only.
-      - name: Take names.json, the race cards and the recent blocks
+      # games-data: every game's board.json, as board-<game>.json, so its players' @names are looked up too (M-756).
+      - name: Take names.json, the race cards, the recent blocks and every game's board
         run: |
           set -euo pipefail
           url="https://github.com/${GITHUB_REPOSITORY}.git"
           mkdir -p "$RUNNER_TEMP/prod" "$RUNNER_TEMP/out" "$RUNNER_TEMP/result"
           : > "$RUNNER_TEMP/base"
-          for b in names-data race-data blocks-data; do
+          for b in names-data race-data blocks-data games-data; do
             rc=0; git ls-remote --exit-code --heads "$url" "$b" >/dev/null 2>&1 || rc=$?
             if [ "$rc" = 2 ]; then echo "No $b branch yet."; continue; fi
             if [ "$rc" != 0 ]; then echo "::error::Couldn't read the $b branch (git ls-remote exit $rc)"; exit 1; fi
@@ -58,6 +59,7 @@ jobs:
               if [ "$b" = names-data ] && [ "$f" = names.json ]; then git show "FETCH_HEAD:$f" > "$RUNNER_TEMP/names.json"; fi
               if [ "$b" = race-data ] && [[ "$f" =~ ^(W[0-9]{3}|board)\.json$ ]]; then git show "FETCH_HEAD:$f" > "$RUNNER_TEMP/prod/$f"; fi
               if [ "$b" = blocks-data ] && [ "$f" = recent-blocks.json ]; then git show "FETCH_HEAD:$f" > "$RUNNER_TEMP/prod/$f"; fi
+              if [ "$b" = games-data ] && [[ "$f" =~ ^([a-z0-9]+)/board\.json$ ]]; then git show "FETCH_HEAD:$f" > "$RUNNER_TEMP/prod/board-${BASH_REMATCH[1]}.json"; fi
             done
           done
       - name: Refresh the @names and pool names

@@ -154,3 +154,9 @@ test("each round's Picks round is the contract's (round_size 30 min, offset 0): 
   assert.equal(rs.length, 3);
   for (const r of rs) assert.equal(r.pickRound, (r.locksAt + R.LEAD) / R.SLOT);
 });
+
+test("the line does not move with the wider window (D-732): the card's 6-hour mark depends only on the start", () => {
+  // Mon 23 Nov 22:30 UTC (5:30 PM ET): the last 6-hour mark at least 4 h 3 min before is 18:00 UTC, as before the change.
+  assert.equal(markOf(Date.UTC(2026, 10, 23, 22, 30)), Date.UTC(2026, 10, 23, 18, 0));
+  assert.equal(markOf(Date.UTC(2026, 10, 24, 1, 30)), Date.UTC(2026, 10, 23, 18, 0));
+});

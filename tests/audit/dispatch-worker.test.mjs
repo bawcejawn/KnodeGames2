@@ -49,8 +49,8 @@ test("kg-dispatch: :07 and :37 start race-samples.yml when it hasn't run in 30 m
   assert.equal(calls[1].url, "https://api.github.com/repos/bawcejawn/KnodeGames2/actions/workflows/race-samples.yml/dispatches");
   const busy = gh(1);
   const out = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, busy.f, NOW);
-  assert.deepEqual(out.map((x) => x.dispatched), [false, false, false, false, false, false]);
-  assert.equal(busy.calls.length, 6, "all ran recently: six lists, nothing started");
+  assert.deepEqual(out.map((x) => x.dispatched), [false, false, false, false, false, false, false]);
+  assert.equal(busy.calls.length, 7, "all ran recently: seven lists, nothing started");
 });
 
 test("kg-dispatch: :07 and :37 start kit-games.yml (Fantasy) only when it hasn't run in 25 minutes (D-355: runs at :27 and :57)", async () => {
@@ -77,7 +77,7 @@ test("kg-dispatch: an error on one job still runs the other, then the run fails 
   };
   await assert.rejects(M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW, (l) => lines.push(l)), /race-samples\.yml: GitHub answered 502 listing/);
   assert.deepEqual(lines, ["kg-dispatch: race-samples.yml: ERROR race-samples.yml: GitHub answered 502 listing runs", `kg-dispatch: kit-games.yml: no run since 2026-11-14T14:16:00Z: started one`,
-    "kg-dispatch: bot.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: names.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: golf.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: lastnode.yml: no run since 2026-11-14T14:31:00Z: started one"]);
+    "kg-dispatch: bot.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: names.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: golf.yml: no run since 2026-11-14T13:51:00Z: started one", "kg-dispatch: lastnode.yml: no run since 2026-11-14T14:31:00Z: started one", "kg-dispatch: watch.yml: no run since 2026-11-14T14:16:00Z: started one"]);
 });
 
 test("kg-dispatch: a run this hour (GitHub's timer, by hand, or ours) -> nothing started", async () => {
@@ -99,7 +99,7 @@ test("kg-dispatch: only its jobs; an unknown trigger, no token, a GitHub error o
   await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, bad, NOW), /workflow_runs/);
   await assert.rejects(M.runJob("41 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, gh(0, { dispatchStatus: 403 }).f, NOW), /403 to the dispatch/);
   assert.deepEqual(Object.keys(M.JOBS), ["22 * * * *", "41 * * * *", "51 * * * *", "7,37 * * * *"], "four triggers: the account's 5th stays free (J5-2)");
-  assert.deepEqual(Object.values(M.JOBS).flat().map((j) => j.workflow), ["vhp-ruler.yml", "stats.yml", "combo.yml", "lastnode.yml", "race.yml", "games.yml", "race-samples.yml", "kit-games.yml", "bot.yml", "names.yml", "golf.yml", "lastnode.yml"]);
+  assert.deepEqual(Object.values(M.JOBS).flat().map((j) => j.workflow), ["vhp-ruler.yml", "stats.yml", "combo.yml", "lastnode.yml", "race.yml", "games.yml", "race-samples.yml", "kit-games.yml", "bot.yml", "names.yml", "golf.yml", "lastnode.yml", "watch.yml"]);
 });
 
 test("kg-dispatch: no web endpoint, and the token is never in the file", async () => {
@@ -176,4 +176,16 @@ test("kg-dispatch: a cancelled run in the window doesn't count as ran; any other
     const [b] = await M.runJob("51 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, list([{ conclusion: "cancelled" }, { conclusion: c }]), NOW);
     assert.equal(b.dispatched, false, `a ${c ?? "running"} run counts`);
   }
+});
+
+// Wed 25 Nov: GitHub's timer started watch.yml 3 times in 29 hours; the Worker starts it at :07 and :37.
+test("kg-dispatch: the node watchdog (watch.yml) is started at :07 and :37 (window 25)", async () => {
+  assert.ok(M.JOBS["7,37 * * * *"].some((j) => j.workflow === "watch.yml" && j.windowMin === 25 && !j.ownOnly));
+  const { f, calls } = gh(0);
+  const out = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, f, NOW);
+  assert.equal(out.find((r) => r.workflow === "watch.yml").dispatched, true);
+  assert.ok(calls.some((c) => c.method === "POST" && c.url.endsWith("/watch.yml/dispatches")));
+  const busy = gh(1);
+  const out2 = await M.runJob("7,37 * * * *", { GH_DISPATCH_TOKEN: TOKEN }, busy.f, NOW);
+  assert.equal(out2.find((r) => r.workflow === "watch.yml").dispatched, false, "a run in the last 25 minutes: none started");
 });

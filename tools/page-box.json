@@ -9,7 +9,7 @@
   "race.html": ["race", "Pick the producer you think finishes first, then watch the race run live on real blocks. Free to play."],
   "blockx.html": ["blockx", "Pick which producer signs the next milestone block. Free to play. Correct calls climb the weekly board."],
   "bracket.html": ["bracket", "Pick the winner of every matchup in a weekly knockout. Free to play. The more you get right, the higher you climb."],
-  "golf.html": ["golf", "Block Golf: your places in the other games become your score. Nothing to pick; the lowest score wins."],
+  "golf.html": ["golf", "Your places in other games become your Block Golf score. Free to play. Play the other games and your score builds here."],
   "fantasy.html": ["fantasy", "Fantasy Producers: draft five producers under a salary cap and name a captain, then send your team."],
   "lastnode.html": ["lastnode", "Last Node Standing: pick a node. Each hour the unluckiest node is knocked out."],
   "overunder.html": ["overunder", "Free test game, no prizes yet. Pick a producer and call whether it signs more or fewer blocks than the number shown. A new game starts every 30 minutes."],

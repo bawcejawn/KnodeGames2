@@ -114,6 +114,8 @@
 /* Leaderboards and Results: a game with no board or results yet is greyed, still tappable (it says so and links to its page). */
 .lb-games button.soon { opacity: .6; border-style: dashed; }
 .lb-games button.soon[aria-pressed="true"] { opacity: 1; }
+/* Results and Leaderboards pickers: the game's games.json icon before its name (Speed, D-748). */
+.lb-games button .mi { width: 20px; height: 20px; margin-right: 6px; vertical-align: -4px; font-size: 16px; }
 /* ── Icon badge, one look everywhere (D-871): the emoji in a rounded badge in the game's colour, with a light inner ring
    and a soft shadow so it reads in light and dark. Sizes: Home tiles 58, All games cards 52, More sheet 36, drop-down 24. ── */
 .gi { display: inline-grid; place-items: center; flex: none; line-height: 1; color: #fff;

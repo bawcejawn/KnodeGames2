@@ -92,12 +92,11 @@
 
 
   <main class="gf">
-    <aside class="page-box" data-game="golf"><p>Block Golf: your places in the other games become your score. Nothing to pick; the lowest score wins.</p></aside>
+    <aside class="page-box" data-game="golf"><p>Your places in other games become your Block Golf score. Free to play. Play the other games and your score builds here.</p></aside>
     <div class="gf-intro">
       <div>
-        <p class="gf-kicker">Knode Games · the whole platform is the course</p>
         <h1>Block Golf</h1>
-        <p class="gf-lede">Every Knode Games game is a hole. Play the games as usual: your place on each game's weekly leaderboard turns into strokes. Lowest score of the week wins.</p>
+        <p class="gf-links"><a href="#rules" id="rules-link">Rules</a> · <a href="index.html#leaderboard/golf">Leaderboard</a> · <a href="ruler.html">Ruler</a></p>
       </div>
       <div class="gf-total" id="total" aria-live="polite">
         <span class="gf-total-label" id="total-label">Your week</span>
@@ -106,8 +105,6 @@
       </div>
     </div>
     <p class="status" id="status" role="status">Loading the course…</p>
-    <p class="gf-practice" id="practice"><b>Block Golf is free to play.</b> No staking and no prizes: just your scorecard and the weekly leaderboard. If you have VHP staked in Block Golf from before, you can withdraw it any time below.</p>
-
     <section class="gf-card" id="card-box" aria-labelledby="card-title">
       <div class="gf-card-head">
         <div>
@@ -133,30 +130,32 @@
       <pre class="gf-share" id="share-text" hidden></pre>
     </section>
 
-    <section class="gf-todo" id="todo-box" hidden aria-labelledby="todo-title">
-      <h2 id="todo-title">Holes you haven't played this week</h2>
-      <p class="gf-sub">A game you don't play is a lost ball (7 strokes). Playing a game never scores worse than skipping it, and the better you do, the more it's worth.</p>
-      <div class="gf-todo-list" id="todo"></div>
-    </section>
+    <p class="gf-links gf-links-row"><a class="btn ghost" href="index.html#leaderboard/golf">Leaderboard →</a></p>
 
-    <section class="gf-todo" id="clubhouse" hidden aria-labelledby="club-title">
-      <h2 id="club-title">Your Clubhouse</h2>
-      <p class="gf-sub" id="club-sub">Each Knode Games feature you use is earned once and kept for good. The more different features you've used, the better your Clubhouse hole.</p>
-      <div class="gf-todo-list gf-club" id="club-list"></div>
-    </section>
+    <!-- GAME-PAGE-STANDARD (M-607): the scorecard is the play area; these two are details, one closed row. -->
+    <details class="fold" id="curious">
+      <summary>For the curious: holes to play, your Clubhouse</summary>
+      <section class="gf-todo" id="todo-box" hidden aria-labelledby="todo-title">
+        <h2 id="todo-title">Holes you haven't played this week</h2>
+        <p class="gf-sub">A game you don't play is a lost ball (7 strokes). Playing a game never scores worse than skipping it, and the better you do, the more it's worth.</p>
+        <div class="gf-todo-list" id="todo"></div>
+      </section>
 
-    <section class="gf-board" id="board-box" aria-labelledby="board-title">
-      <h2 id="board-title">Leaderboard</h2>
-      <div id="gf-board"></div>
-      <p class="note">Points = 7 for each counted hole, minus your strokes. Sunday is review day: results are checked and paid from Monday. A week goes final from Monday 00:00 UTC, once every game's results are final and two checks an hour apart agree.</p>
-    </section>
+      <section class="gf-todo" id="clubhouse" hidden aria-labelledby="club-title">
+        <h2 id="club-title">Your Clubhouse</h2>
+        <p class="gf-sub" id="club-sub">Each Knode Games feature you use is earned once and kept for good. The more different features you've used, the better your Clubhouse hole.</p>
+        <div class="gf-todo-list gf-club" id="club-list"></div>
+      </section>
+    </details>
 
     <section class="gf-card" id="golf-stake" hidden>
     </section>
 
-    <details class="gf-how" id="how">
-      <summary>How it works</summary>
+    <details class="fold gf-how" id="rules">
+      <summary>Rules and how points work</summary>
       <div class="explain">
+        <p><b>Block Golf is free to play.</b> No staking and no prizes: just your scorecard and the weekly leaderboard. If you have VHP staked in Block Golf from before, you can withdraw it any time on this page or the Stake page.</p>
+        <p>Every Knode Games game is a hole. Play the games as usual: your place on each game's weekly leaderboard turns into strokes. The lowest score of the week tops the board.</p>
         <p><b>The course.</b> Every live Knode Games game is a par-4 hole. A new game joins the course the Monday after it goes live. There is nothing to pick in Block Golf: you just play the games.</p>
         <p><b>Your strokes on a hole</b> come from your place on that game's leaderboard for the week (Monday to Monday, UTC):</p>
         <div class="gf-scroll">
@@ -168,8 +167,9 @@
         <p><b>Who you're placed against.</b> Everyone who scored on that game that week, one place per wallet. If you played but scored nothing, it's a double bogey. Players on the same score share the middle of their places. A hole needs at least 3 players who scored; otherwise it's skipped for everyone.</p>
         <p><b>The Clubhouse hole.</b> One more hole, worth the same as a game hole, scored by how many <b>different</b> Knode Games features your wallet has used: staking, claiming a reward, staking in two games in one week, a swap on the swap desk, an @name, running a producer that signed a block, registering a producer key (it counts in the first week that wallet has also signed a block), burning 1 VHP or more of KOIN for VHP (Get VHP), moving stake between games, playing each game, playing every game in a week, and Block X picks on 3 or more days. Each one is earned once, the first week it's seen, and kept for good, so doing it again adds nothing. Features: 0 = lost ball, 1 = double bogey, 2 = bogey, 3 or 4 = par, 5 or 6 = birdie, 7 or 8 = eagle, 9 or more = hole in one. A feature counts from the week Golf first sees it. Staking shows up the same hour; claiming a reward, staking in two games, burning KOIN, moving stake and registering a producer key can take a few days to show.</p>
         <p><b>The mulligan.</b> Your worst hole is dropped each week, whatever it was: a bad week in a game, or a game you missed.</p>
-        <p><b>The week.</b> Lowest score wins. Points are 7 for each counted hole minus your strokes. Ties: more points, then fewer lost balls, then more holes under par, then your best hole.</p>
+        <p><b>The week.</b> The lowest score tops the board. Points are 7 for each counted hole minus your strokes. Ties: more points, then fewer lost balls, then more holes under par, then your best hole.</p>
         <p><b>One board.</b> Everyone plays on the same board. Block Golf is free to play: no staking and no VHP prizes (owner, D-586). If you have VHP staked in Block Golf from before, you can withdraw it any time on this page or the Stake page.</p>
+        <p><b>Points and the week.</b> Points = 7 for each counted hole, minus your strokes. Sunday is review day: results are checked, and the week goes final from Monday 00:00 UTC, once every game's results are final and two checks an hour apart agree.</p>
         <p><b>Fair checks.</b> Block Golf only reads each game's published, final results. If a game's results aren't final 60 hours after the week, that hole is skipped for everyone, never guessed. The page and the recorder run the same scoring file.</p>
       </div>
     </details>

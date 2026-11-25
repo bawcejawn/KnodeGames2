@@ -23,5 +23,5 @@
   "maxRoundPoints": 1,
   "vhpData": true,
   "cardPerRound": false,
-  "rolling": { "roundMin": 30, "gameMin": 720, "leadMin": 5, "scheduleFromMin": 213, "scheduleToMin": 183, "cancelAfterMin": 135 }
+  "rolling": { "roundMin": 30, "gameMin": 720, "leadMin": 5, "scheduleFromMin": 213, "scheduleToMin": 140, "cancelAfterMin": 135 }
 }
