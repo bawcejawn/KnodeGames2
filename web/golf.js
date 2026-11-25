@@ -157,7 +157,12 @@
     $("club-list").replaceChildren(...all.map((f) => el("span", { class: mine[f] !== undefined ? "gf-club-on" : "gf-club-off", text: `${mine[f] !== undefined ? "✓" : "○"} ${nameOfF(f)}` })));
   }
   // GAME-PAGE-STANDARD (M-607): the board lives on the Leaderboards page (index.html#leaderboard/golf), not here.
-  function drawAll() { drawCard(); drawTodo(); drawClub(); }
+  function drawAll() {
+    drawCard(); drawTodo(); drawClub();
+    // Repo Lens #R3-29: the "For the curious" row shows only when something inside it does (not for a guest, a final
+    // week, or before the Clubhouse is on the course).
+    $("curious").hidden = $("todo-box").hidden && $("clubhouse").hidden;
+  }
 
   $("wk-this").addEventListener("click", () => { showing = "this"; drawCard(); });
   $("wk-last").addEventListener("click", () => { if (weeks.last) { showing = "last"; drawCard(); } });

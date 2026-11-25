@@ -133,4 +133,5 @@ test("GAME-PAGE-STANDARD (M-607): box first, the scorecard open, then one links 
   const rules = main.slice(main.indexOf('id="rules"'));
   for (const s of [/Block Golf is free to play\.<\/b> No staking and no prizes/, /Points = 7 for each counted hole, minus your strokes/, /Sunday is review day/]) assert.match(rules, s);
   assert.match(js, /a link to something inside a closed fold-out \(Rules, the Clubhouse\) opens that row/);
+  assert.match(js, /\$\("curious"\)\.hidden = \$\("todo-box"\)\.hidden && \$\("clubhouse"\)\.hidden;/, "#R3-29: no empty For the curious row");
 });
