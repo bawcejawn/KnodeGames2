@@ -1,0 +1,33 @@
+{
+  "updated": "Tue 24 Nov 2026, from the Library (M-593) and Vault's steps (M-507, M-594). All times ET.",
+  "note": "Every chain step: dry run first, paste it to Vault, then send. A chat changes this file by a small pull request.",
+  "items": [
+    { "date": "2026-11-24", "time": "From 6:21 PM", "kind": "chain", "card": "vault-game-apply", "what": "Vault game-apply 4 (Fantasy), then 13 (Last Node). Each dry run must say week 6. Then merge #45." },
+
+    { "date": "2026-11-25", "time": "From ~9:35 AM", "kind": "chain", "card": "picks-apply", "what": "Picks apply 8 (Combo Card). Dry run to Vault, then send." },
+    { "date": "2026-11-25", "time": "After apply 8", "kind": "chain", "card": "picks-upgrade-clear", "what": "Picks upgrade-clear (clears the v2 announcement). Dry run to Vault, then send." },
+    { "date": "2026-11-25", "time": "By 2 PM", "kind": "merge", "what": "Merge #109 (sponsor rows and pick batching) if it has its GO and a green ci. Otherwise it waits for Mon 30." },
+    { "date": "2026-11-25", "time": "~4 PM", "kind": "check", "card": "bot-mana", "what": "Bot wallet Mana: send the last line of the status to Vault. Vault says if a KOIN top-up is needed before 7 PM." },
+    { "date": "2026-11-25", "time": "Before 6:30 PM", "kind": "merge", "what": "The UI merge batch (D-793), one at a time, green ci between each." },
+    { "date": "2026-11-25", "time": "6:55 PM", "kind": "info", "what": "Phone reminder (D-801): the Worker, Combo and Last Node, RPC_SPARE, CONFIRM_MAINNET." },
+    { "date": "2026-11-25", "time": "7:00 PM", "kind": "freeze", "what": "The payout freeze ends. The bot finalizes week 4 by itself." },
+    { "date": "2026-11-25", "time": "7:00 to 7:30 PM", "kind": "github", "what": "Set the RPC_SPARE variable (a plain https:// node address), only with Vault's OK." },
+    { "date": "2026-11-25", "time": "7:10 to 7:15 PM", "kind": "github", "what": "Paste the Cloudflare Worker, only if #103 is merged. Then check that Combo and Last Node ran at :22 (Health checks, Recorders)." },
+    { "date": "2026-11-25", "time": "Before 8 PM", "kind": "info", "what": "Remove CONFIRM_MAINNET=yes from .env, so no mainnet send can happen while you're away." },
+    { "date": "2026-11-25", "time": "~8 PM", "kind": "away", "what": "Away until Sun 29 ~11 PM: no chain sends, no merges, no variable changes. Keep the PC and its node running." },
+
+    { "date": "2026-11-29", "time": "7:00 PM", "kind": "info", "what": "Week 6 starts. Survivor Season 1 starts (day 1: Mon 30)." },
+
+    { "date": "2026-11-30", "time": "7:00 AM", "kind": "freeze", "what": "The payout freeze starts (to Wed 2 Dec 7 PM): no payout, vault or kit merges unless Vault says OK." },
+    { "date": "2026-11-30", "time": "Step 1", "kind": "chain", "card": "picks-apply", "what": "Picks apply 18 (Within 5 blocks), then apply 19 (Within 10 blocks). Dry runs to Vault." },
+    { "date": "2026-11-30", "time": "Step 2", "kind": "check", "card": "picks-status-p", "what": "Picks status: no \"Announced game\" lines left." },
+    { "date": "2026-11-30", "time": "Step 3", "kind": "merge", "what": "Merge #83 (pins the Picks contract's new owner)." },
+    { "date": "2026-11-30", "time": "Step 4", "kind": "chain", "card": "picks-owner-propose", "what": "Picks owner-propose (to the pinned cold wallet). Dry run to Vault. The accept comes 48 hours to 7 days later." },
+    { "date": "2026-11-30", "time": "Step 5", "kind": "chain", "card": "vault-game-apply", "what": "Vault game-apply 8 (Combo), then 16 (Over Under, after New Games' PR D merges). Each dry run must say week 7." },
+
+    { "date": "2026-12-01", "time": "~6:26 PM", "kind": "info", "what": "Last moment for vault game-apply 16. After this it needs a new game-add and another 48 hours." },
+    { "date": "2026-12-02", "time": "~9:30 AM", "kind": "info", "what": "Last moment for vault game-apply 8." },
+    { "date": "2026-12-02", "time": "7:00 PM", "kind": "freeze", "what": "The payout freeze ends." },
+    { "date": "2026-12-02", "time": "~9 PM", "kind": "merge", "what": "Merge #15 (audit follow-ups), after Vault's review and a green ci." }
+  ]
+}
