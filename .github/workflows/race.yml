@@ -880,7 +880,7 @@ jobs:
                   raise ValueError("window order must be W0 <= W1 <= L <= S0 <= S1")
 
 
-          def make_card(L, game, rnd, window, c, own_rule, paying, pooled=(), min_k=10, pool_rule="min", mode=None, include=None, version=RULE_VERSION, no_void=False):
+          def make_card(L, game, rnd, window, c, own_rule, paying, pooled=(), min_k=10, pool_rule="min", mode=None, include=None, version=RULE_VERSION, no_void=False, row_history=False):
               w = window
               _check_window(w)
               if own_rule not in OWN_RULES:
@@ -923,7 +923,7 @@ jobs:
                   rate, steady = rate_of(L, a, T, f)   # owner, 5 Nov: steady producers play at full size; rate is shown only
                   rows.append({"a": a, "own": o, "avg": av, "k": k, "form": f["form"], "rate": rate,
                                "entry": k >= min_k * M and (steady or f["form"] >= FORM_GATE) and history and (a in act_set or f["signed"] > 0), "pooled": a in pooled,
-                               "isNew": is_new, "quality": "ok"})
+                               "isNew": is_new, **({"history": history} if row_history else {}), "quality": "ok"})
                   if a not in act_set:
                       rows[-1]["listed"] = True   # here only because of include (Repo Lens #G-40 G40-2), as in vhp-ruler.js
               rows.sort(key=lambda r: (-r["own"], r["a"]))
@@ -941,6 +941,8 @@ jobs:
                   out["include"] = list(include)
               if no_void:   # D-312/D-317: the game never voids (Knode Games VS); the key is there only when set, so no other card changes
                   out["noVoid"] = True
+              if row_history:   # the history flag on each row (M-731), only when the game asks for it, so no other card changes
+                  out["rowHistory"] = True
               out.update({"total": tot, "formFrom": form_from, "producers": rows})
               return out
 
@@ -1137,7 +1139,7 @@ jobs:
 
 
           _SETTINGS, _WKEYS = ("game", "round", "window", "c", "minK", "poolRule", "ownRule", "paying", "pooled"), ("W0", "W1", "L", "S0", "S1")
-          _OPTIONAL = ("mode", "include", "version", "noVoid")
+          _OPTIONAL = ("mode", "include", "version", "noVoid", "rowHistory")
 
 
           def check_settings(g):
@@ -1154,6 +1156,8 @@ jobs:
                   check_include(g["include"])
               if "noVoid" in g and g["noVoid"] is not True:
                   raise ValueError("noVoid must be true")
+              if "rowHistory" in g and g["rowHistory"] is not True:
+                  raise ValueError("rowHistory must be true")
               _dec(g["game"], "game")
               _dec(g["round"], "round")
               w = g["window"]
@@ -1203,7 +1207,7 @@ jobs:
                   w = game["window"]
                   try:
                       mine = make_card(L, game["game"], game["round"], w, int(game["c"]), game["ownRule"], game["paying"], game["pooled"],
-                                       game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True)
+                                       game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True, game.get("rowHistory") is True)
                       if pub_d["scored"]:
                           mine = score_card(L, mine)
                   except ValueError as e:
@@ -1218,17 +1222,18 @@ jobs:
               want["version"] = game.get("version", RULE_VERSION)
               want["include"] = json.dumps(game.get("include"), separators=(",", ":"))
               want["noVoid"] = game.get("noVoid")
+              want["rowHistory"] = game.get("rowHistory")
               want.update({"W0": w["W0"], "W1": w["W1"], "L": w["L"], "S0": w["S0"], "S1": w["S1"]})
               got = {"game": pub.get("game"), "round": pub.get("round"), "ownRule": pub.get("ownRule"), "paying": pub.get("paying"),
                      "c": str(pub.get("c")), "minK": pub.get("minK"), "poolRule": pub.get("poolRule"), "mode": pub.get("mode"),
-                     "version": pub.get("ruleVersion"), "include": json.dumps(pub.get("include"), separators=(",", ":")), "noVoid": pub.get("noVoid")}
+                     "version": pub.get("ruleVersion"), "include": json.dumps(pub.get("include"), separators=(",", ":")), "noVoid": pub.get("noVoid"), "rowHistory": pub.get("rowHistory")}
               got.update(pub.get("window") or {})
               for k in want:
                   if got.get(k) != want[k] or type(got.get(k)) is not type(want[k]):
                       return False, "setting %s: the card says %s, the game says %s" % (k, json.dumps(got.get(k)), json.dumps(want[k])), None
               try:
                   mine = make_card(L, game["game"], game["round"], w, int(game["c"]), game["ownRule"], game["paying"], game["pooled"],
-                                   game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True)
+                                   game["minK"], game["poolRule"], game.get("mode"), game.get("include"), game.get("version", RULE_VERSION), game.get("noVoid") is True, game.get("rowHistory") is True)
                   if any("credited" in p for p in pub.get("producers", [])):
                       mine = score_card(L, mine)
               except ValueError as e:
