@@ -58,9 +58,12 @@
   let draft = null, draftWeek = null; // winner seeds per round for the bracket being filled in
 
   // ── data ──
+  // the phone round stepper's short names (the full name stays in aria-label and the day line)
+  const shortRound = (n) => ({ "Round of 32": "R32", "Round of 16": "R16", Quarterfinals: "QF", Semifinals: "SF" })[n] || n;
   async function loadWeeks() {
     const now = Date.now(), w = BM.weekOf(now);
-    await Promise.all([w - 1, w, w + 1].filter((x) => x >= 1).map(async (x) => {
+    // next week's file exists only once it is seeded (Sunday 00:00 UTC): don't ask for it before (no 404 every load)
+    await Promise.all([w - 1, w, w + 1].filter((x) => x >= 1 && (x <= w || now >= BM.seedTime(x))).map(async (x) => {
       try { const j = await fetchJson(`${DATA}W${String(x).padStart(3, "0")}.json`); if (valid(j, x)) weeks.set(x, j); } catch { /* not yet */ }
     }));
     try { const b = await fetchJson(DATA + "board.json"); if (b && b.v === 1) board = b; } catch { /* not yet */ }
@@ -251,8 +254,8 @@
     const roundDone = (r) => (draft ? draft[r].filter(Boolean).length : 0);
     const tree = wide();
     // the round stepper (phones): name, day, and how many of the round you've picked
-    $("bk-rounds").replaceChildren(...BM.ROUND_NAMES[s.size].map((n, r) => el("button", { type: "button", "aria-pressed": String(r === round), class: open && draft && roundDone(r) === draft[r].length ? "full" : "", onclick: () => { round = r; render(); } },
-      el("span", { text: n }), el("small", { text: open && draft ? `${dayName(BM.roundDay(view, r, s.size)).slice(0, 3)} · ${roundDone(r)}/${draft[r].length}` : dayName(BM.roundDay(view, r, s.size)).slice(0, 3) }))));
+    $("bk-rounds").replaceChildren(...BM.ROUND_NAMES[s.size].map((n, r) => el("button", { type: "button", "aria-pressed": String(r === round), "aria-label": n, class: open && draft && roundDone(r) === draft[r].length ? "full" : "", onclick: () => { round = r; render(); } },
+      el("span", { text: shortRound(n) }), el("small", { text: open && draft ? `${dayName(BM.roundDay(view, r, s.size)).slice(0, 3)} · ${roundDone(r)}/${draft[r].length}` : dayName(BM.roundDay(view, r, s.size)).slice(0, 3) }))));
     $("bk-rounds").hidden = tree;
     const di0 = dayIdx(round);
     $("bk-day").textContent = `${BM.ROUND_NAMES[s.size][round]} · played ${dayName(BM.roundDay(view, round, s.size))} (UTC)${di0 && di0.hours && !di0.done ? ` · ${di0.hours} of 24 hours in` : ""} · ${ptsOf(round)}${decidedOf(round)}${di0 && di0.hours && estOf(round) ? ` · ~ ${LIVE_EST}` : ""}`;
@@ -371,6 +374,13 @@
     for (let r = d.rounds.length - 2; r >= Math.max(0, d.rounds.length - 3); r--) out.push(el("p", { text: `${names[r]} winners: ${d.rounds[r].map((x) => `${x} ${nameOf(s.seeds[x - 1])}`).join(", ")}` }));
     return out;
   }
+  // D-278, the shared card's rule (web/js/lib/send-picks.js GUEST_CHANGE and confirmLines; the same words): a first
+  // bracket may be paid by the Knode Games Mana sponsor; a CHANGE is never sponsored (it goes out with the player's own
+  // Mana, KWallet's noSponsor), and a guest wallet (no Mana of its own) can't change a bracket. Pinned against the
+  // card's own text by tests/audit/site.bracket-d278.test.mjs. (bracket.js still builds its own operation: it is a
+  // classic script the tests load directly; it moves onto SP.send with the page-script split, plan step 5.)
+  const GUEST_CHANGE = "A guest wallet can't change a pick (a change uses your own Mana). Connect a wallet to change a pick.";
+  const CHANGE_MANA = "A change is paid with your own Mana (Knode's free Mana sponsor pays only for a first pick).";
   const LOCK_MARGIN = 120000;   // too close to the lock: two minutes, by the chain's clock at send time (#E-3 L-2)
   let checking = null;          // { n, account, week, seeds } frozen when "Check your bracket" opens (#E-3 C-2)
   // fix-check RC-3: a wallet request that may still be approved (KOIN Vault keeps it open after its window closes).
@@ -408,9 +418,12 @@
     const lockedUntil = openLockUntil(who, view);
     if (Date.now() < lockedUntil) return pop("info", "A bracket request is still open in your wallet", [`Approve or reject it in your wallet first. If it goes through, that bracket is the one that counts; this page shows it once it's on the chain. You can send a new one after it's settled, or after ${dayTime(lockedUntil)}.`], [btn("OK", close)]);
     if (BM.lockTime(view) - Date.now() < LOCK_MARGIN) return pop("bad", "Too close to the lock", [`Brackets lock ${dayTime(BM.lockTime(view))}. This one can't make it in time.`], [btn("OK", close)]);
-    const frozen = { n, account: who, week: view, seeds: s.seeds.join(","), size: s.size };
-    pop("info", "Check your bracket", [...summaryOf(n, s),
-      el("p", { class: "ago", text: `Sent to the chain as one number: ${n}, from ${nameOf(who)}. You can change it until ${dayTime(BM.lockTime(view))}, up to ${BM.MAX_CHANGES} times.` })],
+    const change = mine !== null;
+    if (change && W.kind === "guest") return pop("info", "Your bracket is already sent", [GUEST_CHANGE], [btn("OK", close)]);
+    const frozen = { n, account: who, week: view, seeds: s.seeds.join(","), size: s.size, change };
+    pop("info", change ? "Check your change" : "Check your bracket", [...summaryOf(n, s),
+      el("p", { class: "ago", text: `Sent to the chain as one number: ${n}, from ${nameOf(who)}. You can change it until ${dayTime(BM.lockTime(view))}, up to ${BM.MAX_CHANGES} times.` }),
+      change ? el("p", { class: "ago", text: `This replaces the bracket you sent and uses one of your ${BM.MAX_CHANGES} changes this week. ${CHANGE_MANA}` }) : null].filter(Boolean),
       [btn("Back", close, "btn btn-ghost"), btn("Confirm in wallet", () => send(frozen))]);
     checking = frozen;
   }
@@ -422,6 +435,8 @@
       checking = null; return pop("bad", "Your bracket changed", ["Your bracket, wallet or week changed while you were checking it. Nothing was sent: check it again."], [btn("OK", close)]);
     }
     checking = null;
+    if ((mine !== null) !== frozen.change) return pop("bad", "Your bracket changed", ["Your sent bracket changed while you were checking this one. Nothing was sent: check it again."], [btn("OK", close)]);
+    if (frozen.change && W.kind === "guest") return pop("info", "Your bracket is already sent", [GUEST_CHANGE], [btn("OK", close)]);
     if (BM.lockTime(frozen.week) - (await chainNow()) < LOCK_MARGIN) return pop("bad", "Too close to the lock", [`Brackets lock ${dayTime(BM.lockTime(frozen.week))} by the chain's clock. Nothing was sent.`], [btn("OK", close)]);
     // Repo Lens #E-26 E26-1: checked again at Confirm, not only when the review opened: another tab may have sent since
     const lockedUntil = openLockUntil(frozen.account, frozen.week);
@@ -429,13 +444,14 @@
     const n = frozen.n, wk = frozen.week, summary = () => summaryOf(n, s);
     sending = true; render();
     const wallet = W.kind === "guest" ? "your guest wallet" : W.label ? W.label() : "your wallet";
-    pop("busy", W.kind === "guest" ? "Sending your bracket…" : `Confirm in ${wallet}`, [...summary(), "The Knode Games Mana sponsor pays the Mana."]);
+    pop("busy", W.kind === "guest" ? "Sending your bracket…" : `Confirm in ${wallet}`, [...summary(), frozen.change ? CHANGE_MANA : "The Knode Games Mana sponsor pays the Mana."]);
     try {
       const { operation } = await picksContract.functions.pick({ player: frozen.account, game: BM.GAME_ID, round: String(BM.picksRound(wk)), producers: [], number: String(n) }, { onlyOperation: true });
       // #B-15 B15-4: the lock is written BEFORE the wallet is asked, so a reload or a second tab while the request
       // waits for approval (KOIN Vault, on a phone often in another app) can't send a second bracket
       openRequestUntil = setOpenLock(frozen.account, wk, null);   // localStorage, per account and week
-      const id = await W.send(`your bracket for week ${wk + 1}`, [operation]);
+      // D-278: a change never goes to the sponsor; a first bracket is sent exactly as before
+      const id = await W.send(`your bracket${frozen.change ? " change" : ""} for week ${wk + 1}`, [operation], ...(frozen.change ? [{ noSponsor: true }] : []));
       clearOpenLock(frozen.account, wk);
       pop("busy", "Sent. Checking the chain…", summary());
       let seen = false;
@@ -457,7 +473,7 @@
           `Don't send another bracket until it's settled (this page waits until ${dayTime(openRequestUntil)}); it shows here once it's on the chain.`], [btn("OK", close)]);
       }
       const why = /locked/i.test(m) ? "Brackets are locked: they close Monday 23:55 UTC."
-        : /not open yet/i.test(m) ? "Picks for this week aren't open yet (they open at the seeding, Sunday 00:00 UTC)."
+        : /not open yet/i.test(m) ? "Picks for this week aren't open yet (they open Sunday 02:00 UTC, two hours after the seeding)."
         : /used up/i.test(m) ? "Today's picks are used up. More after 00:00 UTC."
         : /changed again/i.test(m) ? `This bracket has been changed ${BM.MAX_CHANGES} times already.`
         : /already your pick/i.test(m) ? "That is already your bracket."
