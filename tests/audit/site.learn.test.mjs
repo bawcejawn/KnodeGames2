@@ -69,6 +69,7 @@ test("every link on the page goes to a real page, and the page uses the shared l
 
 // M-742 / M-769: the guest-wallet row. Vault's wording (M-754) is pinned, and every site label the steps name must
 // still exist in the wallet code, so a rename in wallet.js or header-wallet.js fails here until this row follows it.
+// Labels as renamed by Hub's #155 (M-771): this test passes only once #155 is on main.
 test("the guest wallet row: Vault's wording, real site labels, the key goes only to Kondor or Restore", () => {
   const row = main.slice(main.indexOf('id="guest-wallet"'), main.indexOf("</details>", main.indexOf('id="guest-wallet"')));
   assert.ok(row.length > 0, "guest-wallet row");
@@ -77,7 +78,7 @@ test("the guest wallet row: Vault's wording, real site labels, the key goes only
   assert.ok(t.includes(`Anyone with this key controls the wallet. Never share it. Enter it only in Kondor's own import screen, or in "Restore a guest key" in this site's wallet menu. Knode Games never asks you to send it, and no one from Knode Games ever will.`));
   assert.match(row, /<p class="learn-warn">/, "the warning is in its own box");
   const code = fs.readFileSync(WEB + "wallet.js", "utf8") + fs.readFileSync(WEB + "header-wallet.js", "utf8");
-  for (const label of ["Guest wallet: back up, restore, forget", "Back up guest key", "Tap to reveal", "Copy", "Restore a guest key", "Add another account", "Connect a wallet", "Kondor"])
+  for (const label of ["Back up or move my wallet", "Back up guest key", "Tap to reveal", "Show", "Copy", "Restore a guest key", "Add another account", "Connect a wallet", "Kondor"])
     assert.ok(code.includes(`"${label}"`) || code.includes(`"＋ ${label}"`), `site label still exists: ${label}`);
   assert.doesNotMatch(t, /paste (it|the key|your key) (into|in) (a|any|this) (website|site|message|chat|form)/i);
   assert.doesNotMatch(t, /send (us|it to)/i);
