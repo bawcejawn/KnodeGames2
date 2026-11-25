@@ -27,6 +27,9 @@ import * as SP from "./js/lib/send-picks.js";
   const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const $ = (id) => document.getElementById(id);
+  // The "Rules" link under the title opens the closed Rules row and scrolls to it (game page standard, D-730).
+  const rulesLink = $("rules-link");
+  if (rulesLink) rulesLink.addEventListener("click", (e) => { const d = $("rules"); if (!d) return; e.preventDefault(); d.open = true; d.scrollIntoView({ block: "start" }); });
   const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k === "text") e.textContent = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? "" : v); } for (const c of kids) if (c != null) e.append(c); return e; };
   const isAddr = (a) => typeof a === "string" && /^1[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(a);
   const nameOf = (a) => (isAddr(a) ? NAMES[a] || a.slice(0, 5) + "…" + a.slice(-4) : "–");

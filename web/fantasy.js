@@ -94,7 +94,7 @@ function start() {
     PICKS = dep && isAddr(dep.contract) ? dep.contract : null;
     provider = new lib.Provider(RPC);
     W = window.KWallet || null;
-    if (window.KStake && typeof window.KStake.mount === "function" && $("fantasy-stake")) window.KStake.mount($("fantasy-stake"), { game: GAME });
+    // Stake: one line to stake.html#g4 at the bottom of the page (standard page, D-791); no stake panel here.
     if (window.KStake && typeof window.KStake.badge === "function" && $("stake-badge")) window.KStake.badge($("stake-badge"), { game: GAME });
     if (W && W.init && PICKS) W.init({ provider, chainId: gd && gd.chainId, payer: gd && gd.payer, sponsor: gd && gd.sponsor, onChange: () => refreshMine() });
     if (PICKS) {
@@ -316,7 +316,10 @@ function start() {
       : mine.monday && !mine.carried && me() ? [el("b", { text: "No team carries into this week." }), " Save one, or you score nothing until you do."]
       : mine.inForce ? ["No new team saved: the team before carries on."] : me() ? ["You have no team yet."] : []));
   }
+  /** Standard page (D-791): extras sit in closed rows. Opening a row from a link or a button. */
+  function openFold(id) { const d = $(id); if (d && d.tagName === "DETAILS") d.open = true; return d; }
   function pickFromList() {
+    openFold("curious");
     const q = $("fx-q"), box = $("pool-box");
     if (box) box.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     if (q) setTimeout(() => q.focus({ preventScroll: true }), 350);
@@ -573,15 +576,16 @@ function start() {
     else step = mine.inForce ? "Your team plays on. You may make 1 change for the next day (swap a producer or move the C), or leave it." : v.text;
     $("fx-next").replaceChildren(el("span", { class: "fx-next-l", text: "Your move" }), el("span", { class: "fx-next-t", text: step }), act ? el("button", { type: "button", onclick: act[1] }, act[0]) : "");
   }
-  function render() { if (mine.td == null) return; renderHero(); renderSheet(); renderPool(); renderWeek(); renderLeague(); renderRival(); }
+  function render() {
+    if (mine.td == null) return; renderHero(); renderSheet(); renderPool(); renderWeek(); renderLeague(); renderRival();
+    const sl = $("fx-stake-line"); if (sl) sl.hidden = !me() || !W || W.kind === "guest";   // guests never stake
+  }
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* fine */ } } };
   function setupGuide() {
-    const g = $("fx-guide"), lg = $("fx-legend");
-    if (g) {
-      g.hidden = store.get("fx-guide") === "hidden";
-      $("fx-guide-x").addEventListener("click", () => { g.hidden = true; store.set("fx-guide", "hidden"); });
-      $("fx-guide-show").addEventListener("click", () => { g.hidden = false; store.set("fx-guide", ""); g.scrollIntoView({ block: "start" }); });
-    }
+    const lg = $("fx-legend");
+    // The quick guide now lives inside the closed Rules row (D-791), so it is never hidden there.
+    for (const a of document.querySelectorAll('a[href="#rules"], a[data-open]')) a.addEventListener("click", () => { const d = openFold(a.dataset.open || "rules"); if (d) setTimeout(() => d.scrollIntoView({ block: "start" }), 0); });
+    if (location.hash === "#rules" || location.hash === "#curious") openFold(location.hash.slice(1));
     if (lg) { if (store.get("fx-legend") === "closed") lg.open = false; lg.addEventListener("toggle", () => store.set("fx-legend", lg.open ? "" : "closed")); }
   }
 
