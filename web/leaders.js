@@ -109,7 +109,9 @@
 
   function buttons() {
     host.replaceChildren(...games.map((g) => {
-      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), text: g.name, class: g.id !== "questions" && !g.cfg ? "soon" : null });
+      // Icon from games.json (D-748), drawn as text and hidden from screen readers; the name stays the button label.
+      const b = el("button", { type: "button", "aria-pressed": String(g.id === current), class: g.id !== "questions" && !g.cfg ? "soon" : null },
+        g.icon ? el("span", { class: "mi", "aria-hidden": "true", text: g.icon }) : null, g.name);
       b.addEventListener("click", () => { if (location.hash !== `#leaderboard/${g.id}`) location.hash = g.id === "questions" ? "#leaderboard" : `#leaderboard/${g.id}`; else show(g.id); });
       return b;
     }));
@@ -174,14 +176,16 @@
     if (view === "leaderboard") show(sub || "questions");
   }
 
+  /** A game's icon from games.json (D-748): a short emoji, checked; "" when missing or not an emoji. */
+  const iconOf = (g) => (g && typeof g.icon === "string" && g.icon.length >= 1 && g.icon.length <= 8 && !/[<>&"'A-Za-z0-9\s]/.test(g.icon) ? g.icon : "");
   async function load() {
     try {
       const list = (await fetchJson("games.json")).games;
       // Every live or preview game, in the games list's order; a game with no board yet is greyed, not hidden.
       const extra = (Array.isArray(list) ? list : []).filter((g) => g && (g.status === "live" || g.status === "preview") && g.id !== "questions"
         && typeof g.id === "string" && /^[a-z0-9-]{1,24}$/.test(g.id) && typeof g.name === "string" && g.name.length <= 40)
-        .map((g) => ({ id: g.id, name: g.name, href: typeof g.href === "string" ? g.href : "", cfg: g.status === "live" ? boardOf(g) : null }));
-      games = [games[0], ...extra];
+        .map((g) => ({ id: g.id, name: g.name, icon: iconOf(g), href: typeof g.href === "string" ? g.href : "", cfg: g.status === "live" ? boardOf(g) : null }));
+      games = [{ ...games[0], icon: iconOf((Array.isArray(list) ? list : []).find((g) => g && g.id === "questions")) }, ...extra];
     } catch { /* only the question game */ }
     buttons();
     route();
