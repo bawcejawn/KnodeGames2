@@ -116,15 +116,14 @@ function start() {
   /** Starts whose pick was just sent: their cards flash once (owner default; none with reduced motion, see the CSS). */
   const flashed = new Set();
   function render() {
-    const now = Date.now(), starts = [...games.keys()].sort((a, b) => a - b), box = $("ou-games");
+    // Owner (M-703): a cancelled start (no schedule file) is not shown at all; the count is on the admin page.
+    const now = Date.now(), starts = [...games.keys()].filter((s) => games.get(s)).sort((a, b) => a - b), box = $("ou-games");
     if (!starts.length) { box.replaceChildren(el("p", { class: "ou-none", text: "No game is open right now. A new game starts every 30 minutes; picks open 2 hours before the start." })); }
     else box.replaceChildren(...starts.map((s) => {
       const e = games.get(s), mine = saved.get(s), want = draft.get(s), lk = F.locksAt(s) - now;
       const head = el("div", { class: "ou-g-head" },
         el("span", { class: "ou-g-when", text: `Starts ${hm(s)}` }),
-        e ? el("span", { class: "ou-g-lock" + (lk < 300000 ? " hot" : ""), "data-lock": String(F.locksAt(s)), text: lockText(lk) })
-          : el("span", { class: "ou-g-lock", text: "Cancelled" }));
-      if (!e) return el("article", { class: "ou-g ou-off" }, head, el("p", { class: "ou-none", text: "No game at this start: it was cancelled for everyone (no schedule file)." }));
+        el("span", { class: "ou-g-lock" + (lk < 300000 ? " hot" : ""), "data-lock": String(F.locksAt(s)), text: lockText(lk) }));
       const label = F.formLabel(e.form);
       const btn = (c, txt, sub, cls) => el("button", { type: "button", class: cls, "aria-pressed": String((mine ? Number(mine) : want) === c),
         "aria-label": `${txt.toLowerCase()} than ${lineText(e.line)} blocks for ${nameOf(e.producer)}`, disabled: !open(s, now) || !!mine ? "" : null, onclick: () => choose(s, c) },

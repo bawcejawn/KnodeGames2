@@ -94,12 +94,13 @@
     <section class="ou-hero" aria-labelledby="ou-title">
       <p class="ou-kicker">More or Fewer</p>
       <h1 id="ou-title">More or fewer? <span class="ou-tag">Test</span></h1>
-      <p class="ou-links"><a href="#help" id="ou-rules-link">Rules</a> · <a href="ruler.html">The Ruler</a></p>
+      <p class="ou-links"><a href="#help" id="ou-rules-link">Rules</a> · <a href="#league-box">League</a> · <a href="ruler.html">The Ruler</a></p>
       <ol class="ou-steps" aria-label="How to play">
         <li><b>1</b> Pick an open game</li>
         <li><b>2</b> Tap More or Fewer</li>
         <li><b>3</b> Send: the first pick is free</li>
       </ol>
+      <p class="ou-small" id="ou-when">Your result comes about 12 hours after the game starts.</p>
     </section>
 
     <p class="ou-strip" id="ou-strip" role="status" hidden></p>
@@ -108,7 +109,6 @@
 
     <section class="ou-sheet" id="sheet" aria-label="Open games">
       <h2>Open games</h2>
-      <p class="ou-small">Picks open 2 hours before the start and lock 5 minutes before it. 3 or 4 games are open at a time, never more than 4. No changes.</p>
       <div class="ou-games" id="ou-games" aria-live="polite"></div>
       <p class="ou-check" id="ou-check" role="status"></p>
       <div class="ou-actions" id="ou-actions">
@@ -127,7 +127,7 @@
       <div>
         <p><b>Who plays.</b> A new game starts every 30 minutes (:00 and :30 UTC). The producer whose last game started longest ago plays next. A producer can have at most 2 games running at once; if it already has 2, the next one in the queue plays. Producers marked Unreliable (form below 80%) don't play. The pool node never plays.</p>
         <p><b>The number.</b> Each game's number is its producer's forecast blocks for the game, from the VHP Ruler: its share of the network, scaled by its form (counted up to 104%), rounded to a half block (28.5, 29.5, …). Nobody types the number. It is published about 3 and a half hours before the start, before picks open, and never changes.</p>
-        <p><b>Your pick.</b> More means you think the producer will be credited with more blocks than its number in the 14,400 blocks from the game's start (about 12 hours); Fewer means fewer. Picks open 2 hours before the start and lock 5 minutes before it. One pick per game, and no changes.</p>
+        <p><b>Your pick.</b> More means you think the producer will be credited with more blocks than its number in the 14,400 blocks from the game's start (about 12 hours); Fewer means fewer. Picks open 2 hours before the start and lock 5 minutes before it, so 3 or 4 games are open at a time, never more than 4. One pick per game, and no changes. The result comes when the game's 14,400 blocks are done, about 12 hours after its start.</p>
         <p><b>Points.</b> 1 point for each game you call right. A count exactly on the number is skipped, and so is a producer that is void for that game: no win, no loss. A game with no published number is cancelled for everyone. A game counts for the week it starts in.</p>
         <p><b>Form.</b> On form: 97% or more. A little behind: 90% to 96.9%. Behind: 80% to 89.9%. Unreliable: below 80%.</p>
         <p><b>Prizes.</b> Free to play. No free prizes for now: the Free play board pays no VHP prize until the owner turns prizes on. Staking comes later, once More or Fewer is proven; a stake counts from the next week after it opens. Then wallets with at least 1 VHP staked in More or Fewer that week play on the Staked board. This is a TEST.</p>
