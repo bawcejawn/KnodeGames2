@@ -32,6 +32,12 @@
 .learn-go { display: inline-block; padding: 8px 14px; border-radius: 999px; background: var(--violet-soft); color: var(--violet); font-weight: 700; font-size: .92rem; text-decoration: none; }
 .learn-go:hover { filter: brightness(.97); }
 
+/* Guest wallet row: numbered steps and a warning box. */
+.learn-steps { margin: calc(-1 * var(--sp-2)) var(--sp-4) var(--sp-3); padding-left: 1.3em; color: var(--muted); line-height: 1.5; display: grid; gap: var(--sp-2); }
+.learn-steps b { color: var(--ink); }
+.learn-row p.learn-warn { margin: 0 var(--sp-4) var(--sp-4); padding: var(--sp-3); border-left: 4px solid var(--rose); background: var(--rose-soft);
+  border-radius: var(--r-sm); color: var(--ink); font-weight: 600; }
+
 /* Where to go next: one column on a phone, two from 560 px. */
 .learn-links { display: grid; gap: var(--sp-2); }
 .learn-links a { display: grid; gap: 2px; padding: var(--sp-3) var(--sp-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); color: var(--ink); text-decoration: none; }
@@ -39,5 +45,5 @@
 .learn-links b { color: var(--violet); }
 .learn-links span { color: var(--muted); font-size: .92rem; }
 @media (min-width: 560px) { .learn-links { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 400px) { .learn-short, .learn-row > summary { padding-left: var(--sp-3); padding-right: var(--sp-3); } .learn-row p { padding-left: var(--sp-3); padding-right: var(--sp-3); }
+@media (max-width: 400px) { .learn-steps { margin-left: var(--sp-3); margin-right: var(--sp-3); } .learn-row p.learn-warn { margin-left: var(--sp-3); margin-right: var(--sp-3); } .learn-short, .learn-row > summary { padding-left: var(--sp-3); padding-right: var(--sp-3); } .learn-row p { padding-left: var(--sp-3); padding-right: var(--sp-3); }
   .learn-row p + .learn-go, .learn-row p + .learn-go-row { margin-left: var(--sp-3); margin-right: var(--sp-3); } }

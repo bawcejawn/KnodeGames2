@@ -15,7 +15,8 @@ const sentences = (s) => s.split(/(?<=[.!?])\s+/).filter(Boolean);
 
 const answers = [...main.matchAll(/<details class="learn-row" id="([a-z-]+)">\s*<summary>([^<]+)<\/summary>\s*<p>([\s\S]*?)<\/p>/g)]
   .map(([, id, q, a]) => ({ id, q, a: text(a) }));
-const short = [...main.matchAll(/<li>([\s\S]*?)<\/li>/g)].map(([, t]) => text(t));
+const shortBox = main.slice(main.indexOf('<section class="learn-short"'), main.indexOf("</section>", main.indexOf('<section class="learn-short"')));
+const short = [...shortBox.matchAll(/<li>([\s\S]*?)<\/li>/g)].map(([, t]) => text(t));
 
 test("the page has the short version and the fold-out answers", () => {
   assert.equal(short.length, 5, "In short: five lines");
@@ -35,7 +36,7 @@ test("every answer is at most two short sentences, and each In short line is one
 });
 
 test("no banned words, no dates, no prize amounts, no old game name", () => {
-  const banned = /\b(line|lines|odds|bet|bets|betting|earn|earns|earned|earning|earnings|return|returns|profit|profits|yield|APR|APY|guaranteed?)\b/i;
+  const banned = /\b(line|lines|odds|bet|bets|betting|earn|earns|earned|earning|earnings|return|returns|profit|profits|yield|APR|APY|guaranteed?|gambling|gamble)\b/i;
   assert.doesNotMatch(words, banned);
   assert.doesNotMatch(words, /\b(Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?\s+\d/i, "no dates");
   assert.doesNotMatch(words, /\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/, "no weekdays");
@@ -64,4 +65,20 @@ test("every link on the page goes to a real page, and the page uses the shared l
   assert.match(html, /href="learn\.css"/);
   assert.match(html, /<main[^>]*>\s*<aside class="page-box"/);
   assert.doesNotMatch(main, /<script/i, "no script in the page body");
+});
+
+// M-742 / M-769: the guest-wallet row. Vault's wording (M-754) is pinned, and every site label the steps name must
+// still exist in the wallet code, so a rename in wallet.js or header-wallet.js fails here until this row follows it.
+test("the guest wallet row: Vault's wording, real site labels, the key goes only to Kondor or Restore", () => {
+  const row = main.slice(main.indexOf('id="guest-wallet"'), main.indexOf("</details>", main.indexOf('id="guest-wallet"')));
+  assert.ok(row.length > 0, "guest-wallet row");
+  const t = text(row);
+  assert.ok(t.includes("Knode Games usually pays the Mana to collect a prize; a little KOIN in that wallet means you can always collect it yourself."));
+  assert.ok(t.includes(`Anyone with this key controls the wallet. Never share it. Enter it only in Kondor's own import screen, or in "Restore a guest key" in this site's wallet menu. Knode Games never asks you to send it, and no one from Knode Games ever will.`));
+  assert.match(row, /<p class="learn-warn">/, "the warning is in its own box");
+  const code = fs.readFileSync(WEB + "wallet.js", "utf8") + fs.readFileSync(WEB + "header-wallet.js", "utf8");
+  for (const label of ["Guest wallet: back up, restore, forget", "Back up guest key", "Tap to reveal", "Copy", "Restore a guest key", "Add another account", "Connect a wallet", "Kondor"])
+    assert.ok(code.includes(`"${label}"`) || code.includes(`"＋ ${label}"`), `site label still exists: ${label}`);
+  assert.doesNotMatch(t, /paste (it|the key|your key) (into|in) (a|any|this) (website|site|message|chat|form)/i);
+  assert.doesNotMatch(t, /send (us|it to)/i);
 });
