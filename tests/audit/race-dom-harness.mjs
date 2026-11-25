@@ -16,7 +16,9 @@ export function card(field, at = 0) {
 export const cards6 = (field, at) => Array.from({ length: 6 }, (_, l) => card(field, at + l * HOUR));
 export const pad3 = (w) => String(w).padStart(3, "0");
 
-export async function boot({ app, now, files = {}, vhp = {}, blocks = null, type = null, wallet = null }) {
+// D-743: `race` = { wallet, kind, mana, picks: { [race number]: { horse, changes } }, sent: [] } mocks the Race contract and a connected
+// Kondor wallet: get_pick / get_usage read `picks`, and W.send records each send (label, opts) and stores the pick.
+export async function boot({ app, now, files = {}, vhp = {}, blocks = null, type = null, wallet = null, view = null, race = null }) {
   const html = fs.readFileSync(`${app}web/race.html`, "utf8").replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
   const errors = [], vc = new VirtualConsole();
   vc.on("jsdomError", (e) => errors.push(String(e && (e.detail && e.detail.stack || e.stack || e.message) || e)));
@@ -34,13 +36,25 @@ export async function boot({ app, now, files = {}, vhp = {}, blocks = null, type
     if (v === "404" || v === "500") return { ok: false, status: Number(v), json: async () => null };
     return { ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(typeof v === "function" ? v() : v)) };
   };
+  if (race) files = { ...files, "deployment.json": { contract: addr("R") }, "race.koilib.json": {} };
   win.koilib = {
-    Provider: class { constructor() {} },
-    Contract: class { constructor() { this.functions = { balance_of: async ({ owner }) => ({ result: { value: String(Math.round((vhp[owner] || 0) * 1e8)) } }) }; } },
+    Provider: class { constructor() {} async getAccountRc() { return String(Math.round(((race && race.mana) ?? 10) * 1e8)); } },
+    Contract: class { constructor() { this.functions = { balance_of: async ({ owner }) => ({ result: { value: String(Math.round((vhp[owner] || 0) * 1e8)) } }),
+      ...(race ? {
+        get_pick: async ({ race: r }) => ({ result: race.picks[String(r)] ? { pick: { ...race.picks[String(r)] } } : {} }),
+        get_usage: async () => ({ result: { picks_today: 0 } }),
+        pick: async (args) => ({ operation: { call_contract: { contract_id: addr("R") }, args } }),
+      } : {}) }; } },
   };
+  if (race) {
+    race.sent = race.sent || [];
+    win.KWallet = { address: race.wallet, kind: race.kind || "kondor", init() {}, connect() {}, label: () => "Kondor", batchReady: () => false,
+      send: async (label, ops, opts = {}) => { race.sent.push({ label, opts }); for (const o of ops) { const k = String(o.args.race), old = race.picks[k]; race.picks[k] = { horse: o.args.horse, changes: old ? (old.changes || 0) + 1 : 0 }; } return "0x1220aa"; } };
+  }
   const B = blocks || { ts: [T - 1000], sig: [0], signers: [A], from: 1, top: 1 };
-  win.KBlocks = { ensure: async () => ({ B: typeof B === "function" ? B(T) : B }), isAddr: () => false };
+  win.KBlocks = { ensure: async () => ({ B: typeof B === "function" ? B(T) : B }), isAddr: race ? (a) => typeof a === "string" && /^1[1-9A-Za-z]{33}$/.test(a) : () => false };
   if (type != null) win.localStorage.setItem("pr-type", String(type));   // open on that race length's tab
+  if (view != null) win.localStorage.setItem("pr-view", view);   // M-448: Whole race is the default; "pack" opens in Pack view
   // M-375: a connected guest wallet (read-only: it sends nothing), for the page's "counted N of 24" line.
   if (wallet) win.KWallet = { address: wallet, kind: "guest", init() {}, connect() {}, label: () => "guest", batchReady: () => false };
   win.eval(fs.readFileSync(`${app}web/ruler-void.js`, "utf8"));

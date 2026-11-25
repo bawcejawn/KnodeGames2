@@ -90,3 +90,10 @@ test("addDay does not change its input", () => {
   V.addDay(t0, R4, res);
   assert.equal(JSON.stringify(t0), s);
 });
+
+test("makeRoster refuses an empty or near-empty list (Repo Lens 1 red-team, M-429): the kit holds the file and retries", () => {
+  for (const n of [0, 1, V.MIN_ROWS - 1]) assert.throws(() => mk(n), /at least 2 are needed/);
+  assert.throws(() => V.makeRoster({ week: 5, day: DAY0, pool: POOL, producers: [POOL, A(1), A(1)], madeAt: 1 }), /only 1 producer/, "the pool node and repeats don't count");
+  assert.equal(mk(V.MIN_ROWS).rows.length, V.MIN_ROWS);
+  assert.equal(V.MIN_ROWS, 2);
+});

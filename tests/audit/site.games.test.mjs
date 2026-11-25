@@ -113,3 +113,35 @@ test("Block X search description: the Block X chat's line (15 Nov), no stale blo
   for (const tag of ['name="description"', 'property="og:description"', 'name="twitter:description"']) assert.ok(b.includes(`<meta ${tag} content="${line}">`), tag);
   assert.ok(!b.includes("2,400 Koinos blocks"));
 });
+
+test("every menu page has the one short box at the top, from tools/page-box.json (D-730)", async () => {
+  const nav = await import(new URL(`file://${process.cwd()}/${APP}/tools/site-nav.mjs`.replace(/\/\.\//, "/")).href);
+  const accents = new Set(["site", "tool", "questions", "race", "blockx", "bracket", "golf", "fantasy", "lastnode", "overunder", "vs", "combo", "survivor"]);
+  for (const [k, [game, text]] of Object.entries(nav.PAGE_BOX)) {
+    assert.ok(accents.has(game), `${k}: known accent`);
+    assert.ok(text.length >= 20 && text.length <= 200, `${k}: 1-2 short sentences`);
+    assert.ok((text.match(/[.!?](\s|$)/g) || []).length <= 3, `${k}: at most three short sentences`);
+    assert.doesNotMatch(text, /\b(bet|bets|odds|gambl\w*|earn\w*|returns?|guaranteed|beta)\b/i, `${k}: wording rules`);
+  }
+  for (const f of fs.readdirSync(`${APP}/web`).filter((x) => x.endsWith(".html"))) {
+    const h = read(`web/${f}`);
+    if (!/<nav class="tabs"/.test(h)) continue;
+    if (f === "index.html") {
+      for (const v of ["welcome", "play", "leaderboard", "results", "how"]) assert.match(h, new RegExp(`id="view-${v}"[^>]*>\\s*<aside class="page-box"`), `index ${v}: box at the top`);
+    } else assert.match(h, /<main[^>]*>\s*<aside class="page-box"/, `${f}: box at the top of the page`);
+    assert.match(h, /href="page-box\.css"/, `${f}: box styles`);
+  }
+});
+
+test("the All games \"Staked\" tag follows the vault's list_games, the same list as the Stake page (D-768)", () => {
+  const js = read("web/games.js"), panel = read("web/stake-panel.js"), page = read("web/stake-page.js");
+  assert.match(js, /K\.stakeable\(\)/, "games.js asks the vault");
+  assert.match(js, /data-staked-pill/, "each Staked tag can be taken away or added");
+  assert.match(panel, /async function stakeable\(\)[\s\S]{0,400}g\.staked && \(g\.active \|\| big\(g\.stake\) > 0n\)/, "the same filter as the Stake page");
+  assert.match(panel, /window\.KStake = \{[^}]*stakeable/, "stake-panel.js offers it");
+  // read only: no send in that path
+  assert.doesNotMatch(panel.match(/async function stakeable\(\)[\s\S]*?\n  }/)[0], /send|sign/i);
+  assert.doesNotMatch(page + panel, /VHP per 100/, "no per-100 wording on the stake pages");
+  // games.json's kinds still drive the Rules text
+  assert.ok(games.every((g) => Array.isArray(g.kinds)));
+});

@@ -57,11 +57,15 @@ export function rpcNode(url) {
 // ── protobuf, just what list_picks needs (contracts/picks/assembly/proto/picks.proto) ──
 const varint = (n) => { const o = []; let v = BigInt(n); do { let x = Number(v & 0x7fn); v >>= 7n; if (v) x |= 0x80; o.push(x); } while (v); return o; };
 /** list_picks_arguments { game = 1; round = 2; start_after = 3 (address bytes); limit = 4 }. */
+/** base64url WITH its "=" padding: the public nodes refuse chain.read_contract args whose padding was cut (Last Node,
+ *  #104, Tue 24 Nov; Node's base64url encoding drops it). koilib sends it padded the same way. */
+export const b64urlPadded = (b) => Buffer.from(b).toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
+
 export function encodeListPicks(game, round, startAfter, limit) {
   const b = [0x08, ...varint(game), 0x10, ...varint(round)];
   if (startAfter) { const a = decodeBase58(startAfter); b.push(0x1a, ...varint(a.length), ...a); }
   b.push(0x20, ...varint(limit));
-  return Buffer.from(b).toString("base64url");
+  return b64urlPadded(b);
 }
 function fields(buf) {
   const out = []; let i = 0;
@@ -272,7 +276,7 @@ export async function vaultView(node, vault, who, week, lim = {}) {
   const one = async (x) => {
     inTime();
     const a = decodeBase58(x);
-    const args = Buffer.from([0x0a, ...varint(a.length), ...a, 0x10, ...varint(C.GAME_ID), 0x18, ...varint(week)]).toString("base64url");
+    const args = b64urlPadded([0x0a, ...varint(a.length), ...a, 0x10, ...varint(C.GAME_ID), 0x18, ...varint(week)]);
     const r = await timed(node.call("chain.read_contract", { contract_id: vault, entry_point: GET_GAME_PLAYER, args }));
     if (!r || !("result" in r)) throw new Error(`no answer reading ${x}'s stake`);
     const g = fields(Buffer.from(r.result ?? "", "base64"));

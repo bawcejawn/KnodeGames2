@@ -16,3 +16,12 @@ test("the timer is three times an hour, all day, and can be started by hand", ()
   assert.deepEqual(crons, ["2,22,42 * * * *"]);
   assert.match(yml, /^\s*workflow_dispatch:/m);
 });
+
+test("chain.read_contract args keep their base64 '=' padding (24 Nov, M-539: unpadded args are refused with -32601)", () => {
+  const calls = yml.split("\n").filter((l) => l.includes('"chain.read_contract"'));
+  assert.ok(calls.length >= 2, "expected the picks read and the vault reads");
+  for (const l of calls) {
+    assert.match(l, /"args": base64\.urlsafe_b64encode\(args\)\.decode\(\)\}/, `args must be padded: ${l.trim().slice(0, 140)}`);
+    assert.doesNotMatch(l, /rstrip\("="\)/);
+  }
+});

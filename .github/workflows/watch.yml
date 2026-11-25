@@ -63,6 +63,8 @@ jobs:
       - name: Check the personal node
         run: node bot/watch.mjs
         env:
+          # Repo Lens R1-12: read from the independent second node (RPC_CHECK), not the stopgap RPC (armana), unless it is "off".
+          RPC: ${{ (vars.RPC_CHECK != '' && vars.RPC_CHECK != 'off') && vars.RPC_CHECK || 'https://api.koinosblocks.com' }}
           WATCH_PRODUCER: ${{ vars.PERSONAL_PRODUCER }}
           WATCH_LABEL: personal node
           WATCH_MINUTES: "30"

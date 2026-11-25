@@ -12,8 +12,9 @@ test("the bar shows only behind W.batchReady and only with chosen picks", () => 
 });
 test("chosen picks of every race length, open and different from the current pick, at most 10", () => {
   assert.match(js, /for \(const \[index, horse\] of drafts\)/); assert.match(js, /for \(const \[k, horse\] of rtDrafts\)/);
-  assert.match(js, /horse !== myPicks\.get\(index\) && start - Date\.now\(\) > LOCK_MARGIN/);
-  assert.match(js, /horse !== rtPicks\.get\(k\) && start - Date\.now\(\) > LOCK_MARGIN/);
+  // D-743: a change never goes in a batch (it is asked first and paid with the player's own Mana), so only first picks are drafts
+  assert.match(js, /!myPicks\.get\(index\) && start - Date\.now\(\) > LOCK_MARGIN/);
+  assert.match(js, /!rtPicks\.get\(k\) && start - Date\.now\(\) > LOCK_MARGIN/);
   assert.match(js, /pendingDrafts\(\)\.slice\(0, 10\)/);
 });
 test("races that start are dropped right before signing; the daily picks counted; failure wording", () => {
@@ -23,6 +24,6 @@ test("races that start are dropped right before signing; the daily picks counted
   assert.match(js, /race: M\.contractRace\(d\.type, d\.index\)/);
 });
 test("a single pick still goes through sendPick exactly as before", () => {
-  assert.match(js, /W\.send\(`pick \$\{nameOf\(horse\)\} for the race at \$\{dayTime\(tr\.start\)\}`, \[operation\]\)/);
+  assert.match(js, /W\.send\(`\$\{change \? "change your pick to" : "pick"\} \$\{nameOf\(horse\)\} for the race at \$\{dayTime\(tr\.start\)\}`, \[operation\], change \? \{ noSponsor: true \} : \{\}\)/);   // D-743
   assert.match(js, /onclick: \(\) => sendPick\(cur \+ k, sel\.value\)/);
 });

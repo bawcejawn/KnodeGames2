@@ -25,6 +25,10 @@ export const LEAD = 300000;
 export const AHEAD = 2 * DAY;
 export const MAX_CHANGES = 0;
 export const MAX_ROWS = 64;
+/** Repo Lens 1 red-team (M-429): fewer producers than this is a broken list, not a thin day (today's list has about 16;
+ *  week 5's write-once file was published EMPTY, VS-9). makeRoster throws, so the kit holds the file, alerts and retries
+ *  every run instead of locking an empty week. checkRoster does not use it: week 5's published file must still read. */
+export const MIN_ROWS = 2;
 export const MAX_NUMBER = 18446744073709551615n;
 export const ROSTER_VERSION = 1;
 
@@ -36,6 +40,7 @@ export function makeRoster({ week, day, pool, producers, madeAt }) {
   const rows = [...new Set(producers)].filter((a) => a !== pool).sort();
   for (const a of rows) if (!isAddr(a)) throw new Error(`roster: bad producer address ${a}`);
   if (rows.length > MAX_ROWS) throw new Error(`roster: ${rows.length} producers qualify, the limit is ${MAX_ROWS}: stopping, nothing is cut (D-296)`);
+  if (rows.length < MIN_ROWS) throw new Error(`roster: only ${rows.length} producer(s) qualify, at least ${MIN_ROWS} are needed: not publishing a broken list (it is retried next run)`);
   if (!Number.isSafeInteger(day) || day % DAY !== 0) throw new Error("roster: a day is a whole UTC day");
   const r = { v: ROSTER_VERSION, game: GAME, week, day, pool, rows, madeAt };
   return { ...r, sum: fnv64([r.v, r.game, r.week, r.day, r.pool, r.rows.join(","), r.madeAt].join("|")) };

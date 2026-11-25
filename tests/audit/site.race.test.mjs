@@ -172,7 +172,7 @@ test("the race page sends only one thing itself: the wallet's own pick on the ra
   // D-166 (contract v2): the race type rides in the race number from bit 48; the pick is still player, race, horse.
   assert.match(js, /const args = \{ player: who, race: M\.contractRace\(type, index\) \};/);
   assert.match(js, /raceContract\.functions\.pick\(\{ \.\.\.args, horse \}, \{ onlyOperation: true \}\)/);
-  assert.match(js, /await W\.send\(`pick [^`]*`, \[operation\]\)/);
+  assert.match(js, /await W\.send\(`\$\{change \? "change your pick to" : "pick"\} [^`]*`, \[operation\], change \? \{ noSponsor: true \} : \{\}\)/);   // D-743: a change uses the player's own Mana
   assert.doesNotMatch(js, /signTransaction|sendTransaction|privateKey|wif/i);
   assert.match(js, /const tr = M\.typedRace\(type, index\)/);
   assert.match(js, /if \(Date\.now\(\) >= tr\.start\)/, "the page also refuses a started race (the chain enforces it)");
@@ -207,7 +207,7 @@ test("race page: medals only for wallets that earn (the recorder's earns), on bo
 test("race page: the staked / free status bar sits at the top of the page, for game 7", () => {
   const h = read("web/race.html"), js = read("web/race.js");
   // owner 14 Nov facelift: the title now sits in the hero, still straight after the status bar
-  assert.match(h, /<main class="pr">\s*<div id="stake-badge" hidden><\/div>\s*<section class="rc-hero">[\s\S]*?<h1>Producer Race <span class="rc-tag">Free<\/span><\/h1>/);
+  assert.match(h, /<main class="pr">\s*(?:<aside class="page-box"[^\n]*<\/aside>\s*)?<div id="stake-badge" hidden><\/div>\s*<section class="rc-hero">[\s\S]*?<h1>Producer Race <span class="rc-tag">Free<\/span><\/h1>/);
   assert.match(js, /window\.KStake\.badge\(document\.getElementById\("stake-badge"\), \{ game: 7 \}\)/);
   assert.ok(h.indexOf('id="stake-badge"') < h.indexOf('id="stake"'), "the bar above the full stake panel");
 });

@@ -17,9 +17,9 @@ function data(over = {}) {
     live: true, week: 2n, config: { genesis_time: "1792368000000", week_length: "604800000" }, paused: false, min: U,
     wallet: { vhp: 42n * U, koin: 0n },
     games: [
-      g(7, "Producer Race", { total: 500n * U, mine: 20n * U, counted: 15n * U, pending: 5n * U, pendingFrom: "Mon 9 Nov", share: 0.04, staked: true, claims: [{ week: 1n, reward: 75000000n }], last: 120000000n }),
+      g(7, "Producer Race", { total: 500n * U, mine: 20n * U, counted: 15n * U, pending: 5n * U, pendingFrom: "Mon 9 Nov", share: 0.04, staked: true, claims: [{ week: 1n, reward: 75000000n }], last: { pot: 3n * U, staked: 250n * U } }),
       g(1, "Daily Questions", { total: 120n * U, mine: 10n * U, counted: 10n * U, share: 0.083, staked: true }),
-      g(2, "Who Signs Block X", { total: 80n * U, last: 90000000n }),
+      g(2, "Who Signs Block X", { total: 80n * U, last: { pot: 36n * U, staked: 40n * U } }),
     ],
     ...over,
   };
@@ -46,7 +46,7 @@ async function boot(d, { address = "1Abc", kind = "kondor" } = {}) {
 test("summary: total staked, where, what's earning, wallet, and rewards with one Claim all", async () => {
   const p = await boot(data());
   const s = p.text(".hub-sum");
-  assert.match(s, /You have staked 30 VHP in 2 games · 25 VHP earning this week/);
+  assert.match(s, /You have staked 30 VHP in 2 games · 25 VHP counting this week/);
   assert.match(s, /In your wallet 42 VHP/);
   assert.match(s, /Rewards to claim 0\.75 VHP Claim all/);
   p.button(".hub-sum", "Claim all").click(); await tick();
@@ -65,7 +65,7 @@ test("where you're staked: each game with the amount, its share and whether it's
   assert.ok(p.$("#g7").classList.contains("mine") && p.$("#g7").classList.contains("on"));
   const heads = p.$$("#hub-body h2").map((h) => h.textContent);
   assert.deepEqual(heads, ["Where you're staked", "Stake in another game"]);
-  assert.match(p.text("#g2"), /Who Signs Block X Last week paid 0\.9 VHP per 100 staked 80 VHP staked by everyone Stake/);
+  assert.match(p.text("#g2"), /Who Signs Block X Last week's pot: 36 VHP; 40 VHP was staked 80 VHP staked by everyone Stake/);
 });
 
 test("a stake that hasn't started yet says the Monday it starts counting", async () => {
@@ -218,4 +218,17 @@ test("I-3 (Repo Lens #142): withdrawing all of a Daily Questions stake also says
   p.button("#g1 .hub-form", "Cancel").click();
   p.button("#g7", "Withdraw").click(); p.type("20");
   assert.doesNotMatch(p.text("#hub-review"), /answers this week/, "other games: unchanged");
+});
+
+test("a week with no winners says its pot rolled into this week, not a per-100 figure (D-768)", async () => {
+  const d = data(); d.games[2].last = { rolled: true, pot: 3674n * U / 100n };
+  const p = await boot(d);
+  assert.match(p.text("#g2"), /No winners last week: its pot \(36\.74 VHP\) rolled into this week/);
+  assert.doesNotMatch(p.text("#g2"), /per 100/);
+});
+
+test("a closed week not yet finalized says its winners are decided by Wednesday night", async () => {
+  const d = data(); d.games[2].last = { pending: true, pot: 36n * U };
+  const p = await boot(d);
+  assert.match(p.text("#g2"), /Last week's pot: 36 VHP \(winners decided by Wednesday night\)/);
 });

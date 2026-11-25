@@ -419,7 +419,7 @@ ${ind(script, 10).replace(/\n$/, "")}
             git ls-files -z -- "$dir" | xargs -0 -r git update-index --force-remove --
           done
           while IFS= read -r name; do
-            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|alltime|${WEEK_SH})|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|schedule/r[0-9]{5}|${WEEK_SH}/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
+            [[ "$name" =~ ^[a-z][a-z0-9-]{1,23}/((board|live|alltime|${WEEK_SH})|vault/(HOLD-|RELEASE-)?W(0|[1-9][0-9]{0,3})|inputs/W(0|[1-9][0-9]{0,3})|schedule/r[0-9]{5}|${WEEK_SH}/(manifest|(wk|d[1-7]|r[0-9]{3,5})[.][0-9a-f]{12}|p/[0-9a-f]{1,2}[.][0-9a-f]{12}))\\.json$ ]] || { echo "::error::bad name from the check: $name"; exit 1; }
             h=$(git hash-object -w "$IN/$name")
             git update-index --add --cacheinfo "100644,$h,$name"
           done < "$LIST"

@@ -63,12 +63,12 @@ test("start-sheet.js uses no network, storage or innerHTML", () => {
   assert.doesNotMatch(read("web/start-sheet.js"), /fetch\(|XMLHttpRequest|localStorage|sessionStorage|innerHTML|insertAdjacentHTML|eval\(/);
 });
 
-test("hub-ui.css is linked once, last before </head>, on every page with menus except race.html and golf.html", () => {
+test("hub-ui.css is linked once, last before </head>, on every page with menus", () => {
   const pages = fs.readdirSync(path.join(APP, "web")).filter((f) => f.endsWith(".html"));
   let n = 0;
   for (const f of pages) {
     const s = read(`web/${f}`), menus = /<nav class="tabs"|<nav class="tabbar"/.test(s), links = s.split('href="hub-ui.css"').length - 1;
-    if (!menus || f === "race.html" || f === "golf.html") { assert.equal(links, 0, f); continue; }
+    if (!menus) { assert.equal(links, 0, f); continue; }
     assert.equal(links, 1, f); n++;
     assert.match(s, /<link rel="stylesheet" href="hub-ui.css">\s*<\/head>/, `${f}: last before </head>`);
   }
