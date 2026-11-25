@@ -288,7 +288,8 @@
       ...(mine.length ? [el("h2", {}, "Where you're staked"), el("ul", { class: "hub-list" }, ...mine.map(stakedRow))] : []),
       el("h2", {}, mine.length ? "Stake in another game" : "Pick a game to stake in"),
       el("p", { class: "muted hub-sub" }, `At least ${F.exact(d.min)} VHP in a game makes you a staked player there. A new stake starts counting the next Monday.`),
-      el("ul", { class: "hub-list" }, ...rest.map(otherRow)));
+      el("ul", { class: "hub-list" }, ...rest.map(otherRow)),
+      el("p", { class: "muted hub-sub" }, "Only games that take a stake are listed here. New games appear once they open for staking. Free-play games don't need a stake."));
   }
 
   // #g7 (from a game page's status bar): open that game's Stake box.
