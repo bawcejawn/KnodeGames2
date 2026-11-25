@@ -7,7 +7,7 @@
 | Piece | Purpose | Code | Version / last change | Known limits |
 |---|---|---|---|---|
 | **Vault** `1Mpmf2…` | holds every stake, produces blocks as the Knode Games Pool, pays weekly rewards | `game/` | v6 (2 Nov); **v6.1 announced on chain 5 Nov** (`11043e1f…`, tx `0x1220a4a9…`, uploadable from Sat 7 19:01 UTC), upload Mon 9 ([CALENDAR](.ai/platform/CALENDAR.md)) | owner key hot until the cold-owner handover Tue 10 |
-| **Swap Desk** `1FKTpX…` | VHP → KOIN, 3% fee | `desk/` | v2 (28 Oct) | owner is also its treasury until the weekend runbook |
+| **Swap Desk** `1FKTpX…` | VHP → KOIN, 10% fee since 25 Nov 2026 (was 3%); a separate app, owner-run, fee set on chain | `desk/` | v2 (28 Oct) | owner is also its treasury until the weekend runbook |
 | **Mana sponsor** `1ByDDS…` | pays players' Mana within caps (2.4 a transaction) | `sponsor/` | v3 guest fix (4 Nov) | one key controls it ([SPONSOR](.ai/platform/SPONSOR.md)) |
 | **Picks** `1LmgqB…` / **Race picks** `1EN7xU…` | record picks, enforce locks on chain | `picks/`, `race/` | 30 Oct / 27 Oct | Picks owner handover tool built (#180, #191); date not set |
 | **Daily Questions** (game 1) | quick questions, weekly board, staked + free | `generator.ts`, `resolver.ts`, `bot/bot.ts`, `app.js` | 5 a day now; **2 + 3 a day from Mon 9**; plain wording (#171) | **results recorder for the rule week not built (I-101)** |
