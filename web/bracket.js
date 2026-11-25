@@ -49,6 +49,8 @@
   const weeks = new Map();          // week → recorder file
   let board = null, form = new Map(), view = null, round = 0;
   let prizesFrom;                   // index.json prizesFromWeek: the first paid week; null = none yet; undefined = not read
+  // M-741: the words under a live estimate (the Ruler chat to confirm them, M-739 point 3); one place to change them
+  const LIVE_EST = "live estimate (blocks against expected so far, updated hourly); the VHP ruler decides at the end of the day";
   let rulerFrom;                    // index.json rulerFrom (R-BR-7): the ruler's first "on" week; null = not set; undefined = not read
   const shadows = new Map();        // week → its shadow summary (ruler/W<week>.json), when there is one
   let picksContract = null, mine = null, sending = false;
@@ -240,6 +242,10 @@
     const open = isOpen(), res = w.results, byes = new Set(BM.byesOf(s.size, s.seeds.length));
     // Repo Lens #G-48 G48-4: in a week the VHP ruler scores, the day index isn't what decides, so its percentages aren't shown
     const onWeek = w.rulerMode === "on";
+    // Live score (M-741): in an on week the day index doesn't decide (G48-4), so a decided round shows no percentages.
+    // A round the ruler hasn't decided yet shows the day index so far as a LIVE ESTIMATE, marked "~" and labelled; it is
+    // never shown as a result, and it goes away as soon as the ruler's card decides the round.
+    const estOf = (r) => onWeek && !(res && res.rounds[r]);
     const decidedOf = (r) => (res && res.rounds[r] ? (onWeek ? (Array.isArray(w.rulerBackup) && w.rulerBackup.includes(r) ? " · decided by the seeding (no ruler card in time)" : " · decided by the VHP ruler's card") : "") : "");
     const ptsOf = (r) => `${2 ** r} point${r ? "s" : ""} a right pick${r === R - 1 ? ", +2 for the champion" : ""}`;
     const roundDone = (r) => (draft ? draft[r].filter(Boolean).length : 0);
@@ -249,7 +255,7 @@
       el("span", { text: n }), el("small", { text: open && draft ? `${dayName(BM.roundDay(view, r, s.size)).slice(0, 3)} · ${roundDone(r)}/${draft[r].length}` : dayName(BM.roundDay(view, r, s.size)).slice(0, 3) }))));
     $("bk-rounds").hidden = tree;
     const di0 = dayIdx(round);
-    $("bk-day").textContent = `${BM.ROUND_NAMES[s.size][round]} · played ${dayName(BM.roundDay(view, round, s.size))} (UTC)${di0 && di0.hours && !di0.done ? ` · ${di0.hours} of 24 hours in` : ""} · ${ptsOf(round)}${decidedOf(round)}`;
+    $("bk-day").textContent = `${BM.ROUND_NAMES[s.size][round]} · played ${dayName(BM.roundDay(view, round, s.size))} (UTC)${di0 && di0.hours && !di0.done ? ` · ${di0.hours} of 24 hours in` : ""} · ${ptsOf(round)}${decidedOf(round)}${di0 && di0.hours && estOf(round) ? ` · ~ ${LIVE_EST}` : ""}`;
     $("bk-day").hidden = tree;
     $("bk-quick").hidden = !open;
     const fk = renderFollow(s, res);
@@ -269,7 +275,7 @@
         const kids = [el("span", { class: `bk-seed t${seed <= 4 ? 1 : seed <= 8 ? 2 : seed <= 16 ? 3 : 4}`, text: String(seed) }),
           el("span", { class: "bk-name" }, el("b", { text: nameOf(p.a) }), el("small", { text: meta })),
           ix && !pooled && BM.forfeits(ix, p.vhp) ? el("span", { class: "bk-ix", text: "under half", title: `Averaged ${fmt(ix.avg / 1e8)} VHP over the day, under half its seeding ${fmt(p.vhp)} VHP: it loses this matchup, unless its opponent is under half too (then the blocks decide)` })
-            : ix && !onWeek && BM.scoreOf(ix, pooled)[1] > 0 ? el("span", { class: "bk-ix", text: `${fmt(BM.indexOf(ix, pooled) * 100, 1)}%`, title: pooled ? `${fmt(ix.blocks)} blocks; judged on its rate (the Knode Games Pool)` : `${fmt(ix.blocks)} blocks of ${fmt(ix.expected, 1)} expected` }) : null,
+            : ix && (!onWeek || estOf(r)) && BM.scoreOf(ix, pooled)[1] > 0 ? el("span", { class: estOf(r) ? "bk-ix est" : "bk-ix", text: `${estOf(r) ? "~" : ""}${fmt(BM.indexOf(ix, pooled) * 100, 1)}%`, title: (estOf(r) ? LIVE_EST + ". " : "") + (pooled ? `${fmt(ix.blocks)} blocks; judged on its rate (the Knode Games Pool)` : `${fmt(ix.blocks)} blocks of ${fmt(ix.expected, 1)} expected`) }) : null,
           upset ? el("span", { class: "bk-upset", text: winner ? "Upset!" : "Upset pick" }) : null,
           myPick === seed && !bye && (open || mine !== null) ? el("span", { class: "bk-mark", text: winner ? (winner === seed ? "✓" : "✗") : "★" }) : null];
         if (open && !bye && seed) return el("button", { type: "button", class: cls, "aria-pressed": String(myPick === seed), "aria-label": `Pick ${nameOf(p.a)}, seed ${seed}`, onclick: () => choose(r, m, seed) }, ...kids);
