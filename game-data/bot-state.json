@@ -3,7 +3,7 @@
   "orphans": [],
   "lastCompound": 41415033,
   "warnings": [],
-  "lastProduced": 41414898,
+  "lastProduced": 41415374,
   "producedByDay": {
     "1430": 36,
     "1431": 60,
@@ -13,16 +13,16 @@
     "1435": 53,
     "1436": 53,
     "1437": 53,
-    "1438": 1
+    "1438": 4
   },
-  "producerScannedTo": 41414970,
+  "producerScannedTo": 41415710,
   "settings": "{\"min_stake\":\"100000000\",\"min_stake_next\":\"0\",\"min_stake_next_week\":\"0\",\"max_sponsor_rc\":\"0\",\"min_sponsor_rc\":\"0\",\"paused\":false}",
-  "sealedAt": 41414967,
+  "sealedAt": 41415685,
   "desk": {
     "settings": "{\"fee_bps\":1000,\"min_swap\":\"100000000\",\"max_swap\":\"0\",\"paused\":false,\"timelock\":\"172800000\"}",
-    "koin": "27669590442",
+    "koin": "28520722043",
     "koinOut": "825796065935",
-    "at": 1795729128420
+    "at": 1795731406920
   },
   "deskProducerKey": "AzCYCDLDa49PPVHKk60xQbOErS6XY1TcEA8bkSo8Sk6E",
   "notified": [
@@ -31,20 +31,20 @@
   ],
   "vhpLists": {
     "a1dca6c62b750898eb147d4f8eeb0ee35f9a98fcdd14f0c06f4b2c1c08a8fc00": {
-      "n": 64,
-      "last": 41415027
+      "n": 65,
+      "last": 41415745
     },
     "3f9ce05670aadbaeeded237077c0909cf70e412ba52d44f8d05683fec1027655": {
-      "n": 64,
-      "last": 41415027
+      "n": 65,
+      "last": 41415745
     },
     "b04467930903aaf015311696186baeb7fb6cf490711516015e5ea8bfa3e7c7e9": {
-      "n": 36,
-      "last": 41415027
+      "n": 37,
+      "last": 41415745
     },
     "d2e3e051caedc6220660429156d3f17c4d31f9edcb47ce2609caed6eac459981": {
-      "n": 23,
-      "last": 41415027
+      "n": 24,
+      "last": 41415745
     },
     "90bf1c3839d9a3d4d4f9aa91ddb396ef28835360a1935522c94676f61f54eb1b": {
       "n": 9,
@@ -79,7 +79,7 @@
     "2026-11-23": "931416415",
     "2026-11-24": "784612725",
     "2026-11-25": "711912658",
-    "2026-11-26": "751781620"
+    "2026-11-26": "791914537"
   },
   "games": "[[1,true,true,true,0,0,0],[2,true,true,true,1,3,0],[4,true,true,true,1,6,0],[6,false,true,true,1,5,5],[7,true,true,true,1,3,0],[9,true,true,true,1,5,0],[13,true,true,true,1,6,0]]",
   "vault": {
@@ -99,7 +99,6 @@
     }
   },
   "ownResolves": [
-    1795000876596,
     1795000894741,
     1795000914648,
     1795017776611,
@@ -158,7 +157,8 @@
     1795705836666,
     1795716543044,
     1795716559878,
-    1795716575935
+    1795716575935,
+    1795731382714
   ],
-  "seal": "3141682aa7565b5f60071d2d05c663f46667c8dad77c1900d310a4d49aea5bb7"
+  "seal": "c73e34ca0732be592da609db456db5f87b8da7ac5167d7f705e795bbbc6c1503"
 }
