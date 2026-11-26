@@ -62,12 +62,20 @@ test("the look (D-730, D-732): one short box with Rules and Ruler links, 'the nu
   assert.equal(box, "Free test game, no prizes yet. Pick a producer and call whether it signs more or fewer blocks than the number shown. A new game starts every 30 minutes.", "Marketing's box text (M-491), in the shared box (#94)");
   assert.equal((html.match(/class="page-box"/g) || []).length, 1, "exactly one box on the page (R3-17 F-5)");
   assert.ok(!html.includes('class="ou-box"'), "no second, page-own box");
-  assert.match(html, /<p class="ou-links"><a href="#help" id="ou-rules-link">Rules<\/a> · <a href="ruler\.html">The Ruler<\/a><\/p>/);
+  assert.match(html, /<p class="ou-links"><a href="#help" id="ou-rules-link">Rules<\/a> · <a href="#league-box">League<\/a> · <a href="ruler\.html">The Ruler<\/a><\/p>/, "the League link sits in the links row (page standard)");
   assert.match(code, /\$\("help"\)\.open = true/, "the Rules link opens the rules box");
   assert.ok(js.includes('"The number"') && js.includes('"▲ More"') && js.includes('"▼ Fewer"'));
   assert.match(css, /prefers-reduced-motion: reduce\) \{ \.ou-g\.sent \{ animation: none; \}/, "no flash for people who ask for less motion");
   assert.match(css, /\.ou-actions\.ready \{ position: sticky;/);
-  assert.match(code, /: el\("span", \{ class: "ou-g-lock", text: "Cancelled" \}\)/, "a cancelled game shows no countdown");
+});
+
+test("declutter (page standard, owner M-703): cancelled starts are hidden, the small print lives in Rules, the result time is said", () => {
+  assert.match(code, /starts = \[\.\.\.games\.keys\(\)\]\.filter\(\(s\) => games\.get\(s\)\)/, "a start with no schedule file is never rendered");
+  assert.ok(!code.includes(`text: "Cancelled"`) && !html.includes("cancelled for everyone (no schedule file)"), "no Cancelled card or text");
+  const sheet = html.slice(html.indexOf('id="sheet"'), html.indexOf("</section>", html.indexOf('id="sheet"')));
+  assert.ok(!sheet.includes('class="ou-small"'), "no small print under Open games");
+  assert.match(text(html.slice(html.indexOf('id="help"'))), /3 or 4 games are open at a time, never more than 4/);
+  assert.match(html, /<p class="ou-small" id="ou-when">Your result comes about 12 hours after the game starts\.<\/p>/);
 });
 
 test("the game is called More or Fewer: 'Over' or 'Under' never shows on this page (owner, D-762; display only)", () => {

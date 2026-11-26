@@ -49,7 +49,6 @@
 .ou-games { display: grid; gap: 12px; margin: 10px 0; }
 .ou-g { background: var(--surface, #fff); border: 1px solid var(--line, #E2E4EA); border-top: 4px solid var(--ou-accent); border-radius: var(--r-md, 14px); padding: 10px 12px 12px; box-shadow: var(--shadow, none); transition: box-shadow .2s ease; }
 .ou-g.on { box-shadow: 0 0 0 2px var(--ou-accent), var(--shadow, none); }
-.ou-g.ou-off { border-top-color: var(--line, #E2E4EA); opacity: .85; }
 .ou-g-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
 .ou-g-when { color: var(--muted, #4B4766); font-weight: 600; }
 .ou-g-lock { padding: 3px 9px; border-radius: 999px; background: var(--ou-pill); color: var(--ou-pill-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
