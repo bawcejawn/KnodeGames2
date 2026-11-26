@@ -321,6 +321,16 @@
         <h1>Rules</h1>
         <p class="muted">The rules for every open game. Pick one to see how it works in a minute.</p>
       </div>
+      <div class="rules-shared" id="rewards-all">
+        <h2>How rewards work for every game</h2>
+        <p class="muted">The same for every game that takes a stake. Each game's own tab below has its own points and scoring.</p>
+        <ol class="steps">
+          <li><h3>Play free, or stake VHP</h3><p>Everyone can play every game free. In games that pay a free prize, the 2 best free players each week win 2 VHP and 1 VHP (ties share); each game's page says whether its free prize is on. To share a game's rewards, stake at least 1 VHP in it (whole numbers only; KOIN works too, it is turned into VHP). A stake counts from the next week. You can withdraw any amount at any time on the <a href="stake.html">Stake page</a>.</p></li>
+          <li><h3>Pick in any game</h3><p>Each game has its own points and its own weekly board, and each game's page explains its own scoring.</p></li>
+          <li><h3>The week closes</h3><p>Each week the vault's block rewards go to the players. A flat 5% fee is taken first. Then the free prizes are paid: in each game with a free prize, 2 VHP to the best free player and 1 VHP to the second. The rest is split across the staked games by each game's share of the VHP staked that week. Inside each game, the top 30% of staked players with at least 1 point share that game's part: 40% by place and stake counted up to 10 VHP, 60% by place and full stake. The bot closes the week. Each game's results are posted by Thursday 00:00 UTC (Wednesday 7 PM ET) and are final 24 hours after they're posted. If a game has no staked winners, its part carries into that game's next week. The free prizes are still paid to its free players.</p><p>In a thin week the free prizes can be smaller. An unused free prize goes back into next week's rewards.</p></li>
+          <li><h3>Collect your reward</h3><p>Rewards are paid in VHP and never expire. Collect them on the <a href="stake.html">Stake page</a>, with every game's. Unclaimed rewards wait for you.</p></li>
+        </ol>
+      </div>
       <div class="rules-tabs" role="tablist" aria-label="Rules for">
         <button type="button" role="tab" id="rt-game" data-rules="game" aria-controls="rp-game"><span aria-hidden="true">🎯</span>Daily Questions</button>
         <button type="button" role="tab" id="rt-race" data-rules="race" aria-controls="rp-race"><span aria-hidden="true">🏇</span>Producer Race</button>
@@ -334,10 +344,10 @@
         <div class="rules-short"><h2>In short</h2><p>Answer quick questions every day about Koinos block producers. Every right answer is a point, and each week the best players share that week's pool.</p></div>
         <ol class="rules-steps">
           <li><span class="ri" aria-hidden="true">👛</span><div><b>Connect</b><p>Kondor on a computer, KOIN Vault on a phone, or play as a guest: free, no wallet needed.</p></div></li>
-          <li><span class="ri" aria-hidden="true">🔒</span><div><b>Stake 1 VHP or more, or play free</b><p>Staking lets you share the weekly pool. Your stake is never spent: take it back any time.</p></div></li>
-          <li><span class="ri" aria-hidden="true">✍️</span><div><b>Answer the day's questions</b><p>Two rounds a day, Monday to Saturday, at <b class="lt" data-utc-hour="0">00:00 UTC</b> and <b class="lt" data-utc-hour="12">12:00 UTC</b>: 4 questions each, 8 a day, 48 a week. Each round is open for 12 hours.</p></div></li>
+          <li><span class="ri" aria-hidden="true">🔒</span><div><b>Stake 1 VHP or more, or play free</b><p>Free to play. To share this game's weekly rewards, stake at least 1 VHP in it. Your stake is never spent: take it back any time.</p></div></li>
+          <li><span class="ri" aria-hidden="true">✍️</span><div><b>Answer the day's questions</b><p>Two rounds a day, Monday to Saturday, at <b class="lt" data-utc-hour="0">00:00 UTC</b> and <b class="lt" data-utc-hour="12">12:00 UTC</b>: 4 questions each, 8 a day, 48 a week. Each round is open for 12 hours. Every correct answer is one point; a question that is voided scores for nobody. A normal week has 48 questions, so 48 is the top score. Sunday is results day.</p></div></li>
           <li><span class="ri" aria-hidden="true">📈</span><div><b>Climb the weekly leaderboard</b><p>Results come straight from the blocks. Check them on the Results page.</p></div></li>
-          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Collect your reward</b><p>From Week 4 (the week of 16 November) Daily Questions is paid like every vault game: each week's results are posted by Thursday <b class="lt" data-utc-hour="0">00:00 UTC</b> and are final 24 hours later, and you collect on the <a href="stake.html#g1">Stake page</a>. Rewards are paid in VHP and never expire.</p></div></li>
+          <li><span class="ri" aria-hidden="true">🏆</span><div><b>Collect your reward</b><p>Rewards are paid in VHP and collected on the <a href="stake.html#g1">Stake page</a>, with every game's. They never expire. (Rewards from weeks before 16 November are collected on this page.)</p></div></li>
         </ol>
         <div class="q-more" id="questions-more">
           <p class="schedule" id="schedule"></p>
@@ -349,19 +359,11 @@
         </div>
         <div class="rules-good"><h3>Good to know</h3><ul>
           <li><b>Free to play.</b> Knode Games pays the Mana (the network's transaction fee) for you, within daily limits.</li>
-          <li><b>Who wins:</b> the top 30% of staked players with at least 1 point share Daily Questions' part of the week's rewards: the vault's block rewards, after a flat 5% fee and the free prizes, are split across the staked games by each game's stake. The 2 best free players win 2 VHP and 1 VHP.</li>
+          <li><b>How the week is paid:</b> Each week the vault's block rewards go to the players. A flat 5% fee is taken first. Then the free prizes are paid: in each game with a free prize, 2 VHP to the best free player and 1 VHP to the second. The rest is split across the staked games by each game's share of the VHP staked that week. Inside each game, the top 30% of staked players with at least 1 point share that game's part: 40% by place and stake counted up to 10 VHP, 60% by place and full stake. The bot closes the week. Each game's results are posted by Thursday 00:00 UTC (Wednesday 7 PM ET) and are final 24 hours after they're posted. If a game has no staked winners, its part carries into that game's next week. The free prizes are still paid to its free players. <a href="#rewards-all">How rewards work for every game</a>.</li>
           <li><b>A stake counts from the next week.</b> You can withdraw any amount at any time, on the <a href="stake.html#g1">Stake page</a> (it works the same for every game).</li>
-          <li><b>Reward split since the week of Monday 2 November:</b> 40% shared by place × stake up to 10 VHP, 60% by place × full stake. Details below.</li>
         </ul></div>
         <h3 class="rules-more">The details</h3>
-        <details class="rules-d"><summary>How rewards are worked out</summary>
-      <ol class="steps">
-        <li><h3>Play free, or stake VHP</h3><p>Anyone can answer and climb the leaderboard for free, and each week the 2 best free players win 2 VHP for 1st and 1 VHP for 2nd (from Week 4, the week of 16 November; ties share; from 16 November, up to 10 wallets share a place, and if more tie, the 10 whose last point came earliest, then by wallet address, so ties at the same time go to the lower address; a free player is one who never held the minimum stake that week; from the October 2026 contract update). To share in the rewards, stake at least 1 VHP (whole numbers only), or KOIN, which is burned into VHP. A stake counts from the next week. You can withdraw any amount at any time, down to the last decimal. Withdraw part during a week and you keep playing with the lower stake; withdraw everything and you're out for that week.</p></li>
-        <li><h3>Answer daily questions</h3><p>48 questions a week, Monday to Saturday, in two rounds a day: 4 at 00:00 UTC (answers close at 12:00 UTC) and 4 at 12:00 UTC (answers close at 00:00 UTC), each 12 hours later and before the blocks they ask about are produced. Every correct answer is one point. Sunday is results day.</p></li>
-        <li><h3>The week closes</h3><p><strong>The vault's block rewards go to the players</strong> after a flat 5% fee: first the free players' prizes, then the rest is split across the staked games by each game's stake. Daily Questions' part goes to the top 30% of its staked players who scored at least one point, ties included. Higher places win a bigger share: 40% is shared by place × stake counted up to 10 VHP per wallet, so a small stake still wins a real share, and 60% by place × full stake, so staking more pays more. From Week 4 (the week of 16 November) Daily Questions works like every vault game: the bot closes the week, its results are posted by Thursday 00:00 UTC and are final 24 hours later. No staked winners? The free players' prize is still paid, and the rest carries into next week.</p></li>
-        <li><h3>Collect your reward</h3><p>Your reward is paid in VHP. From Daily Questions' part of the week's rewards, the top 30% of staked players who scored at least one point win, counted by headcount, and ties at the line win too. Each place weighs 1/√rank, so first place weighs the most. The pot is two baskets: 40% shared by place weight times your stake counted up to 10 VHP per wallet (so a small stake still wins a real share), and 60% shared by place weight times your full stake. Every correct answer is one point, so the week's top score is the number of questions that week (48 in a normal week). (These rules apply from the first full week after the October 2026 contract update; before it, the first basket was shared by place alone.) Unclaimed rewards wait for you, and keep producing for the pool meanwhile. Rewards from weeks before 16 November are collected on this page; from Week 4 on, on the Stake page, with every game's.</p></li>
-      </ol>
-        </details>
+        <p class="muted rules-link"><a href="#rewards-all">How rewards work for every game</a>: free prizes, the 5% fee, the split between games and the top 30%.</p>
         <details class="rules-d"><summary>Anyone can move the results: voids and the VHP rule</summary>
       <div class="section-head" id="open-network">
         <h2>Anyone can move the results</h2>

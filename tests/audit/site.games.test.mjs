@@ -180,3 +180,24 @@ test("the Leaderboards picker has Knode Games VS and More or Fewer, with their '
   assert.match(read("web/leaders.js"), /cfg\.soon \|\| "Couldn't load this leaderboard/);
   assert.match(read("web/leaders.js"), /soon: typeof b\.soon === "string" && b\.soon\.length <= 100 \? b\.soon : "",/);
 });
+
+// Owner, 25 Nov 2026 (M-824/M-825/M-826): Daily Questions is paid and shares rewards exactly like every other staked game.
+// One shared payout section on the Rules view (Vault's Card 3 words, verbatim), nothing about "Daily Questions' part".
+test("Rules: one shared payout section for every game, Vault's exact Card 3 text, and no Questions-first payout wording", () => {
+  const home = read("web/index.html");
+  const card3 = "Each week the vault's block rewards go to the players. A flat 5% fee is taken first. Then the free prizes are paid: in each game with a free prize, 2 VHP to the best free player and 1 VHP to the second. The rest is split across the staked games by each game's share of the VHP staked that week. Inside each game, the top 30% of staked players with at least 1 point share that game's part: 40% by place and stake counted up to 10 VHP, 60% by place and full stake. The bot closes the week. Each game's results are posted by Thursday 00:00 UTC (Wednesday 7 PM ET) and are final 24 hours after they're posted. If a game has no staked winners, its part carries into that game's next week. The free prizes are still paid to its free players.";
+  assert.equal(home.split(card3).length - 1, 2, "the same paragraph in the shared section and in the Questions Good to know box");
+  assert.match(home, /<div class="rules-shared" id="rewards-all">[\s\S]*<h3>Play free, or stake VHP<\/h3>[\s\S]*<h3>Pick in any game<\/h3>[\s\S]*<h3>The week closes<\/h3>[\s\S]*<h3>Collect your reward<\/h3>/);
+  assert.match(home, /In games that pay a free prize, the 2 best free players each week win 2 VHP and 1 VHP/);
+  assert.match(home, /In a thin week the free prizes can be smaller\. An unused free prize goes back into next week's rewards\./);
+  for (const bad of [/Daily Questions' part/, /Daily Questions' share/, /works like every vault game/, /From Week 4 \(the week of 16 November\) Daily Questions/, /Reward split since the week of Monday 2 November/, /24 hours later/]) assert.doesNotMatch(home, bad, String(bad));
+  assert.doesNotMatch(read("web/app.js"), /Daily Questions' share/);
+  assert.doesNotMatch(read("web/stake.html"), /Daily Questions' own stake buttons/);
+  assert.doesNotMatch(read("web/start.html"), /Then answer the daily questions/);
+  assert.doesNotMatch(read("web/get.html"), /then answer each day's questions/);
+  // the Questions tab keeps its own scoring and links to the shared section
+  const q = home.slice(home.indexOf('id="rp-game"'), home.indexOf('id="rp-race"'));
+  assert.match(q, /48 questions|8 a day, 48 a week/); assert.match(q, /48 is the top score/); assert.match(q, /href="#rewards-all"/);
+  assert.match(q, /Rewards from weeks before 16 November are collected on this page/);
+  for (const bad of [/\b(earn|earnings|returns?|APY|guaranteed|bet|odds)\b/i]) assert.doesNotMatch(card3, bad);
+});
