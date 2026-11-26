@@ -3662,7 +3662,28 @@ jobs:
           else
             export GIT_AUTHOR_NAME=kpred-bot GIT_AUTHOR_EMAIL=kpred-bot@users.noreply.github.com GIT_COMMITTER_NAME=kpred-bot GIT_COMMITTER_EMAIL=kpred-bot@users.noreply.github.com
             commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "games: record")
-            git push -q "$remote" "$commit:refs/heads/games-data"
+            # Thu 26 Nov (M-828, as kit-games.yml in #164): Last Node, Golf, Combo or the kit may push games-data while this job
+            # checks. Only this workflow writes these folders, so if they are unchanged on the new tip, the checked folders are
+            # put on that tip and pushed again (up to 3 tries). Anything else on the branch is kept as the tip has it.
+            for try in 1 2 3; do
+              if git push -q "$remote" "$commit:refs/heads/games-data"; then break; fi
+              if [ "$try" = 3 ] || [ -z "$parent" ]; then echo "::error::Couldn't push games-data (tried $try time(s)): nothing published this run; the next run tries again."; exit 1; fi
+              sleep $((try * 5))
+              git fetch -q --depth 1 "$remote" games-data; tip=$(git rev-parse FETCH_HEAD)
+              for g in blockx bracket questions; do
+                if [ "$(git rev-parse -q --verify "$parent:$g" || true)" != "$(git rev-parse -q --verify "$tip:$g" || true)" ]; then
+                  echo "::error::$g changed on games-data while this run checked it: nothing published this run; the next run tries again."; exit 1
+                fi
+              done
+              git read-tree "$tip"
+              for g in blockx bracket questions; do
+                git rm -r -q --cached --ignore-unmatch "$g" >/dev/null
+                if git rev-parse -q --verify "$tree:$g" >/dev/null; then git read-tree --prefix="$g/" "$tree:$g"; fi
+              done
+              tree=$(git write-tree); parent="$tip"
+              commit=$(git commit-tree "$tree" -p "$parent" -m "games: record")
+              echo "Retrying the push on the new tip $(git rev-parse --short "$tip") (try $((try + 1)))."
+            done
           fi
           if grep -qxF '!alert' "$HELD"; then echo "::error::A file was held, or a published file needs your check (see the errors above); everything else was published."; exit 1; fi
           echo "Games files published."
