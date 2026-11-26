@@ -80,7 +80,7 @@ test("nicknames: 3 to 20 letters, digits, spaces, - and _; spaces trimmed and sq
 });
 
 // ── the sponsor list ──
-test("the list: opt-out hides a sponsor, a support name goes at 0, a donation name stays, amounts only when ticked", () => {
+test("the list (owner, 8:11 PM: hidden names are Anonymous Donor / Anonymous Sponsor): opt-out hides a sponsor, a support name goes at 0, a donation name stays, amounts only when ticked", () => {
   const rows = here(S.listRows([
     { kind: "donation", units: String(V(5000)), nickname: "Big Giver", showAmount: true },
     { kind: "donation", units: String(V(1000)), nickname: "Quiet One", showAmount: false },
@@ -88,9 +88,10 @@ test("the list: opt-out hides a sponsor, a support name goes at 0, a donation na
     { kind: "support", units: String(V(2000)), nickname: "Helper", showAmount: true },
     { kind: "support", units: "0", nickname: "Gone", showAmount: true },              // withdrew everything
     { kind: "support", units: String(V(1200)), nickname: "Rude Word", hidden: true, showAmount: true },
+    { kind: "donation", units: String(V(1100)), nickname: "Rude Too", hidden: true, showAmount: false },
   ]));
-  assert.deepEqual(rows.donors.map((r) => [r.name, r.amount]), [["Big Giver", "5,000 VHP"], ["Quiet One", null]]);
-  assert.deepEqual(rows.supporters.map((r) => [r.name, r.amount]), [["Helper", "2,000 VHP"], ["Anonymous Seed Sponsor", "1,200 VHP"]]);
+  assert.deepEqual(rows.donors.map((r) => [r.name, r.amount]), [["Big Giver", "5,000 VHP"], ["Anonymous Donor", null], ["Quiet One", null]]);
+  assert.deepEqual(rows.supporters.map((r) => [r.name, r.amount]), [["Helper", "2,000 VHP"], ["Anonymous Sponsor", "1,200 VHP"]]);
 });
 
 test("the list never shows a wallet address, even if one is passed in by mistake", () => {
@@ -127,8 +128,9 @@ test("no wallet address on the page or in its scripts (the vault's address comes
 });
 
 test("always 'Seed Sponsor', never a bare 'Sponsor' (that is the Mana sponsor)", () => {
-  // A word "sponsor" on its own (not part of a name like min_sponsor_vhp or seedSponsor) must follow "Seed".
-  const bare = [...(html + "\n" + pageJs + "\n" + mathJs).matchAll(/(?<!seed[\s-])\bsponsors?\b/gi)].map((m) => m.index);
+  // A word "sponsor" on its own (not part of a name like min_sponsor_vhp or seedSponsor) must follow "Seed". The one
+  // exception is the owner's own label for a hidden support name, "Anonymous Sponsor" (owner, 25 Nov, 8:11 PM ET).
+  const bare = [...(html + "\n" + pageJs + "\n" + mathJs).matchAll(/(?<!seed[\s-])(?<!Anonymous )\bsponsors?\b/gi)].map((m) => m.index);
   assert.deepEqual(bare, []);
   assert.match(html, /<h1[^>]*>Seed Sponsors?<\/h1>/);
 });

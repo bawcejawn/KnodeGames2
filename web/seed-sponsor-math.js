@@ -8,7 +8,9 @@
   const UNIT = 100000000n;            // 1 VHP = 10^8 units
   const DEFAULT_MIN_VHP = 1000;
   const MAX_UNITS = 18446744073709551615n;   // the chain keeps amounts as u64
-  const HIDDEN_NAME = "Anonymous Seed Sponsor";
+  // Owner (Wed 25 Nov, 8:11 PM ET): a name the owner hides shows as "Anonymous Donor" on a donation and
+  // "Anonymous Sponsor" on a support deposit. These two labels are the owner's own words.
+  const HIDDEN = { donation: "Anonymous Donor", support: "Anonymous Sponsor" };
   const ADDRESS_LIKE = /1[1-9A-HJ-NP-Za-km-z]{20,}/;
 
   const big = (x) => { try { return BigInt(x ?? 0); } catch { return null; } };
@@ -54,7 +56,7 @@
   }
 
   /** The public list. Each record: { kind: "donation" | "support", units, nickname, showAmount, hidden }.
-   *  Opted out (no nickname) → not shown. Support at 0 → not shown. Hidden by the owner → "Anonymous Seed Sponsor".
+   *  Opted out (no nickname) → not shown. Support at 0 → not shown. Hidden by the owner → "Anonymous Donor" / "Anonymous Sponsor".
    *  The amount only when the Seed Sponsor ticked "Show my amount". Biggest first. Nothing else from a record is used. */
   function listRows(records) {
     const donors = [], supporters = [];
@@ -63,7 +65,7 @@
       if (!units || units <= 0n) continue;
       const nick = checkNickname(r.nickname);
       if (!nick.ok && !r.hidden) continue;
-      const name = r.hidden || ADDRESS_LIKE.test(nick.name) ? HIDDEN_NAME : nick.name;
+      const name = r.hidden || ADDRESS_LIKE.test(nick.name) ? HIDDEN[r.kind] : nick.name;
       const row = { name, amount: r.showAmount ? fmtVhp(units) : null, units };
       if (r.kind === "donation") donors.push(row);
       else if (r.kind === "support") supporters.push(row);
@@ -73,5 +75,5 @@
     return { donors: out(donors), supporters: out(supporters) };
   }
 
-  window.KSeedSponsor = { UNIT, DEFAULT_MIN_VHP, HIDDEN_NAME, minVhp, checkAmount, checkNickname, fmtVhp, seedTotal, listRows };
+  window.KSeedSponsor = { UNIT, DEFAULT_MIN_VHP, HIDDEN, minVhp, checkAmount, checkNickname, fmtVhp, seedTotal, listRows };
 })();
