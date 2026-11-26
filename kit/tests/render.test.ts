@@ -241,3 +241,36 @@ test("render: the publish push rule accepts <slug>/live.json and rejects other l
   for (const bad of ["fantasy/W005/live.json", "fantasy/vault/live.json", "fantasy/lives.json", "live.json", "fantasy/live.json.x"]) assert.ok(!re.test(bad), `${bad} is refused`);
   assert.ok(re.test("fantasy/board.json") && re.test("fantasy/W005.json"), "the old names still pass");
 });
+
+// M-822 (Wed 25 Nov): Last Node / Golf / Combo push games-data while publish-kit checks, so the push was refused 4 runs in
+// a row. The retry puts the checked kit folders on the new tip, keeps everything else as the tip has it, and refuses if a
+// kit folder itself changed. This runs the committed loop itself against a local repo.
+test("render: publish-kit retries a refused push on the new tip and keeps the other recorders' files (M-822)", { skip: NO_BASH }, () => {
+  const kit = fs.readFileSync(path.join(ROOT, ".github/workflows/kit-games.yml"), "utf8");
+  const pub = kit.slice(kit.indexOf("  publish-kit:"), kit.indexOf("  kit-alerts:"));
+  const loop = pub.match(/\n( *)for try in 1 2 3; do\n[\s\S]*?\n\1done\n/);
+  assert.ok(loop, "the retry loop is in publish-kit");
+  const sh = (cwd: string, s: string, env: Record<string, string> = {}) => spawnSync("bash", ["-euo", "pipefail", "-c", s], { cwd, encoding: "utf8", env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t", ...env } });
+  const run = (otherTouchesKit: boolean) => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), "kit-retry-"));
+    const setup = `git init -q --bare r.git && git init -q s && cd s && mkdir -p fantasy lastnode && echo 1 > fantasy/board.json && echo 1 > lastnode/board.json && git add . && git commit -qm i && git push -q ../r.git HEAD:refs/heads/games-data`;
+    assert.equal(sh(d, setup).status, 0);
+    const other = otherTouchesKit ? "echo x > fantasy/board.json" : "echo 2 > lastnode/board.json";
+    const script = `remote="file://${d}/r.git"; mkdir w && cd w && git init -q && git fetch -q --depth 1 "$remote" games-data && parent=$(git rev-parse FETCH_HEAD) && git read-tree "$parent"
+      echo 2 > ../new && git update-index --add --cacheinfo "100644,$(git hash-object -w ../new),fantasy/board.json"; tree=$(git write-tree); msg="kit: record"; commit=$(git commit-tree "$tree" -p "$parent" -m "$msg")
+      (cd ../s && ${other} && git commit -qam other && git push -q ../r.git HEAD:refs/heads/games-data)
+      sleep() { :; }
+      ${loop![0]}`;
+    const r = sh(d, script);
+    const show = (f: string) => sh(d, `git --git-dir=r.git show games-data:${f}`).stdout.trim();
+    return { r, fantasy: show("fantasy/board.json"), lastnode: show("lastnode/board.json") };
+  };
+  const ok = run(false);
+  assert.equal(ok.r.status, 0, ok.r.stderr + ok.r.stdout);
+  assert.match(ok.r.stdout, /Retrying the push on the new tip/);
+  assert.deepEqual([ok.fantasy, ok.lastnode], ["2", "2"], "the kit's file and Last Node's file are both on the branch");
+  const bad = run(true);
+  assert.equal(bad.r.status, 1);
+  assert.match(bad.r.stdout, /fantasy changed on games-data while this run checked it/);
+  assert.equal(bad.fantasy, "x", "nothing of this run was pushed over the changed kit folder");
+});
