@@ -161,6 +161,15 @@ test("the All games \"Staked\" tag follows the vault's list_games, the same list
   assert.ok(games.every((g) => Array.isArray(g.kinds)));
 });
 
+test("Leaderboards and Results: the game chips wrap to rows (hub-ui.css), and the picker keeps one button per game with the game's name", () => {
+  const css = read("web/hub-ui.css");
+  assert.match(css, /\.lb-games \{ flex-wrap: wrap; overflow: visible; row-gap: 8px; \}/);
+  assert.match(css, /\.lb-games button \{ flex: 0 1 auto; max-width: 100%; min-height: 44px; white-space: normal; text-align: center; \}/);
+  const home = read("web/index.html");
+  assert.match(home, /class="lb-games" role="group" aria-label="Game" id="lb-games"/);
+  assert.match(home, /class="lb-games res-games" role="group" aria-label="Game" id="res-games"/);
+});
+
 test("the Leaderboards picker has Knode Games VS and More or Fewer, with their 'soon' lines until data exists", () => {
   const vs = games.find((g) => g.id === "vs"), ou = games.find((g) => g.id === "overunder");
   assert.equal(vs.board.data, "games-data/vs/board.json");
