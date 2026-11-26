@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-26T11:38:48.390Z",
+  "updated": "2026-11-26T12:03:15.749Z",
   "days": [
     "questions/W000-D1.json",
     "questions/W000-D2.json",
@@ -47,6 +47,7 @@
     "questions/W005-D2.json",
     "questions/W005-D3-00.json",
     "questions/W005-D3.json",
-    "questions/W005-D4-00.json"
+    "questions/W005-D4-00.json",
+    "questions/W005-D4.json"
   ]
 }
