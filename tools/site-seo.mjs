@@ -45,6 +45,8 @@ export const PAGES = [
     desc: "The Koinos chain right now: block time, transactions per hour, who is producing blocks, and how much KOIN is burned into VHP.", image: "og-knode.png", priority: "0.6" },
   { file: "mana.html", path: "mana.html", title: "Mana levels · Check any Koinos wallet's Mana", short: "Koinos Mana levels",
     desc: "Enter any Koinos wallet address to see its Mana tank: how much is left, when it's full again, and how much comes back every hour and day.", image: "og-knode.png", priority: "0.6" },
+  { file: "seed-sponsor.html", path: "seed-sponsor.html", title: "Seed Sponsor · Support the Knode Games seed", short: "Knode Games Seed Sponsor",
+    desc: "Support Knode Games by adding VHP to the platform's Seed: donate it for good, or support and withdraw any time. Nicknames only.", image: "og-knode.png", priority: "0.5" },
   { file: "burn.html", path: "burn.html", title: "Burn KOIN into VHP · Knode Games", short: "Burn KOIN into VHP",
     desc: "Turn KOIN into VHP, 1 for 1, with your own wallet, so you can stake it in Knode Games or produce blocks.", image: "og-knode.png", priority: "0.5" },
   { file: "names.html", path: "names.html", title: "Your Koinos @name · Knode Games", short: "Get your Koinos @name",

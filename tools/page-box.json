@@ -28,6 +28,7 @@
   "ecosystem.html": ["tool", "Apps and tools around Koinos."],
   "install.html": ["tool", "Add Knode Games to your phone's home screen."],
   "ruler.html": ["tool", "How we measure producers fairly. Read this to see how games treat unusual races."],
+  "seed-sponsor.html": ["tool", "Add VHP to the platform's Seed: donate it for good, or support and withdraw any time. Nicknames only."],
   "trust.html": ["tool", "How Knode Games keeps funds safe and what you can check yourself."],
   "fairness.html": ["tool", "How picks are locked and results are decided, in plain words."],
   "terms.html": ["tool", "The terms for using Knode Games. Please read them before you connect a wallet."]
