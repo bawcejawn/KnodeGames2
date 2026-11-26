@@ -79,10 +79,20 @@ export const FOOT = [["New here? Quick tour", "#welcome"], ["Trust", "trust.html
 // One icon per game everywhere (D-748): a game's link in the Games drop-down and the More sheet shows that game's emoji
 // from web/games.json ("icon"), the same one as its Home tile and its All games card (tests/audit/site.game-icons.test.mjs).
 const GAMES = JSON.parse(fs.readFileSync(ROOT + "games.json", "utf8")).games;
+// Each icon is checked the same way games.js checks it (a short emoji, no letters or markup; a known colour), so a bad
+// games.json entry stops the build instead of reaching every page (M-657 follow-up).
+const ICON_ACCENTS = new Set(["blue", "violet", "mint", "sun", "hot"]);
+for (const g of GAMES) {
+  if (typeof g.icon !== "string") continue;
+  if (!(g.icon.length >= 1 && g.icon.length <= 8 && !/[<>&"'A-Za-z0-9\s]/.test(g.icon)) || !ICON_ACCENTS.has(g.accent))
+    throw new Error(`games.json: ${g.id} has a bad icon or accent`);
+}
 /** The menu link ("race.html", "#play") → the game's emoji, for every game in games.json. */
 export const GAME_ICON = new Map(GAMES.filter((g) => typeof g.icon === "string" && g.href)
   .map((g) => [g.href === "index.html#play" ? "#play" : g.href, g.icon]));
-const mi = (link) => (GAME_ICON.has(link) ? `<span class="mi" aria-hidden="true">${GAME_ICON.get(link)}</span>` : "");
+const GAME_ACCENT = new Map(GAMES.filter((g) => typeof g.icon === "string" && g.href)
+  .map((g) => [g.href === "index.html#play" ? "#play" : g.href, g.accent]));
+const mi = (link) => (GAME_ICON.has(link) ? `<span class="mi gi acc-${GAME_ACCENT.get(link)}" aria-hidden="true">${GAME_ICON.get(link)}</span>` : "");
 const svg = (k) => `<svg aria-hidden="true" viewBox="0 0 24 24">${I[k]}</svg>`;
 function href(file, link) {
   if (!link.startsWith("#")) return `href="${link}"`;

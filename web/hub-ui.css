@@ -121,3 +121,34 @@
 
 /* Results and Leaderboards pickers: the game's games.json icon before its name (Speed, D-748). */
 .lb-games button .mi { width: 20px; height: 20px; margin-right: 6px; vertical-align: -4px; font-size: 16px; }
+/* ── Icon badge, one look everywhere (D-871): the emoji in a rounded badge in the game's colour, with a light inner ring
+   and a soft shadow so it reads in light and dark. Sizes: Home tiles 58, All games cards 52, More sheet 36, drop-down 24. ── */
+.gi { display: inline-grid; place-items: center; flex: none; line-height: 1; color: #fff;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .35), inset 0 -10px 16px -8px rgba(0, 0, 0, .18), 0 10px 18px -10px rgba(20, 22, 31, .55); }
+
+.gtile > .gi { width: 58px; height: 58px; border-radius: 17px; font-size: 34px; }
+.welcome-also .gtile > .gi { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .35), inset 0 -10px 16px -8px rgba(0, 0, 0, .18), 0 10px 18px -10px rgba(20, 22, 31, .55); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) :is(.gi, .welcome-also .gtile > .gi) { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .28), 0 0 0 1px rgba(255, 255, 255, .08), 0 10px 18px -10px #000; } }
+:root[data-theme="dark"] :is(.gi, .welcome-also .gtile > .gi) { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .28), 0 0 0 1px rgba(255, 255, 255, .08), 0 10px 18px -10px #000; }
+.g > .g-ic.gi { width: 52px; height: 52px; border-radius: 15px; font-size: 30px; }
+.more-panel .mi.gi { width: 36px; height: 36px; border-radius: 11px; font-size: 21px; }
+.dd-menu .mi.gi { width: 24px; height: 24px; border-radius: 7px; font-size: 14px; margin-right: 10px; vertical-align: -6px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3); }
+:is(.more-panel, .dd-menu) .mi.gi.acc-blue { background: var(--tile-blue); }
+:is(.more-panel, .dd-menu) .mi.gi.acc-violet { background: var(--tile-violet); }
+:is(.more-panel, .dd-menu) .mi.gi.acc-mint { background: var(--tile-mint); }
+:is(.more-panel, .dd-menu) .mi.gi.acc-sun { background: var(--tile-sun); }
+:is(.more-panel, .dd-menu) .mi.gi.acc-hot { background: var(--tile-hot); }
+/* ── Pick status (D-742; owner on the card mock, Tue 24 Nov: no counts, no glow). Hub's data sets data-pick on each All
+   games card and Home tile; these styles are shared so Home uses the same look. ── */
+:is(.g, .gtile)[data-pick="open"] { border: 2px solid var(--acc, var(--violet)); }
+.g[data-pick="open"] { padding: 13px; }
+:is(.g, .gtile)[data-game] { --acc: var(--violet); }
+:is(.g, .gtile):has(> .gi.acc-blue) { --acc: #1F5AE6; }
+:is(.g, .gtile):has(> .gi.acc-violet) { --acc: #7B4DFF; }
+:is(.g, .gtile):has(> .gi.acc-mint) { --acc: #0E9F6E; }
+:is(.g, .gtile):has(> .gi.acc-sun) { --acc: #E0952A; }
+:is(.g, .gtile):has(> .gi.acc-hot) { --acc: #F0527A; }
+.g-st .chip { font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+[data-pick="open"] .g-st .chip { background: color-mix(in srgb, var(--acc) 14%, var(--surface)); color: color-mix(in srgb, var(--acc) 80%, var(--ink)); }
+[data-pick="done"] .g-st .chip { background: var(--mint-soft); color: color-mix(in srgb, var(--mint) 75%, var(--ink)); }
+[data-pick="closed"] .g-st .chip { background: var(--line); color: var(--muted); }
