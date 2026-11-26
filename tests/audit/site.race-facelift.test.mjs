@@ -80,8 +80,9 @@ test("top of the page: the game in a line and three steps; the long text is in t
   const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
   const hero = main.slice(main.indexOf('class="rc-hero"'), main.indexOf("</section>", main.indexOf('class="rc-hero"')));
   assert.match(hero, /Pick your producer\. Watch it run\. Real blocks, live races\./);   // D-730 / Marketing (PR D)
-  assert.equal((hero.match(/<li>/g) || []).length, 3);
+  assert.equal((hero.match(/<li>/g) || []).length, 0, "standard page: the three steps moved into the Rules row");
   const rules = main.slice(main.indexOf('id="how"'));
+  assert.equal(((rules.slice(0, rules.indexOf("</ol>")).match(/<li>/g)) || []).length, 3, "the three steps open the Rules row");
   for (const t of ["The races", "Picks and changes", "Points, boards and prizes", "Results", "Reading the board", "Handicap: same speed", "Handicap: same chance", "Handicap: six cards per race", "The finish line"]) assert.match(rules, new RegExp(`<summary>${t}</summary>`));
   assert.ok(rules.includes('id="pts-note"'), "the points line the page updates lives in the rules book");
   for (const t of ["Who gets paid:", "Four 6-hour races a day", "Results are final once every block", "steps per block = (biggest VHP"]) assert.ok(rules.includes(t), t);

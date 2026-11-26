@@ -289,7 +289,8 @@
         lane.setAttribute("aria-label", `${nameOf(r.a)}: ${ended ? (rp >= 0 ? `place ${rp + 1}` : "no place") : `running ${i + 1}`}, ${fmt(r.steps, 1)} steps`);
         keep.push(lane);
       });
-      track.replaceChildren(...keep);
+      { const lanes6 = keep.filter((n) => n.classList.contains("pr-lane") && !n.classList.contains("rt-head") && !n.classList.contains("pr-headrow"));
+        track.replaceChildren(...keep.filter((n) => !lanes6.includes(n)), ...capLanes(lanes6, "0", () => render())); }
       if (live && B.top !== lastTop && lastTop) { const lane = existing.get(B.signers[B.sig[B.sig.length - 1]]); if (lane) { lane.classList.remove("pr-step"); void lane.offsetWidth; lane.classList.add("pr-step"); } }
       lastTop = B.top;
     }
@@ -331,7 +332,21 @@
   }
 
   // ── results ──
+  /** M-768 (Ruler M-739, exact words): why a producer races with no handicap this hour. The second sentence covers the
+   *  6-hour "active" edge until the 24-hour rule is on (Week 7). */
+  const SITS_OUT = "No handicap this hour: this producer is expected to sign fewer than 10 blocks in this race. With so few blocks one lucky block decides the race, so no handicap can make it fair, and it races without one. It can also mean the producer signed no block in the 6 hours before this hour's card; it gets a handicap again at the next card after it signs.";
+  /** Standard page (GAME-PAGE-STANDARD.md "Long lists"): a board shows its first LANE_CAP lanes in the chosen order (plus
+   *  the player's own pick), then ONE "Show all (N)" row. The choice holds per race length until the page reloads. */
+  const LANE_CAP = 6, showAll = new Set();
+  function capLanes(lanes, key, redraw) {
+    for (const l of lanes) l.hidden = false;
+    if (lanes.length <= LANE_CAP + 1 || showAll.has(key)) return lanes;
+    lanes.forEach((l, i) => { if (i >= LANE_CAP && !l.classList.contains("mine")) l.hidden = true; });
+    const more = el("button", { type: "button", class: "btn btn-ghost lane-more", onclick: () => { showAll.add(key); redraw(); } }, `Show all (${lanes.length})`);
+    return [...lanes, more];
+  }
   function renderHistory() {
+    if (!$("hist-rows")) return;   // Standard page: the Results table moved to the links row (index.html#results/race)
     const now = Date.now(), cur = M.raceIndex(now);
     let from, to;
     if (histMode === "today") { const d0 = Math.floor(now / M.DAY) * M.DAY; from = M.raceIndex(d0); to = from + 3; }
@@ -729,6 +744,8 @@
         el("span", { class: o && !o.wait ? (o.ok ? "pk-ok" : "pk-no") : "", text: o && !o.wait ? o.mark : "" })));
     }
     const trial = cur.mode !== "on";
+    // Standard page: the 3 newest races, then ONE "Show all (N)" row.
+    if (rows.length > 4 && !showAll.has(`r${rtype}`)) { rows.forEach((r, i) => { if (i >= 3) r.hidden = true; }); rows.push(el("button", { type: "button", class: "btn btn-ghost lane-more", onclick: () => { showAll.add(`r${rtype}`); renderRulerBox(); } }, `Show all (${rows.length})`)); }
     $("ruler-list").replaceChildren(!rows.length ? el("p", { class: "note", text: `No ${T.name.toLowerCase()} results yet.` }) : trial ? el("details", { class: "rl-trial" }, el("summary", { text: "Trial results (count for nothing)" }), ...rows) : el("div", { class: "pk-list rl" }, ...rows));
     // Once the Ruler scores the race, this list is the results: the older lists would repeat them.
     const hist = document.getElementById("history");
@@ -761,8 +778,11 @@
   if (window.KNames && window.KNames.onChange) window.KNames.onChange(() => { render(); renderPicks(true); renderBoard(); });
 
   const setMode = (m) => { histMode = m; $("h-today").setAttribute("aria-pressed", String(m === "today")); $("h-week").setAttribute("aria-pressed", String(m === "week")); renderHistory(); };
-  $("h-today").onclick = () => setMode("today");
-  $("h-week").onclick = () => setMode("week");
+  if ($("h-today")) { $("h-today").onclick = () => setMode("today"); $("h-week").onclick = () => setMode("week"); }
+  // Standard page: the Rules link (tool row, or race.html#how) opens the closed Rules row.
+  const openRules = () => { const d = $("how"); if (d) d.open = true; };
+  document.addEventListener("click", (e) => { if (e.target && e.target.closest && e.target.closest('a[href="#how"]')) openRules(); });
+  if (location.hash === "#how") openRules();
 
   // ── race types (D-166): the toggle and the 1-hour, 2-hour, daily and weekly races ──
   // Shown only from M.TYPES_FROM_WEEK (the week the Race contract v2 is live). The 6-hour race above is unchanged.
@@ -874,6 +894,9 @@
       if (rk && before && before.has(a) && before.get(a) !== rk) { const d = before.get(a) - rk; pill = el("span", { class: `rt-pill ${d > 0 ? "up" : d < 0 ? "down" : ""}`, text: d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : "–", title: d === 0 ? "Same place" : `${d > 0 ? "Gained" : "Lost"} ${Math.abs(d)} place${Math.abs(d) === 1 ? "" : "s"}` }); }
       const cells = upc.map((u) => {
         const k = `${rtype}:${u.index}`, mine = rtPicks.get(k), draft = rtDrafts.get(k), chosen = (draft || mine) === a, used = !chosen && mine && !changesLeft(rtype, u.index);   // D-745
+        // M-768 (Ruler M-739): a producer with no handicap on the card in force sits out: a pick on it can't score unless
+        // its VHP grows before that race, so the button is grey "Sits out" (a pick already made still shows as such).
+        if (card && !hm.has(a) && !chosen) return el("button", { type: "button", class: "rt-pk out", disabled: "", "aria-label": `${nameOf(a)} sits out this hour: no pick` }, el("span", { text: "Sits out" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));
         const free = !who;   // M-696: without a wallet the button says "Play free to pick" and starts the guest
         const b = el("button", { type: "button", class: `rt-pk${chosen ? " on" : ""}${free ? " free" : ""}`, "aria-pressed": String(chosen), "aria-label": free ? `Play free to pick ${nameOf(a)} for the race at ${dayTime(u.start)}` : `${chosen ? "Picked" : used ? "Changed already, no pick for" : "Pick"} ${nameOf(a)} for the race at ${dayTime(u.start)}` },
           el("span", { text: free ? "Play free to pick" : chosen ? (draft && draft !== mine ? "Picked" : "Locked in") : used ? "Changed" : "Pick" }), el("small", { class: "rt-pk-t", text: rtype >= 3 ? dayTime(u.start).replace(/ UTC$/, "") : clock(u.start) }));   // M-413: phones hide the time header, so the time sits on the button
@@ -888,14 +911,18 @@
       const lane = el("div", { class: `pr-lane rt-lane${rk === 1 && !ended ? " lead" : ""}${ended && rk && endLabel(ROt, a, rk - 1).win ? " win" : ""}`, style: grid, "data-addr": a },
         el("div", { class: "pr-who" }, el("span", { class: "pr-rank", text: ((q) => q > 0 ? ord(q) : "–")(ended && ROt ? (ROt.pending ? 0 : ROt.placings.indexOf(a) + 1) : rk || 0) }), el("span", { class: "pr-dot", style: `background:${colour(a)}` }),
           el("a", { class: "pr-name", href: EXPLORER + a, target: "_blank", rel: "noopener noreferrer", text: nameOf(a) }), pill || "",
-          el("span", { class: "pr-meta", text: `${h ? `×${h.toFixed(2)} per block` : "no handicap this hour"} · ${fmt(r ? r.blocks : 0)} blocks${sh ? ` · ${fmt(sh * 100, sh < 0.01 ? 2 : 1)}% VHP` : ""}` })),
+          el("span", { class: "pr-meta", text: `${h ? `×${h.toFixed(2)} per block` : "No handicap this hour"} · ${fmt(r ? r.blocks : 0)} blocks${sh ? ` · ${fmt(sh * 100, sh < 0.01 ? 2 : 1)}% VHP` : ""}` })),
         el("div", { class: `pr-run${ended ? " over" : ""}${packView ? " pack" : ""}` }, el("div", { class: "pr-shade", style: `width:${frac > 0 ? POS(frac) : "0"}` }), el("div", { class: "pr-trail", style: `width:${POS(x / 100)};background:${colour(a)}` }),
           el("img", { class: "pr-horse rt-animal", alt: "", "aria-hidden": "true", src: `media/animals/${ANIMAL[rtype]}.png`, width: "40", height: "40", style: `left:calc(${POS(x / 100)} - 20px)` }), el("div", { class: "pr-nowline", style: `left:${POS(frac)}` })),
         el("div", { class: "pr-gap" }, r ? ((() => { const L = ended ? endLabel(ROt, a, rk - 1) : { text: rk === 1 ? "Leading" : null }; return L.text ? el("b", { text: L.text }) : `${fmt(r.behind, 1)} behind`; })()) : "–", el("br"), el("span", { class: "ago", text: `${fmt(r ? r.steps : 0, 1)} steps` })),
         ...cells);
+      // R4-60 L-1: a lane holding your pick or draft for any upcoming race stays visible under the "Show all" cap.
+      if (upc.some((u) => { const k = `${rtype}:${u.index}`; return (rtDrafts.get(k) || rtPicks.get(k)) === a; })) lane.classList.add("mine");
       return lane;
     });
-    $("rt-track").replaceChildren(head, ...lanes);
+    $("rt-track").replaceChildren(head, ...capLanes(lanes, String(rtype), () => rtRender(true)));
+    // M-768: the Ruler's words (M-739) for "No handicap this hour", once under the board when a lane shows it.
+    { const n = $("rt-sitsout"); if (n) { const any = !!card && order.some((a) => !hm.has(a)); n.hidden = !any; n.textContent = any ? SITS_OUT : ""; } }
   }
   function rtTabs() {
     const nav = $("race-types");
