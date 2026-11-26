@@ -113,9 +113,17 @@
             "1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd": "84736790018063"
           },
           "seal": "b50edabc90665ce82f327663801347f4477ef57f2c6a80dd17f272ab216c1f32"
+        },
+        {
+          "height": 41410912,
+          "readAt": "2026-11-26T18:08:33.022Z",
+          "values": {
+            "1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd": "84695837290948"
+          },
+          "seal": "8b36f6ed6077db101dd63ff7d2182d9f8a08c05cd115a8551b7c7b893559d000"
         }
       ],
-      "vhpSeal": "02b923df0c2ac65a650aeadefce002b836e45f4d07bc294b622f624fb77591c3"
+      "vhpSeal": "350a42c711b33532de5b9d7ce3056117206154a6d78a94ce4fe8bae02f79e81b"
     },
     {
       "id": "W005-D4-00-2",
@@ -220,7 +228,34 @@
           "seal": "d5d387b6b21c0e694774a3cfa38b0d04458e89440f1a15a95c81e60988932541"
         }
       ],
-      "vhpSeal": "2150a66c9e462cb309c98ebca2e46e20ca54ca13e1d3a24c6b7023d08ee47182"
+      "vhpSeal": "2150a66c9e462cb309c98ebca2e46e20ca54ca13e1d3a24c6b7023d08ee47182",
+      "result": {
+        "void": false,
+        "option": 2,
+        "value": "3.100 s",
+        "dataHash": "29f2c3dd178f4867b816f0abe2a10dbb1e7fc2de7a7901e6f17e01cc9b5700b2",
+        "resolvedAt": "2026-11-26T17:35:24.110Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41389864,
+          "decidedHeight": 41410272,
+          "readings": [
+            41406253,
+            41407380,
+            41408513,
+            41409731
+          ],
+          "readingsInWindow": 4,
+          "values": {
+            "network": {
+              "release": "2320788714053782",
+              "end": "2313319150578560",
+              "change": "−0.32%",
+              "height": 41409731
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D4-00-3",
@@ -317,7 +352,34 @@
           "seal": "31ff34460e40a0ad77901be02cec657894d4e383515b167b000392e61d597043"
         }
       ],
-      "vhpSeal": "c1cf58fbb31ba5951bdac786fdc3ed8b77d9e1bbf174af8e22e805ef771b7faa"
+      "vhpSeal": "c1cf58fbb31ba5951bdac786fdc3ed8b77d9e1bbf174af8e22e805ef771b7faa",
+      "result": {
+        "void": false,
+        "option": 0,
+        "value": "22.580 s",
+        "dataHash": "29f2c3dd178f4867b816f0abe2a10dbb1e7fc2de7a7901e6f17e01cc9b5700b2",
+        "resolvedAt": "2026-11-26T17:35:24.110Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41389864,
+          "decidedHeight": 41410272,
+          "readings": [
+            41406253,
+            41407380,
+            41408513,
+            41409731
+          ],
+          "readingsInWindow": 4,
+          "values": {
+            "network": {
+              "release": "2320788714053782",
+              "end": "2313319150578560",
+              "change": "−0.32%",
+              "height": 41409731
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D4-00-4",
@@ -422,7 +484,34 @@
           "seal": "56a1b99f42646a47a16443c86349da2b6983187b7be0b0f8f44aaa3cfe9e6fca"
         }
       ],
-      "vhpSeal": "0f2ac976d41d424be3973535d609a3ad11e08ecc26691c6adf700022d55c1500"
+      "vhpSeal": "0f2ac976d41d424be3973535d609a3ad11e08ecc26691c6adf700022d55c1500",
+      "result": {
+        "void": false,
+        "option": 0,
+        "value": "19",
+        "dataHash": "29f2c3dd178f4867b816f0abe2a10dbb1e7fc2de7a7901e6f17e01cc9b5700b2",
+        "resolvedAt": "2026-11-26T17:35:24.110Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41389864,
+          "decidedHeight": 41410272,
+          "readings": [
+            41406253,
+            41407380,
+            41408513,
+            41409731
+          ],
+          "readingsInWindow": 4,
+          "values": {
+            "network": {
+              "release": "2320788714053782",
+              "end": "2313319150578560",
+              "change": "−0.32%",
+              "height": 41409731
+            }
+          }
+        }
+      }
     }
   ],
   "daySeal": "389f216bee24b019887f56fb5b1870ba8e82b35378a3f65a7859e0c4e8ebc08d"
