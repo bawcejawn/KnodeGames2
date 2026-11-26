@@ -93,17 +93,19 @@ test("Combo Card preview: linked from the home tile, the games list and the menu
   assert.equal((nav.match(/\["Combo Card · Preview", "combo\.html"/g) || []).length, 2, "Play group and Games menu");
   const js = read("web/games.js");
   assert.match(js, /preview \? el\("span", \{ class: "pill preview", text: g\.opens \? `Preview · \$\{g\.opens\}` : "Preview" \}\)/);
-  assert.match(js, /\$\("g-soon"\)\.replaceChildren\(\.\.\.games\.filter\(\(g\) => g\.status === "preview"\)\.map\(card\)/);
-  // live-only parts never see it: status, stake, prize, boards, results, Golf's course
-  for (const re of [/const free = games\.filter\(\(g\) => g\.status === "live"/, /const boards = games\.filter\(\(g\) => g\.status === "live"/, /if \(!K \|\| !id \|\| g\.status !== "live"\) return null;/]) assert.match(js, re);
+  // PR B: the preview card sits at the end of the one list, with a "Take a look" button
+  assert.match(js, /\.\.\.gameList\.filter\(\(g\) => g\.status === "preview"\)/);
+  assert.match(js, /g\.status === "preview" \? "Take a look"/);
+  // live-only parts never see it: pick status, prize tag, stake button
+  for (const re of [/live \? el\("span", \{ class: "g-st" \}\) : null/, /live \? el\("span", \{ class: "pill prize"/, /VAULT_IDS\[g\.id\] && g\.status === "live"/, /if \(!K \|\| !id \|\| g\.status !== "live"\) return null;/]) assert.match(js, re);
 });
 
-test("free-prize label says plainly who wins and is readable (light text on the dark green pill; owner, 15 Nov)", () => {
+test("Free prizes tag: shown exactly when the owner's switch is ON for this week; no amount on the card (D-794, PR B)", () => {
   const js = read("web/games.js"), html = read("web/games.html");
-  assert.ok(js.includes('"Free board: 1st wins 2 VHP, 2nd wins 1 VHP"'));
-  assert.ok(js.includes('"No free prizes this week"'));
-  assert.ok(!js.includes("2 + 1 VHP"), "the old shorthand is gone");
-  assert.match(html, /\.pill\.prize-on \{ background: var\(--mint\); color: var\(--paper\); \}/);
+  assert.match(js, /b\.hidden = !\(g && prizeState\(g, now\) === "on"\)/, "drawn only when ON");
+  assert.match(js, /text: "Free prizes", hidden: ""/, "hidden until the switch file says ON");
+  assert.doesNotMatch(js, /VHP/, "no prize amount on the cards");
+  assert.match(html, /\.pill\.prize \{ background: var\(--mint\); color: var\(--paper\); \}/);
 });
 
 test("Block X search description: the Block X chat's line (15 Nov), no stale block count or multiplier", () => {
