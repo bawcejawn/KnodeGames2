@@ -116,7 +116,7 @@ import * as SP from "./js/lib/send-picks.js";
     }
     return { hours, partial: null };
   }
-  function result(df) { return RULER ? L.rulerCutsFrom(df.field, df.hours || []) : L.cutsFrom(df.field, (df.hours || []).map((h) => ({ blocks: h.blocks, hh: h.hh }))); }
+  function result(df) { return RULER ? L.rulerCutsFrom(df.field, df.hours || [], df.week) : L.cutsFrom(df.field, (df.hours || []).map((h) => ({ blocks: h.blocks, hh: h.hh }))); }
   /** The ruler's view of an event: the recorded cuts (final once each hour's card is in) and, for the hour running now,
    *  an ESTIMATE of each standing node's luck from the blocks so far (its blocks ÷ its share of the field's blocks, by
    *  the field card's VHP). The ruler's own card for the hour decides; the page never cuts anyone itself. */

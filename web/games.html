@@ -37,37 +37,44 @@
   <link rel="stylesheet" href="styles.css">
   <style>
     .gh { max-width: 720px; margin: 0 auto; padding: 28px 16px 60px; }
-    .gh h1 { font-family: var(--display); font-size: clamp(28px, 4vw, 38px); margin: 0 0 6px; }
-    .gh .lede { color: var(--muted); margin: 0 0 18px; max-width: 60ch; }
-    .wk { display: flex; justify-content: space-between; align-items: end; gap: 12px; background: var(--navy); color: var(--navy-ink); border-radius: var(--r-md); padding: 12px 16px; margin-bottom: 8px; }
-    .wk small { display: block; color: var(--navy-muted); font-size: 12px; }
-    .wk b { font-family: var(--num); font-size: 22px; font-variant-numeric: tabular-nums; }
-    .wk .r { text-align: right; }
-    .sec { display: flex; justify-content: space-between; gap: 8px; font-family: var(--display); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 22px 2px 8px; }
+    .gh h1 { font-family: var(--display); font-size: clamp(28px, 4vw, 38px); margin: 0 0 8px; }
+    .wkline { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; color: var(--muted); font-size: 15px; margin: 0 0 6px; }
+    .wkline b { color: var(--ink); font-variant-numeric: tabular-nums; }
+    .legend { color: var(--muted); font-size: 14px; line-height: 1.45; margin: 0 0 16px; }
+    .legend b { color: var(--ink); }
     .glist { display: grid; gap: 10px; }
-    .g { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow); padding: 14px; color: var(--ink); text-decoration: none; }
-    a.g:hover { border-color: var(--violet); }
-    a.g:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
-    .g-ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--violet-soft); font-size: 22px; line-height: 1; box-shadow: 0 10px 18px -12px rgba(20, 22, 31, .6); }
-    .g-bd { flex: 1; min-width: 0; display: grid; gap: 4px; }
-    .g-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-    .g-name { font-weight: 700; font-size: 16px; }
-    .g-line { color: var(--muted); font-size: 16px; line-height: 1.45; }
-    .g-st { display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px; }
+    /* one card per game: icon | name + tags / short line / pick status / buttons */
+    .g { display: grid; grid-template-columns: 52px 1fr; gap: 6px 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow); padding: 14px; color: var(--ink); }
+    .g-ic { grid-row: span 2; }
+    .g-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+    .g-name { font-weight: 800; font-size: 17px; color: var(--ink); text-decoration: none; margin-right: 2px; }
+    a.g-name:hover { text-decoration: underline; }
+    .g-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .g-line { color: var(--muted); font-size: 16px; line-height: 1.4; }
+    .g-st { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; }
     .g-st:empty { display: none; }
-    .g-st span { background: var(--paper); border-radius: 8px; padding: 3px 8px; }
-    .g-st .me { background: var(--violet); color: var(--violet-ink); }
-    .g-go { align-self: center; color: var(--violet); font-size: 24px; line-height: 1; }
+    .g-acts { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .g-acts.one { grid-template-columns: 1fr; }
+    .g-acts .btn { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 12px; font-weight: 800; text-decoration: none; }
+    .g-play { background: var(--ink); color: var(--surface); }
+    .g-stake { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
     .g.soon { background: transparent; box-shadow: none; border-style: dashed; }
-    .g.soon .g-ic { background: var(--line); color: var(--muted); }
     .g.soon .g-name, .g.soon .g-line { color: var(--muted); }
     .pill { font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
     .pill.free { background: var(--mint-soft); color: color-mix(in srgb, var(--mint) 70%, var(--ink)); }
+    .pill.prize { background: var(--mint); color: var(--paper); }
     .pill.staked { background: var(--sun-soft); color: var(--ink); }
-    .pill.prize-on { background: var(--mint); color: var(--paper); }   /* light text on dark green (was dark on dark: owner, 15 Nov) */
-    .pill.practice { background: var(--line); color: color-mix(in srgb, var(--muted) 45%, var(--ink)); }
     .pill.soon { background: var(--line); color: color-mix(in srgb, var(--muted) 45%, var(--ink)); }
     .pill.preview { background: var(--sun); color: #1b1206; }
+    .g-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0 8px; }
+    .g-links a { display: flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 800; text-decoration: none; }
+    .gh .fold { border-top: 1px solid var(--line); }
+    .gh .fold:last-of-type { border-bottom: 1px solid var(--line); }
+    .gh .fold > summary { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 800; cursor: pointer; list-style: none; }
+    .gh .fold > summary::-webkit-details-marker { display: none; }
+    .gh .fold > summary::after { content: "›"; font-size: 22px; color: var(--muted); transition: transform .15s ease; }
+    .gh .fold[open] > summary::after { transform: rotate(90deg); }
+    .gh .fold > :not(summary) { margin-bottom: 14px; }
     .gh .note { color: var(--muted); font-size: 15px; }
   </style>
   <link rel="stylesheet" href="page-box.css">
@@ -85,17 +92,17 @@
           <summary>Games</summary>
           <div class="dd-menu">
             <a href="games.html" aria-current="page">All games</a>
-            <a href="index.html#play"><span class="mi" aria-hidden="true">🎯</span>Daily Questions</a>
-            <a href="race.html"><span class="mi" aria-hidden="true">🏇</span>Producer Race</a>
-            <a href="blockx.html"><span class="mi" aria-hidden="true">🧱</span>Who Signs Block X</a>
-            <a href="bracket.html"><span class="mi" aria-hidden="true">🏆</span>Producer Bracket</a>
-            <a href="golf.html"><span class="mi" aria-hidden="true">⛳</span>Block Golf</a>
-            <a href="fantasy.html"><span class="mi" aria-hidden="true">📋</span>Fantasy Producers</a>
-            <a href="lastnode.html"><span class="mi" aria-hidden="true">🏁</span>Last Node Standing</a>
-            <a href="survivor.html"><span class="mi" aria-hidden="true">🛡️</span>Survivor</a>
-            <a href="vs.html"><span class="mi" aria-hidden="true">🆚</span>Knode Games VS</a>
-            <a href="overunder.html"><span class="mi" aria-hidden="true">↕️</span>More or Fewer</a>
-            <a href="combo.html"><span class="mi" aria-hidden="true">🎟️</span>Combo Card · Preview</a>
+            <a href="index.html#play"><span class="mi gi acc-violet" aria-hidden="true">🎯</span>Daily Questions</a>
+            <a href="race.html"><span class="mi gi acc-blue" aria-hidden="true">🏇</span>Producer Race</a>
+            <a href="blockx.html"><span class="mi gi acc-mint" aria-hidden="true">🧱</span>Who Signs Block X</a>
+            <a href="bracket.html"><span class="mi gi acc-sun" aria-hidden="true">🏆</span>Producer Bracket</a>
+            <a href="golf.html"><span class="mi gi acc-hot" aria-hidden="true">⛳</span>Block Golf</a>
+            <a href="fantasy.html"><span class="mi gi acc-blue" aria-hidden="true">📋</span>Fantasy Producers</a>
+            <a href="lastnode.html"><span class="mi gi acc-violet" aria-hidden="true">🏁</span>Last Node Standing</a>
+            <a href="survivor.html"><span class="mi gi acc-blue" aria-hidden="true">🛡️</span>Survivor</a>
+            <a href="vs.html"><span class="mi gi acc-mint" aria-hidden="true">🆚</span>Knode Games VS</a>
+            <a href="overunder.html"><span class="mi gi acc-sun" aria-hidden="true">↕️</span>More or Fewer</a>
+            <a href="combo.html"><span class="mi gi acc-hot" aria-hidden="true">🎟️</span>Combo Card · Preview</a>
           </div>
         </details>
         <a href="index.html#leaderboard">Leaderboards</a>
@@ -127,27 +134,24 @@
   <main class="gh">
     <aside class="page-box" data-game="site"><p>Every Knode Games game in one place. Pick one to start; most are free to play.</p></aside>
     <h1>Games</h1>
-    <p class="lead lede">Every game has its own weekly leaderboard. Stakers share the pool's weekly rewards, split by each game's share of the stake. Every game has a Free play board; a game's label says whether this week's Free play board pays its 1st and 2nd place.</p>
+    <p class="wkline"><span>Week <b id="wk-num">–</b></span><span>Ends in <b id="wk-left">–</b></span></p>
+    <p class="legend"><b>Coloured border</b>: picks open for you · <b>✓ Picked</b>: all done · Tags show <b>Free play</b>, <b>Free prizes</b> (this week's free board pays its top two) and <b>Staked</b>.</p>
 
-    <div class="wk">
-      <div><small>This week ends in about</small><b id="wk-left">–</b></div>
-      <div class="r"><small>Week</small><b id="wk-num">–</b></div>
-    </div>
-    <p class="note">Weeks run Monday 00:00 to Monday 00:00 UTC.</p>
-
-    <section class="stats-panel" id="stats-panel" aria-label="Live stats" hidden></section>
-
-    <div class="sec"><span>Play now</span></div>
     <div class="glist" id="g-live"><p class="note">Loading the games…</p></div>
-    <p class="g-boards" id="g-boards" hidden></p>
-    <p class="g-boards" id="g-results" hidden></p>
 
-    <section class="card panel" id="stake-list" hidden></section>
+    <nav class="g-links" aria-label="Boards">
+      <a href="index.html#leaderboard">Leaderboards →</a>
+      <a href="index.html#results">Results →</a>
+    </nav>
 
-    <section id="soon-box" hidden>
-      <div class="sec"><span>Coming soon</span></div>
-      <div class="glist" id="g-soon"></div>
-    </section>
+    <details class="fold" id="stake-fold">
+      <summary>Where to stake</summary>
+      <section class="card panel" id="stake-list" hidden></section>
+    </details>
+    <details class="fold" id="stats-fold">
+      <summary>Knode Games right now</summary>
+      <section class="stats-panel" id="stats-panel" aria-label="Live stats" hidden></section>
+    </details>
   </main>
 
   <nav class="tabbar" aria-label="Main">
@@ -159,17 +163,17 @@
   <div class="more-sheet" id="more-sheet" hidden>
     <nav class="more-panel" aria-label="More pages">
       <p class="ms-h">Play</p>
-      <a href="index.html#play"><span class="mi" aria-hidden="true">🎯</span><span>Daily Questions</span></a>
-      <a href="race.html"><span class="mi" aria-hidden="true">🏇</span><span>Producer Race</span></a>
-      <a href="blockx.html"><span class="mi" aria-hidden="true">🧱</span><span>Who Signs Block X</span></a>
-      <a href="bracket.html"><span class="mi" aria-hidden="true">🏆</span><span>Producer Bracket</span></a>
-      <a href="golf.html"><span class="mi" aria-hidden="true">⛳</span><span>Block Golf</span></a>
-      <a href="fantasy.html"><span class="mi" aria-hidden="true">📋</span><span>Fantasy Producers</span></a>
-      <a href="lastnode.html"><span class="mi" aria-hidden="true">🏁</span><span>Last Node Standing</span></a>
-      <a href="survivor.html"><span class="mi" aria-hidden="true">🛡️</span><span>Survivor</span></a>
-      <a href="vs.html"><span class="mi" aria-hidden="true">🆚</span><span>Knode Games VS</span></a>
-      <a href="overunder.html"><span class="mi" aria-hidden="true">↕️</span><span>More or Fewer</span></a>
-      <a href="combo.html"><span class="mi" aria-hidden="true">🎟️</span><span>Combo Card · Preview</span></a>
+      <a href="index.html#play"><span class="mi gi acc-violet" aria-hidden="true">🎯</span><span>Daily Questions</span></a>
+      <a href="race.html"><span class="mi gi acc-blue" aria-hidden="true">🏇</span><span>Producer Race</span></a>
+      <a href="blockx.html"><span class="mi gi acc-mint" aria-hidden="true">🧱</span><span>Who Signs Block X</span></a>
+      <a href="bracket.html"><span class="mi gi acc-sun" aria-hidden="true">🏆</span><span>Producer Bracket</span></a>
+      <a href="golf.html"><span class="mi gi acc-hot" aria-hidden="true">⛳</span><span>Block Golf</span></a>
+      <a href="fantasy.html"><span class="mi gi acc-blue" aria-hidden="true">📋</span><span>Fantasy Producers</span></a>
+      <a href="lastnode.html"><span class="mi gi acc-violet" aria-hidden="true">🏁</span><span>Last Node Standing</span></a>
+      <a href="survivor.html"><span class="mi gi acc-blue" aria-hidden="true">🛡️</span><span>Survivor</span></a>
+      <a href="vs.html"><span class="mi gi acc-mint" aria-hidden="true">🆚</span><span>Knode Games VS</span></a>
+      <a href="overunder.html"><span class="mi gi acc-sun" aria-hidden="true">↕️</span><span>More or Fewer</span></a>
+      <a href="combo.html"><span class="mi gi acc-hot" aria-hidden="true">🎟️</span><span>Combo Card · Preview</span></a>
       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
       <p class="ms-h">Tools</p>

@@ -26,8 +26,8 @@ test("the results view has a game switcher and keeps the question results whole"
 test("games.json: the Producer Race has results; the hub links every game's results", () => {
   const race = JSON.parse(read("web/games.json")).games.find((g) => g.id === "race");
   assert.equal(race.results, true);
-  assert.match(read("web/games.html"), /id="g-results"/);
-  assert.match(read("web/games.js"), /index\.html#results\/\$\{g\.id\}/);
+  // PR B: one "Results →" link (the Results page lists every game) instead of a long list on the All games page
+  assert.match(read("web/games.html"), /<a href="index\.html#results">Results →<\/a>/);
 });
 
 // R-BX-12: Who Signs Block X on the Results page, from the Block X recorder's files on games-data.
