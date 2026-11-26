@@ -90,9 +90,17 @@
             "network": "2319486923411742"
           },
           "seal": "05bc70001393c9b8bad85e059296099e9d403a82da418c74826e6e84884272f7"
+        },
+        {
+          "height": 41394086,
+          "readAt": "2026-11-26T03:38:38.015Z",
+          "values": {
+            "network": "2319404558602748"
+          },
+          "seal": "b87822cea38c944b697f89f2e3b3039dc4552529e2d5334c552faaad7657d7b3"
         }
       ],
-      "vhpSeal": "62bb44184d7c121e7072d6a260a8afb4c8f1d43cef0637d00d08b33ea6a49165"
+      "vhpSeal": "70018e8a7cb634db309eaeec1f950a67036794d4b66aa788f6ac078225fa1b3e"
     },
     {
       "id": "W005-D3-2",
@@ -186,9 +194,17 @@
             "1MoCBDJJmNVTuz2WnS7jmVaTNQEAPQKqvr": "2460284109467"
           },
           "seal": "6643c4dd4fb941ca5fbf47976069444a751758bffee22d8d490083fe1a87a252"
+        },
+        {
+          "height": 41394086,
+          "readAt": "2026-11-26T03:38:38.015Z",
+          "values": {
+            "1MoCBDJJmNVTuz2WnS7jmVaTNQEAPQKqvr": "2460284109467"
+          },
+          "seal": "fc16150375b47494a2a1b647d955597e8c9dae8267cc63da6e6e099fb1b09053"
         }
       ],
-      "vhpSeal": "976c10752b6a54884c7fb023a492668032ba112fb63a2aa6afb25657e95beac4"
+      "vhpSeal": "c97f52d9f352eb16dde07a336fdb7d5cdc0e588f86f083fba1374e1838fac285"
     },
     {
       "id": "W005-D3-3",
@@ -275,9 +291,17 @@
             "network": "2319486923411742"
           },
           "seal": "097fe02c35642dc3f7b015a5be20c5473e7a23da925953f36be75dd856bea05b"
+        },
+        {
+          "height": 41394086,
+          "readAt": "2026-11-26T03:38:38.015Z",
+          "values": {
+            "network": "2319404558602748"
+          },
+          "seal": "4ee9155fcaec66a4cc4087fc7f9964e09808d058af5446ea8aa3c4591aa6ad8b"
         }
       ],
-      "vhpSeal": "1fb4aaa75dcb67175461908220bae6551ccf0b43fe0ea8876c3234c14e56ccaa"
+      "vhpSeal": "78543c65f8a426dfe1096d9650582e9466c4984dc818464f4221169e45755579"
     },
     {
       "id": "W005-D3-4",
@@ -356,9 +380,17 @@
             "network": "2319486923411742"
           },
           "seal": "04fdeee38f41b8c835f7e461318e2f029db62cc4077f21bf0b89ab002a8f4632"
+        },
+        {
+          "height": 41394086,
+          "readAt": "2026-11-26T03:38:38.015Z",
+          "values": {
+            "network": "2319404558602748"
+          },
+          "seal": "397464e136c90bd175eaba058b3c663a0e7712779babe4752f93f7ae62447717"
         }
       ],
-      "vhpSeal": "2d86a140ff6ed66ccde591c891d4d944867ce873df8f9b3d12f6421760de2753"
+      "vhpSeal": "5e587d259c566b18d3109150a8fac2cc1cc6c89657fb0d873cb35517b4f83421"
     }
   ],
   "daySeal": "41dc6a4e79bb530040a2633acf4157ce7e60734cec5c99163c80c367e1cd62a9"
