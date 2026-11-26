@@ -427,8 +427,30 @@ ${ind(SEAL_SH, 10)}
           tree=$(git write-tree)
           if [ -n "$parent" ] && [ "$tree" = "$(git rev-parse "$parent^{tree}")" ]; then echo "No changes."
           else
-            commit=$(git commit-tree "$tree" \${parent:+-p "$parent"} -m "kit: record $(date -u +%Y-%m-%dT%H:%MZ)")
-            git push -q "$remote" "$commit:refs/heads/${branch}"
+            msg="kit: record $(date -u +%Y-%m-%dT%H:%MZ)"
+            commit=$(git commit-tree "$tree" \${parent:+-p "$parent"} -m "$msg")
+            # Wed 25 Nov (M-822): another recorder (Last Node, Golf, Combo) may push ${branch} while this job checks. Only
+            # this workflow writes the kit games' folders, so if they are unchanged on the new tip, the checked folders are
+            # put on that tip and pushed again (up to 3 tries). Anything else on the branch is kept as the tip has it.
+            for try in 1 2 3; do
+              if git push -q "$remote" "$commit:refs/heads/${branch}"; then break; fi
+              if [ "$try" = 3 ] || [ -z "$parent" ]; then echo "::error::Couldn't push ${branch} (tried $try time(s)): nothing published this run; the next run tries again."; exit 1; fi
+              sleep $((try * 5))
+              git fetch -q --depth 1 "$remote" ${branch}; tip=$(git rev-parse FETCH_HEAD)
+              for g in ${games.map((g) => g.slug).join(" ")}; do
+                if [ "$(git rev-parse -q --verify "$parent:$g" || true)" != "$(git rev-parse -q --verify "$tip:$g" || true)" ]; then
+                  echo "::error::$g changed on ${branch} while this run checked it: nothing published this run; the next run tries again."; exit 1
+                fi
+              done
+              git read-tree "$tip"
+              for g in ${games.map((g) => g.slug).join(" ")}; do
+                git rm -r -q --cached --ignore-unmatch "$g" >/dev/null
+                if git rev-parse -q --verify "$tree:$g" >/dev/null; then git read-tree --prefix="$g/" "$tree:$g"; fi
+              done
+              tree=$(git write-tree); parent="$tip"
+              commit=$(git commit-tree "$tree" -p "$parent" -m "$msg")
+              echo "Retrying the push on the new tip $(git rev-parse --short "$tip") (try $((try + 1)))."
+            done
             echo "Published $(wc -l < "$LIST") file(s) to ${branch}."
           fi
           if [ -f "$LIST.alert" ]; then echo "::error::Some kit files were held (see above): the rest was published."; exit 1; fi
