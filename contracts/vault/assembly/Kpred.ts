@@ -109,6 +109,12 @@ const S_GPLAYERS: u32 = 11;
 const S_GENTRIES: u32 = 12;
 const S_GWEEKS: u32 = 13;
 const S_GBUCKETS: u32 = 14;
+// v6.2 Seed Sponsor (claude/vault/SEED-SPONSOR-PLAN-2026-11-25.md): one record per wallet.
+const S_SPONSORS: u32 = 15;
+const SPONSOR_MIN_DEFAULT: u64 = 1000 * 100_000_000;   // 1,000 VHP until the owner sets min_sponsor_vhp
+const SPONSOR_EVENT = "kpred.seed_sponsor";
+const SP_DONATE: u32 = 1, SP_SUPPORT: u32 = 2, SP_WITHDRAW: u32 = 3, SP_PROFILE: u32 = 4, SP_HIDDEN: u32 = 5, SP_MINIMUM: u32 = 6;
+const NICKNAME_RULE = "a nickname is 3 to 20 letters, digits, spaces, - or _ (no space at the start, the end or twice)";
 const Q_GAME: u32 = 1;                         // the question game
 const MAX_GAMES: u32 = 12;                     // games besides the question game, so every close stays bounded
 const MAX_GAME_POINTS: u32 = 255;              // other games' weekly points: 1 to 255
@@ -167,6 +173,21 @@ function prizeFirst(p: u64): u64 { return (u128.fromU64(p) * u128.fromU64(2) / u
 function isAddress(a: Uint8Array | null): bool {
   return a != null && a.length == 25;
 }
+/** v6.2 Seed Sponsor: empty (not shown), or 3 to 20 of A-Z a-z 0-9 space - _, with no space at either end or twice.
+ *  Plain ASCII only, so no lookalike letters from other scripts can get in (audit AB-062). */
+function nickOf(n: string | null): string { return n != null ? n! : ""; }
+function validNickname(n: string): bool {
+  const len = n.length;
+  if (len == 0) return true;
+  if (len < 3 || len > 20) return false;
+  for (let i = 0; i < len; i++) {
+    const ch = n.charCodeAt(i);
+    const ok = (ch >= 48 && ch <= 57) || (ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122) || ch == 45 || ch == 95 || ch == 32;
+    if (!ok) return false;
+    if (ch == 32 && (i == 0 || i == len - 1 || n.charCodeAt(i - 1) == 32)) return false;
+  }
+  return true;
+}
 
 /** The current transaction's operations. On the chain this reads the "operations" field (each entry an `Any`
  *  holding one operation — the exact path the probe contract used on mainnet). The test VM does not fill that
@@ -208,6 +229,7 @@ export class Kpred {
   gentries: Storage.Map<Uint8Array, kpred.gentry_object> = new Storage.Map(System.getContractId(), S_GENTRIES, kpred.gentry_object.decode, kpred.gentry_object.encode, null);
   gweeks: Storage.Map<Uint8Array, kpred.gweek_object> = new Storage.Map(System.getContractId(), S_GWEEKS, kpred.gweek_object.decode, kpred.gweek_object.encode, () => new kpred.gweek_object());
   gbuckets: Storage.Map<Uint8Array, kpred.bucket_object> = new Storage.Map(System.getContractId(), S_GBUCKETS, kpred.bucket_object.decode, kpred.bucket_object.encode, () => new kpred.bucket_object());
+  sponsors: Storage.Map<Uint8Array, kpred.sponsor_object> = new Storage.Map(System.getContractId(), S_SPONSORS, kpred.sponsor_object.decode, kpred.sponsor_object.encode, () => new kpred.sponsor_object());
 
   // ═══════════════════════ helpers ═══════════════════════
 
@@ -347,7 +369,8 @@ export class Kpred {
   liabilities(t: kpred.totals_object): u64 {
     // v6 (audit V6-4): summed in u128, so a broken counter can never wrap the total back into a passing number.
     const s = u128.fromU64(t.total_stake) + u128.fromU64(t.seed_vhp) + u128.fromU64(t.seed_koin) + u128.fromU64(t.owner_share)
-      + u128.fromU64(t.creator_fee) + u128.fromU64(t.pots_outstanding) + u128.fromU64(t.fee_vhp) + u128.fromU64(t.games_rolled);
+      + u128.fromU64(t.creator_fee) + u128.fromU64(t.pots_outstanding) + u128.fromU64(t.fee_vhp) + u128.fromU64(t.games_rolled)
+      + u128.fromU64(t.support_vhp);   // v6.2: Seed Sponsor support is owed to its sponsors like stakes (never first-loss)
     System.require(s.hi == 0, "accounting error: what the vault owes is out of range");
     return s.lo;
   }
@@ -367,10 +390,11 @@ export class Kpred {
     if (now <= t.acc_time) return;
     const dt = u128.fromU64(now - t.acc_time);
     // Everything held that is not stake: the seed, unpaid pots, rollovers and (v6) the fee waiting in VHP.
-    const house = t.seed_vhp + t.pots_outstanding + t.rolled_over + t.games_rolled + t.fee_vhp;
+    // v6.2: Seed Sponsor support produces as seed (its rewards pay the free prizes first), so it is house and seed here.
+    const house = t.seed_vhp + t.support_vhp + t.pots_outstanding + t.rolled_over + t.games_rolled + t.fee_vhp;
     const ap = new u128(t.acc_player_lo, t.acc_player_hi) + u128.fromU64(t.total_stake) * dt;
     const ah = new u128(t.acc_house_lo, t.acc_house_hi) + u128.fromU64(house) * dt;
-    const as_ = new u128(t.acc_seed_lo, t.acc_seed_hi) + u128.fromU64(t.seed_vhp) * dt;   // v6: the seed's part
+    const as_ = new u128(t.acc_seed_lo, t.acc_seed_hi) + u128.fromU64(t.seed_vhp + t.support_vhp) * dt;   // v6: the seed's part (v6.2: with support)
     t.acc_player_lo = ap.lo; t.acc_player_hi = ap.hi;
     t.acc_house_lo = ah.lo; t.acc_house_hi = ah.hi;
     t.acc_seed_lo = as_.lo; t.acc_seed_hi = as_.hi;
@@ -937,7 +961,7 @@ export class Kpred {
     const ap = new u128(t.acc_player_lo, t.acc_player_hi), ah = new u128(t.acc_house_lo, t.acc_house_hi);
     let housePpm: u64;
     if ((ap + ah).isZero()) {
-      const house = t.seed_vhp + t.pots_outstanding + t.rolled_over, all = house + t.total_stake;
+      const house = t.seed_vhp + t.support_vhp + t.pots_outstanding + t.rolled_over, all = house + t.total_stake;
       housePpm = all == 0 ? 1_000_000 : u128.muldiv(u128.fromU64(house), u128.fromU64(1_000_000), u128.fromU64(all)).toU64();
     } else {
       housePpm = u128.muldiv(ah, u128.fromU64(1_000_000), ap + ah).toU64();
@@ -1591,8 +1615,8 @@ export class Kpred {
     const accAll = new u128(t.acc_player_lo, t.acc_player_hi) + new u128(t.acc_house_lo, t.acc_house_hi);
     let seedPart: u64;
     if (accAll.isZero()) {
-      const all = t.total_stake + t.seed_vhp + t.pots_outstanding + t.games_rolled;
-      seedPart = all == 0 ? 0 : u128.muldiv(u128.fromU64(pot), u128.fromU64(t.seed_vhp), u128.fromU64(all)).toU64();
+      const all = t.total_stake + t.seed_vhp + t.support_vhp + t.pots_outstanding + t.games_rolled;
+      seedPart = all == 0 ? 0 : u128.muldiv(u128.fromU64(pot), u128.fromU64(t.seed_vhp + t.support_vhp), u128.fromU64(all)).toU64();
     } else {
       seedPart = u128.muldiv(u128.fromU64(pot), accSeed, accAll).toU64();
     }
@@ -2457,6 +2481,158 @@ export class Kpred {
   }
 
   // ═══════════════════════ authorize: who may act as this contract's account ═══════════════════════
+
+  // ═══════════════════════ v6.2 Seed Sponsor ═══════════════════════
+  // A DONATION becomes seed (seed_vhp): the platform's, never withdrawable by the donor; the seed owner can move it like
+  // any seed VHP, after the seed timelock (owner M-820). A SUPPORT deposit is owed to its sponsor like a stake (in
+  // liabilities, so seedFree never reaches it) and produces as seed; only the sponsor withdraws it, any amount, any
+  // time, also while paused and in the withdrawals-only build. Neither is ever stake: nobody plays with these tokens.
+
+  /** The smallest donation or support deposit in force now. */
+  sponsorMin(c: kpred.config_object): u64 {
+    return c.min_sponsor_vhp > 0 ? c.min_sponsor_vhp : SPONSOR_MIN_DEFAULT;
+  }
+
+  sponsorEvent(who: Uint8Array | null, kind: u32, amount: u64, rec: kpred.sponsor_object | null): void {
+    const e = new kpred.seed_sponsor_event();
+    e.sponsor = who;
+    e.kind = kind;
+    e.amount = amount;
+    e.record = rec;
+    System.event(SPONSOR_EVENT, Protobuf.encode(e, kpred.seed_sponsor_event.encode), who != null ? [who!] : []);
+  }
+
+  /** A donation or support deposit: the checks, the transfer in, the totals and the record, then the event. */
+  sponsorIn(from: Uint8Array | null, amount: u64, nickname: string, show: bool, donation: bool): void {
+    this.live();
+    const c = this.cfg();
+    System.require(!c.paused, "new deposits are paused");
+    System.require(isAddress(from), "address required");
+    System.require(amount % WHOLE == 0, "whole VHP only (1, 2, 3 …)");
+    const min = this.sponsorMin(c);
+    System.require(amount >= min, "at least " + (min / WHOLE).toString() + " VHP each time");
+    System.require(validNickname(nickname), NICKNAME_RULE);
+    const who = from!;
+    System.requireAuthority(authority.authorization_type.contract_call, who);
+    Tokens.pullVhp(who, amount);
+    const t = this.totals.get()!;
+    this.accrue(t);
+    const rec = this.sponsors.get(who)!;
+    const now = this.now();
+    if (rec.first_at == 0) { rec.first_at = now; t.sponsor_count += 1; }
+    rec.last_at = now;
+    rec.nickname = nickname;
+    rec.show_amount = show;
+    if (donation) {
+      rec.donated += amount;
+      t.seed_vhp += amount;
+      t.donated_vhp += amount;
+    } else {
+      rec.support += amount;
+      t.support_vhp += amount;
+    }
+    this.totals.put(t);
+    this.sponsors.put(who, rec);
+    this.sponsorEvent(who, donation ? SP_DONATE : SP_SUPPORT, amount, rec);
+  }
+
+  seed_donate(args: kpred.seed_donate_arguments): kpred.seed_donate_result {
+    this.sponsorIn(args.from, args.amount, nickOf(args.nickname), args.show_amount, true);
+    return new kpred.seed_donate_result();
+  }
+
+  support_deposit(args: kpred.support_deposit_arguments): kpred.support_deposit_result {
+    this.sponsorIn(args.from, args.amount, nickOf(args.nickname), args.show_amount, false);
+    return new kpred.support_deposit_result();
+  }
+
+  /** Rule 1 for Seed Sponsor support: any amount, at any time, by the sponsor only. No pause, no minimum, no lock, and
+   *  open in the withdrawals-only build. Touches only the record, the totals and the transfer. */
+  support_withdraw(args: kpred.support_withdraw_arguments): kpred.support_withdraw_result {
+    this.cfg();
+    System.require(isAddress(args.to), "address required");
+    const to = args.to!;
+    System.requireAuthority(authority.authorization_type.contract_call, to);
+    System.require(args.amount > 0, "amount must be positive");
+    const rec = this.sponsors.get(to)!;
+    System.require(rec.support >= args.amount, "more than your support");
+    const t = this.totals.get()!;
+    this.accrue(t);
+    t.support_vhp = this.less(t.support_vhp, args.amount, "support");
+    rec.support -= args.amount;
+    rec.last_at = this.now();
+    this.totals.put(t);
+    this.sponsors.put(to, rec);
+    this.ensureVhp(args.amount);
+    Tokens.sendVhp(to, args.amount);
+    this.sponsorEvent(to, SP_WITHDRAW, args.amount, rec);
+    return new kpred.support_withdraw_result();
+  }
+
+  /** The sponsor's own choices: the nickname (empty = not shown) and the "show my amount" tick. No VHP moves. */
+  set_sponsor_profile(args: kpred.set_sponsor_profile_arguments): kpred.set_sponsor_profile_result {
+    this.cfg();
+    System.require(isAddress(args.sponsor), "address required");
+    const who = args.sponsor!;
+    System.requireAuthority(authority.authorization_type.contract_call, who);
+    const rec = this.sponsors.get(who)!;
+    System.require(rec.first_at > 0, "no Seed Sponsor record for that wallet");
+    const nick = nickOf(args.nickname);
+    System.require(validNickname(nick), NICKNAME_RULE);
+    rec.nickname = nick;
+    rec.show_amount = args.show_amount;
+    rec.last_at = this.now();
+    this.sponsors.put(who, rec);
+    this.sponsorEvent(who, SP_PROFILE, 0, rec);
+    return new kpred.set_sponsor_profile_result();
+  }
+
+  /** Owner: hide (or show again) a sponsor's nickname on the page. The amounts and the sponsor's own choices stay. */
+  set_sponsor_hidden(args: kpred.set_sponsor_hidden_arguments): kpred.set_sponsor_hidden_result {
+    const c = this.cfg();
+    System.require(this.isOwner(c), "owner only");
+    System.require(isAddress(args.sponsor), "address required");
+    const who = args.sponsor!;
+    const rec = this.sponsors.get(who)!;
+    System.require(rec.first_at > 0, "no Seed Sponsor record for that wallet");
+    rec.hidden = args.hidden;
+    rec.last_at = this.now();
+    this.sponsors.put(who, rec);
+    this.sponsorEvent(who, SP_HIDDEN, 0, rec);
+    return new kpred.set_sponsor_hidden_result();
+  }
+
+  /** Owner: the smallest donation or support deposit, whole VHP, never 0. New deposits only; withdrawals never. */
+  set_min_sponsor(args: kpred.set_min_sponsor_arguments): kpred.set_min_sponsor_result {
+    const c = this.cfg();
+    System.require(this.isOwner(c), "owner only");
+    System.require(args.min_sponsor_vhp > 0, "the minimum can never be 0");
+    System.require(args.min_sponsor_vhp % WHOLE == 0, "whole VHP only (1, 2, 3 …)");
+    c.min_sponsor_vhp = args.min_sponsor_vhp;
+    this.config.put(c);
+    this.sponsorEvent(null, SP_MINIMUM, args.min_sponsor_vhp, null);
+    return new kpred.set_min_sponsor_result();
+  }
+
+  get_sponsor(args: kpred.get_sponsor_arguments): kpred.get_sponsor_result {
+    const r = new kpred.get_sponsor_result();
+    r.sponsor = isAddress(args.sponsor) ? this.sponsors.get(args.sponsor!)! : new kpred.sponsor_object();
+    return r;
+  }
+
+  list_sponsors(args: kpred.list_sponsors_arguments): kpred.list_sponsors_result {
+    const r = new kpred.list_sponsors_result();
+    const limit: i32 = args.limit == 0 || args.limit > 50 ? 50 : <i32>args.limit;
+    const start = args.start != null ? args.start! : new Uint8Array(0);
+    const objs = this.sponsors.getMany(start, limit);
+    for (let i = 0; i < objs.length; i++) {
+      const row = new kpred.sponsor_row();
+      row.address = objs[i].key!;
+      row.sponsor = objs[i].value;
+      r.rows.push(row);
+    }
+    return r;
+  }
 
   authorize(args: authority.authorize_arguments): authority.authorize_result {
     if (args.type == authority.authorization_type.transaction_application) {
