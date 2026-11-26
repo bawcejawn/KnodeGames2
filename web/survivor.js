@@ -145,6 +145,9 @@ if (typeof document !== "undefined" && $("days")) start();
 
 function start() {
   "use strict";
+  // The Rules link opens the closed Rules row and scrolls to it (same as Block X).
+  const rulesLink = $("rules-link");
+  if (rulesLink) rulesLink.addEventListener("click", (e) => { const d = $("rules"); if (!d) return; e.preventDefault(); d.open = true; d.scrollIntoView({ block: "start" }); });
   const lib = window.koilib || window.koinos || window;
   const ROOT = new URL("./", location.href);
   const DATA = "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/games-data/survivor/";
@@ -178,7 +181,9 @@ function start() {
   let producers = [];              // recent signers [{ a, blocks }]
   let switches = null;
   let picksContract = null, myPicks = new Map(), usage = null, sending = false, gameChanged = false;
-  const pays = (n) => Number.isInteger(n) && S.freePrizeOn(switches, n);
+  // A prize shows only when the free-prize switch is on AND the vault has game 3 (stakeOpen: KStake.stakeable(); Vault, M-790).
+  let stakeOpen = false;
+  const pays = (n) => Number.isInteger(n) && S.freePrizeOn(switches, n) && stakeOpen;
   const drafts = new Map();
 
   /** The season to show: the one running today, else the last one that started, else none yet. */
@@ -520,11 +525,14 @@ function start() {
     } finally { sending = false; await loadMine(); }
   }
 
+  // "For the curious" shows only while one of its two boxes has something (Repo Lens #R3-30).
+  function syncCurious() { const c = $("curious"); if (c) c.hidden = $("mine-box").hidden && $("standings-box").hidden; }
+
   // ── my season, day by day ──
   function renderMine() {
     const box = $("mine-box"), mine = myRow();
-    if (!view || !me() || !mine) { box.hidden = true; return; }
-    box.hidden = false;
+    if (!view || !me() || !mine) { box.hidden = true; syncCurious(); return; }
+    box.hidden = false; syncCurious();
     const label = { safe: "Safe", life: "Lost a life", skip: "Didn't count (no ruler card)", pending: "Waiting for the result" };
     $("mine-rows").replaceChildren(...mine.log.map((x) => el("tr", { class: x.what === "life" ? "oz" : "" },
       el("td", { class: "num", text: String(x.n) }),
@@ -537,8 +545,8 @@ function start() {
   let board = "free";
   function setBoard(b) { board = b; $("board-free").setAttribute("aria-pressed", String(b === "free")); $("board-staked").setAttribute("aria-pressed", String(b === "staked")); renderStandings(); }
   function renderStandings() {
-    if (!view || !view.players.length) { $("standings-box").hidden = true; return; }
-    $("standings-box").hidden = false;
+    if (!view || !view.players.length) { $("standings-box").hidden = true; syncCurious(); return; }
+    $("standings-box").hidden = false; syncCurious();
     const who = me(), rows = placesOf(view.players, board);
     const inNow = view.players.filter((x) => x.outN === null).length;
     $("standings-title").textContent = `Season ${viewSeason} standings`;
@@ -558,6 +566,22 @@ function start() {
     $("me-line").textContent = !who ? "" : !mine ? "You're not in this season." : `You: #${myPlace.place} on the ${mine.board === "staked" ? "Staked" : "Free play"} board, ${mine.outN === null ? `${mine.lives} ${mine.lives === 1 ? "life" : "lives"} left` : `out on day ${mine.outN}`}, ${mine.days} day${mine.days === 1 ? "" : "s"} played.`;
   }
 
+  // Staking shows only once the vault takes stakes in Survivor (list_games has game 3 as staked; Vault, M-773).
+  // Until then: no Staked tab, no stake panel, no Stake link, and everyone is on the Free play board.
+  async function checkStake() {
+    const K = window.KStake;
+    if (!K || typeof K.stakeable !== "function") return;
+    let ids = null;
+    try { ids = await K.stakeable(); } catch { return; }   // chain unreachable: stay closed
+    const open = Array.isArray(ids) && ids.includes(S.GAME_ID);
+    if (open === stakeOpen) return;
+    stakeOpen = open;
+    $("board-tabs").hidden = !open; $("stake-link").hidden = !open; $("stake-closed").hidden = open;
+    if (open && typeof K.mount === "function") { $("stake-panel").hidden = false; K.mount($("stake-panel"), { game: S.GAME_ID }); }
+    if (!open && board === "staked") setBoard("free");
+    renderPrizeText(); renderStandings();
+  }
+
   function renderPrizeText() {
     const s = seasonNow(), n = s ? s.season : 1, on = pays(n);
     $("prize-off").hidden = on; $("prize-on").hidden = !on;
@@ -571,6 +595,7 @@ function start() {
     const picksReady = setupPicks().catch(() => {});
     await loadData().catch(() => {});
     renderStandings(); renderMine(); renderDays(true); renderPrizeText();
+    checkStake();
     await picksReady;
     await refreshBlocks(true);
     renderDays(true);

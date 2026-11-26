@@ -142,6 +142,17 @@ test("page: a day that didn't count (a fallback round) shows as skipped and chan
   assert.equal(v.days[0].skip, true);
 });
 
+test("staking shows only when the vault takes stakes in Survivor (Vault, M-773)", () => {
+  const js = fs.readFileSync(path.join(ROOT, "web/survivor.js"), "utf8"), html = fs.readFileSync(path.join(ROOT, "web/survivor.html"), "utf8");
+  assert.ok(/id="board-tabs" hidden/.test(html) && /id="stake-link" hidden/.test(html) && /<div id="stake-panel" hidden><\/div>/.test(html), "Staked tab, Stake link and panel start hidden");
+  assert.ok(html.includes('<p class="note" id="stake-closed">Staking in Survivor opens when Survivor joins the vault. Until then everyone plays on the Free play board.</p>'));
+  assert.ok(!/weekly bucket|staked board\./i.test(html), "no promise of a staked bucket while Survivor isn't a vault game");
+  assert.ok(/<script src="stake-panel\.js"><\/script>\s*<script type="module" src="survivor\.js">/.test(html), "stake-panel.js loads before survivor.js");
+  assert.ok(/ids\.includes\(S\.GAME_ID\)/.test(js) && /K\.stakeable\(\)/.test(js), "the same check as the Stake page: KStake.stakeable() lists game 3");
+  assert.ok(/const pays = \(n\) => Number\.isInteger\(n\) && S\.freePrizeOn\(switches, n\) && stakeOpen;/.test(js), "prize text needs the switch on AND game 3 in the vault (M-790)");
+  assert.ok(/id="prize-on" hidden/.test(html) && !/first paid season/.test(html) && html.includes("Season 2 starts Mon 14 Dec."), "no paid-season promise");
+});
+
 test("page source: built with textContent (no HTML strings), the rules come from games/survivor/math.js, no old files", () => {
   const js = fs.readFileSync(path.join(ROOT, "web/survivor.js"), "utf8"), html = fs.readFileSync(path.join(ROOT, "web/survivor.html"), "utf8");
   assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write/.test(js), "no HTML strings");
@@ -149,4 +160,5 @@ test("page source: built with textContent (no HTML strings), the rules come from
   assert.ok(!/survivor-math\.js/.test(html) && /<script type="module" src="survivor\.js"><\/script>/.test(html));
   assert.ok(!/fields\.json|S0\d\d\.json/.test(js), "no reads of the old recorder's files");
   assert.ok(/https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/games-data\//.test(html), "the CSP allows the games-data branch");
+  assert.ok(/<details class="fold" id="curious" hidden>/.test(html) && /c\.hidden = \$\("mine-box"\)\.hidden && \$\("standings-box"\)\.hidden/.test(js), "an empty For the curious row stays hidden (Repo Lens #R3-30)");
 });
