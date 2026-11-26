@@ -116,7 +116,35 @@
           "seal": "ff121dcbb177d7e01fca7e2f58eb3649b541b6a39638214aeb572f71a488fd85"
         }
       ],
-      "vhpSeal": "3c9064933e5d227692f77b5ec97c9c1f082d895ed3a9cbd2cc0e45dc1de1d328"
+      "vhpSeal": "3c9064933e5d227692f77b5ec97c9c1f082d895ed3a9cbd2cc0e45dc1de1d328",
+      "result": {
+        "void": false,
+        "option": 2,
+        "value": "3.092 s",
+        "dataHash": "c0977e658d7d3fdffc94ddbdb8416dc76b57671ab0497904edcb5ec9b7a3e701",
+        "resolvedAt": "2026-11-26T05:36:02.410Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41375910,
+          "decidedHeight": 41396302,
+          "readings": [
+            41392312,
+            41393043,
+            41394086,
+            41395223,
+            41396168
+          ],
+          "readingsInWindow": 5,
+          "values": {
+            "network": {
+              "release": "2298278402885200",
+              "end": "2319786268147824",
+              "change": "+0.94%",
+              "height": 41392312
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D3-2",
@@ -234,9 +262,17 @@
             "1MoCBDJJmNVTuz2WnS7jmVaTNQEAPQKqvr": "2459055595984"
           },
           "seal": "111dc7a253ee7a9d0e103cff19b00fc3fc9235700e8fafd45c64dff8cb922f7a"
+        },
+        {
+          "height": 41397505,
+          "readAt": "2026-11-26T06:38:29.192Z",
+          "values": {
+            "1MoCBDJJmNVTuz2WnS7jmVaTNQEAPQKqvr": "2458236581327"
+          },
+          "seal": "8e4466041cec571da45ae84478a0d775f2e0a08f45118ad74ceba8e87277b9b2"
         }
       ],
-      "vhpSeal": "b7c62c9ea86008c26a0c4230904d1d87779ac2f29482e1659eeb9a401ff9c243"
+      "vhpSeal": "f05a0b11b4e25f0ce407e571f1ba287e33fb3007922cddd6ddb5e7d5f455703c"
     },
     {
       "id": "W005-D3-3",
@@ -349,7 +385,35 @@
           "seal": "b6485bf8d3cf872b945e22d0dd50811d2858eb21dcfea87f0b3d92bb90e4dbdc"
         }
       ],
-      "vhpSeal": "d14166b29e4457ebd20061eb6bc6087855fa1d95a546190b164e49ef843fefe2"
+      "vhpSeal": "d14166b29e4457ebd20061eb6bc6087855fa1d95a546190b164e49ef843fefe2",
+      "result": {
+        "void": false,
+        "option": 1,
+        "value": "44",
+        "dataHash": "c0977e658d7d3fdffc94ddbdb8416dc76b57671ab0497904edcb5ec9b7a3e701",
+        "resolvedAt": "2026-11-26T05:36:02.410Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41375910,
+          "decidedHeight": 41396302,
+          "readings": [
+            41392312,
+            41393043,
+            41394086,
+            41395223,
+            41396168
+          ],
+          "readingsInWindow": 5,
+          "values": {
+            "network": {
+              "release": "2298278402885200",
+              "end": "2319786268147824",
+              "change": "+0.94%",
+              "height": 41392312
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D3-4",
@@ -454,7 +518,35 @@
           "seal": "954152862af3a520123c17b3302e290f215c36088468a889c1dd9ab096d31324"
         }
       ],
-      "vhpSeal": "f0d3001de7d51cd6fa7fc91727304ac88f84b3dd14328e50c464f7ddc78c8593"
+      "vhpSeal": "f0d3001de7d51cd6fa7fc91727304ac88f84b3dd14328e50c464f7ddc78c8593",
+      "result": {
+        "void": false,
+        "option": 1,
+        "value": "27.120 s",
+        "dataHash": "c0977e658d7d3fdffc94ddbdb8416dc76b57671ab0497904edcb5ec9b7a3e701",
+        "resolvedAt": "2026-11-26T05:36:02.410Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41375910,
+          "decidedHeight": 41396302,
+          "readings": [
+            41392312,
+            41393043,
+            41394086,
+            41395223,
+            41396168
+          ],
+          "readingsInWindow": 5,
+          "values": {
+            "network": {
+              "release": "2298278402885200",
+              "end": "2319786268147824",
+              "change": "+0.94%",
+              "height": 41392312
+            }
+          }
+        }
+      }
     }
   ],
   "daySeal": "41dc6a4e79bb530040a2633acf4157ce7e60734cec5c99163c80c367e1cd62a9"
