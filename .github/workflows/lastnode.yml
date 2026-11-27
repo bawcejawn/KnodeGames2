@@ -2258,18 +2258,29 @@ jobs:
 
           # ── the rules (ports of lastnode-math.js cutsFrom and playerResult; the board as the recorder builds it) ──
           BONUS_STAYED, BONUS_JUMPED = 5, 3
-          def ruler_cuts_from(field, hours):
-              """Port of lastnode-math.js rulerCutsFrom."""
+          FINAL_LUCK_FROM_WEEK = 7   # AB-076 (owner D3, option B), as lastnode-math.js
+          def ruler_cuts_from(field, hours, week=None):
+              """Port of lastnode-math.js rulerCutsFrom (with its week: from week 7 a final-hour void can't end the event)."""
+              final_luck = type(week) is int and week >= FINAL_LUCK_FROM_WEEK
               standing, cuts = [x["a"] for x in field["nodes"]], []
               done = len(standing) <= 1
               for hr, hrow in enumerate(hours):
                   if done: break
-                  rows, at, out, rest = (hrow.get("rows") or {}), hr + 1, [], []
+                  rows, at, out, rest, soft = (hrow.get("rows") or {}), hr + 1, [], [], []
                   for a in sorted(standing):
                       r = rows.get(a)
-                      if r is not None and r.get("void") is True: out.append({"at": at, "a": a, "why": "void", "fpct": None})
-                      elif r is None or r.get("entry") is not True or not dec(r.get("fpct")): out.append({"at": at, "a": a, "why": "no entry", "fpct": None})
+                      has_f = r is not None and dec(r.get("fpct"))
+                      if r is not None and r.get("void") is True:
+                          out.append({"at": at, "a": a, "why": "void", "fpct": None})
+                          if has_f: soft.append((int(r["fpct"]), a))
+                      elif r is None or r.get("entry") is not True or not has_f:
+                          out.append({"at": at, "a": a, "why": "no entry", "fpct": None})
+                          if has_f: soft.append((int(r["fpct"]), a))
                       else: rest.append((int(r["fpct"]), a))
+                  if final_luck and soft and len(rest) <= 1 and len(rest) + len(soft) >= 2:
+                      keep = {a for _, a in soft}
+                      out = [c for c in out if c["a"] not in keep]
+                      rest = rest + soft
                   rest.sort(key=lambda x: (-x[0], x[1]))
                   if len(rest) >= 2: w = rest.pop(); out.append({"at": at, "a": w[1], "why": "luck", "fpct": str(w[0])})
                   for c in out: cuts.append(c); standing.remove(c["a"])
@@ -2297,7 +2308,7 @@ jobs:
           def replay(j):
               """The cuts and players a day file's own field, hours and picks give (None for a void or field-less day)."""
               if "void" in j or not j["field"]: return None
-              res = ruler_cuts_from(j["field"], j["hours"])
+              res = ruler_cuts_from(j["field"], j["hours"], j.get("week"))
               names = {x["a"] for x in j["field"]["nodes"]}
               by = {}
               for row in j["picks"].get("0", []): by[row[0]] = (row[1], row[3] if len(row) == 4 else None)
@@ -2361,11 +2372,11 @@ jobs:
               elif why == ALLOUT:
                   # The VHP ruler: the event's own field and (checked) hours leave no node standing.
                   if not j["field"]: bad("%s: void for every node out, without a field" % f); return
-                  rr = ruler_cuts_from(j["field"], j["hours"])
+                  rr = ruler_cuts_from(j["field"], j["hours"], j.get("week"))
                   if not (rr["done"] and rr["winner"] is None): bad("%s: void for every node out, but its hours leave a node standing" % f)
               elif why == NOCARD_48H:
                   if not j["field"]: bad("%s: void for a missing hour card, without a field" % f); return
-                  rr = ruler_cuts_from(j["field"], j["hours"])
+                  rr = ruler_cuts_from(j["field"], j["hours"], j.get("week"))
                   if rr["done"]: bad("%s: void for a missing hour card, but its hours already decide it" % f); return
                   t1 = j["start"] + (len(j["hours"]) + 1) * H
                   if now < t1 + 48 * H: bad("%s: made void for a missing hour card before the 48-hour grace ended" % f); return
@@ -2613,7 +2624,7 @@ jobs:
                   if "void" in j or not j.get("field") or not j.get("done"): continue
                   # The VHP ruler: credited against expected blocks from each hour card, over the hours the node raced (up to and
                   # including the hour it went out), as watchWeek in bot/games/lastnode.ts.
-                  out_at = {c["a"]: c["at"] for c in ruler_cuts_from(j["field"], j["hours"])["cuts"]}
+                  out_at = {c["a"]: c["at"] for c in ruler_cuts_from(j["field"], j["hours"], j.get("week"))["cuts"]}
                   for n in j["field"]["nodes"]:
                       s = by.setdefault(n["a"], {"got": 0, "exp": 0, "wins": 0, "events": 0, "chi": 0, "m": 0, "ev": []})
                       g, e = 0, 0

@@ -56,6 +56,9 @@ export function timelineOf(boost = {}) {
   return { from: FROM, to, signers: c.who.slice(), ids: c.ids.slice(), deltas, anchors: Object.fromEntries([...bal].map(([a, v]) => [a, { h: to, v }])), bad: [], rebuilt: [], pending: [] };
 }
 const ledgers = new Map(), tlFiles = new Map();
+// Each timeline file is ~185 MB: remove their folders when the test process exits (24 Nov: every run left them in
+// /tmp and filled a 1 GB disk after a few dozen runs).
+process.on("exit", () => { for (const f of tlFiles.values()) { try { fs.rmSync(path.dirname(f), { recursive: true, force: true }); } catch { /* best effort */ } } });
 export function ledgerOf(boost = {}) { const k = JSON.stringify(boost); if (!ledgers.has(k)) ledgers.set(k, R.ledger(timelineOf(boost))); return ledgers.get(k); }
 /** The timeline as a JSON file for the publish job's Python ruler (LASTNODE_RULER_TL). */
 export function tlFileOf(boost = {}) {

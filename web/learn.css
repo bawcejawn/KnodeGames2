@@ -1,0 +1,43 @@
+/* Learn page (learn.html, D-740): plain explanations as short fold-out rows. Mobile first (320 px up), light and dark
+   from the styles.css tokens; no new colours. Works without JavaScript (<details>). */
+.learn { max-width: 760px; padding-bottom: var(--sp-6); }
+.learn-hero { margin: var(--sp-5) 0 var(--sp-4); }
+.learn-hero h1 { font-size: clamp(2rem, 8vw, 3rem); }
+.learn-hero .lede { margin-top: var(--sp-2); font-size: 1.05rem; }
+
+/* "In short": always open, five short lines. */
+.learn-short { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-4); box-shadow: var(--shadow); }
+.learn-short h2 { font-size: 1.15rem; margin-bottom: var(--sp-2); }
+.learn-short ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-2); }
+.learn-short li { position: relative; padding-left: 22px; line-height: 1.45; }
+.learn-short li::before { content: ""; position: absolute; left: 4px; top: .55em; width: 8px; height: 8px; border-radius: 50%; background: var(--violet); }
+
+/* Groups of fold-out rows. */
+.learn-group, .learn-next { margin-top: var(--sp-5); }
+.learn-h { font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 var(--sp-2) 2px; }
+.learn-row { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-top: var(--sp-2); }
+.learn-row > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  min-height: 48px; padding: var(--sp-3) var(--sp-4); font-weight: 700; line-height: 1.3; border-radius: var(--r-md); }
+.learn-row > summary::-webkit-details-marker { display: none; }
+.learn-row > summary::after { content: ""; flex: none; width: 9px; height: 9px; margin-right: 4px; border-right: 2.5px solid var(--violet); border-bottom: 2.5px solid var(--violet);
+  transform: rotate(45deg) translateY(-2px); transition: transform .15s ease; }
+.learn-row[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+.learn-row > summary:hover { background: color-mix(in srgb, var(--violet) 6%, var(--surface)); }
+.learn-row > summary:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+.learn-row[open] { border-color: color-mix(in srgb, var(--violet) 35%, var(--line)); }
+.learn-row p { margin: 0; padding: 0 var(--sp-4) var(--sp-4); color: var(--muted); line-height: 1.55; }
+.learn-row p + .learn-go, .learn-row p + .learn-go-row { margin: calc(-1 * var(--sp-2)) var(--sp-4) var(--sp-4); }
+.learn-go-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.learn-go-row .learn-go { margin: 0; }
+.learn-go { display: inline-block; padding: 8px 14px; border-radius: 999px; background: var(--violet-soft); color: var(--violet); font-weight: 700; font-size: .92rem; text-decoration: none; }
+.learn-go:hover { filter: brightness(.97); }
+
+/* Where to go next: one column on a phone, two from 560 px. */
+.learn-links { display: grid; gap: var(--sp-2); }
+.learn-links a { display: grid; gap: 2px; padding: var(--sp-3) var(--sp-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); color: var(--ink); text-decoration: none; }
+.learn-links a:hover { border-color: color-mix(in srgb, var(--violet) 40%, var(--line)); }
+.learn-links b { color: var(--violet); }
+.learn-links span { color: var(--muted); font-size: .92rem; }
+@media (min-width: 560px) { .learn-links { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 400px) { .learn-short, .learn-row > summary { padding-left: var(--sp-3); padding-right: var(--sp-3); } .learn-row p { padding-left: var(--sp-3); padding-right: var(--sp-3); }
+  .learn-row p + .learn-go, .learn-row p + .learn-go-row { margin-left: var(--sp-3); margin-right: var(--sp-3); } }
