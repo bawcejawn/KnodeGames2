@@ -138,7 +138,7 @@ test("the Support confirm screen says, in big type, that it is support, who can 
   const c = S.confirmText("support", V(1000), "", false);
   assert.equal(c.title, "You are adding SUPPORT: 1,000 VHP");
   assert.ok(c.lines.includes("Only you can withdraw your support: any amount, any time."));
-  assert.ok(c.lines.includes("Your VHP produces blocks for the vault. Its rewards pay the weekly free prizes first, and the rest is shared by the players who stake. You receive none of them."));
+  assert.ok(c.lines.includes("Your VHP produces blocks for the vault. Its rewards, after a 5% fee, pay the weekly free prizes first; the rest is shared by the players who stake. You receive none of them."));   // Repo Lens 3 #R3-45: the fee is named
   assert.ok(c.lines.some((l) => /not shown on this page/.test(l)));
   const w = S.confirmText("withdraw", V(250));
   assert.equal(w.title, "Withdraw 250 VHP of your support");

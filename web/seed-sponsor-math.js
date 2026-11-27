@@ -94,7 +94,7 @@
   // The owner's and Vault's exact words for the confirm screens (M-820, M-821).
   const DONATION_WORDS = "A donation becomes part of the Knode Games seed, owned by the platform. It can be used for the platform, including moving it out of the vault, and you can't take it back.";
   const SUPPORT_ONLY_YOU = "Only you can withdraw your support: any amount, any time.";
-  const REWARD_WORDS = "Your VHP produces blocks for the vault. Its rewards pay the weekly free prizes first, and the rest is shared by the players who stake. You receive none of them.";
+  const REWARD_WORDS = "Your VHP produces blocks for the vault. Its rewards, after a 5% fee, pay the weekly free prizes first; the rest is shared by the players who stake. You receive none of them.";
 
   /** The confirm screen: a big title naming the kind, the plain words, and the button's words. */
   function confirmText(kind, units, nickname, showAmount) {
