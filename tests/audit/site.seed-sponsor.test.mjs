@@ -152,7 +152,8 @@ test("the page says the VHP never plays and wins nothing; its rewards pay free p
   const t = visible(html).replace(/\s+/g, " ");
   assert.match(t, /never staked in a game/i);
   assert.match(t, /cannot win prizes/i);
-  assert.match(t, /Its rewards pay the weekly free prizes first, and the rest is shared by the players who stake\. You get none of them\./);
+  // Repo Lens 3 #R3-45: the 5% fee is named.
+  assert.match(t, /Its rewards, after a 5% fee, pay the weekly free prizes first; the rest is shared by the players who stake\. You get none of them\./);
   assert.doesNotMatch(t, /go to the platform/i);
 });
 
@@ -166,7 +167,8 @@ test("the Donate box says, in the owner's exact words, that a donation is the pl
 test("the Support box says only the Seed Sponsor can withdraw it, any amount, any time, never the owner (M-820)", () => {
   const keep = visible(html.slice(html.indexOf('class="card ss-kind keep"'), html.indexOf("</section>", html.indexOf('class="card ss-kind keep"')))).replace(/\s+/g, " ");
   assert.match(keep, /Only you can withdraw your support: any amount, any time\./);
-  assert.match(keep, /not even the platform's owner/);
+  // Repo Lens 3 #R3-45: the promise is the vault's rule (owner M-820; built in vault v6.2).
+  assert.match(keep, /Under the vault's rules, no other wallet can move it, not even the platform owner's\./);
 });
 
 test("the list says amounts are always public on the chain, whatever the tick (Vault plan, point 2)", () => {
@@ -175,6 +177,15 @@ test("the list says amounts are always public on the chain, whatever the tick (V
 
 test("the page reads the vault's own minimum by its field name once the upgrade is live (Vault plan (g))", () => {
   assert.match(pageJs, /result\.config\.min_sponsor_vhp/);
+});
+
+test("a vault answer without totals shows '–', not an empty box (Repo Lens 4 R4-76 L-1)", () => {
+  assert.match(pageJs, /if \(total === null\) throw new Error\("no totals"\);/);
+  assert.match(pageJs, /\$\("ss-total"\)\.textContent = "–";/);
+});
+
+test("the green 'Still yours' tag reads at 4.5:1 or better in light mode (Repo Lens 3 #R3-45)", () => {
+  assert.match(html, /\.keep \.ss-tag \{ background: var\(--mint-soft\); color: var\(--mint\); \}/);
 });
 
 // ── read-only until the vault upgrade ──
