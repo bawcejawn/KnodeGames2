@@ -1,0 +1,636 @@
+diff --git a/tests/audit/site.games.test.mjs b/tests/audit/site.games.test.mjs
+index 530dae9..8df0799 100644
+--- a/tests/audit/site.games.test.mjs
++++ b/tests/audit/site.games.test.mjs
+@@ -20,7 +20,7 @@ test("games.json: known kinds and statuses, plain text, live games link to this
+     assert.doesNotMatch(g.name + g.line, /[<>]/, `${g.id}: plain text`);
+     if ((g.status === "live" || g.status === "preview") && g.href.includes(".html")) assert.ok(fs.existsSync(`${APP}/web/${g.href.split("#")[0]}`), `${g.id}: page exists`);
+   }
+-  assert.deepEqual(games.filter((g) => g.status === "live").map((g) => g.id).sort(), ["blockx", "bracket", "fantasy", "golf", "questions", "race"]);
++  assert.deepEqual(games.filter((g) => g.status === "live").map((g) => g.id).sort(), ["blockx", "bracket", "fantasy", "golf", "lastnode", "questions", "race"]);
+ });
+ 
+ test("games.js only reads and draws: no sending, no storage, no HTML from data; it checks games.json itself", () => {
+diff --git a/tests/audit/site.ruler-games.test.mjs b/tests/audit/site.ruler-games.test.mjs
+index d28cbcf..d4cf4df 100644
+--- a/tests/audit/site.ruler-games.test.mjs
++++ b/tests/audit/site.ruler-games.test.mjs
+@@ -9,13 +9,13 @@ const sec = p.match(/id="each-game"[\s\S]*?<\/section>/)[0];
+ const LABELS = ["What the game asks you", "What it reads from the Ruler", "How that becomes your score", "Why it's fair", "If the Ruler can't measure a"];
+ 
+ test("one block per game on the Ruler, each with the five lines, no block for a game that is not on the Ruler yet", () => {
+-  for (const id of ["race", "blockx", "bracket", "fantasy"]) {
++  for (const id of ["race", "blockx", "bracket", "fantasy", "lastnode"]) {
+     const b = sec.match(new RegExp(`id="${id}"[\\s\\S]*?</article>`));
+     assert.ok(b, `${id} block`);
+     for (const l of LABELS) assert.ok(b[0].includes(l), `${id}: ${l}`);
+   }
+   const ids = [...sec.matchAll(/<article class="panel" id="([a-z]+)"/g)].map((m) => m[1]);
+-  assert.deepEqual(ids, ["race", "blockx", "bracket", "fantasy"], "in the Ruler chat's order");
++  assert.deepEqual(ids, ["race", "blockx", "bracket", "fantasy", "lastnode"], "in the Ruler chat's order");
+   assert.doesNotMatch(sec, /Producer Bracket joins this list/);
+ });
+ test("Block X: the owner's 48-hour rule (decision 23), word for word; no 3-day void", () => {
+diff --git a/tests/audit/site.ruler-void.test.mjs b/tests/audit/site.ruler-void.test.mjs
+index b8dda90..1654e2f 100644
+--- a/tests/audit/site.ruler-void.test.mjs
++++ b/tests/audit/site.ruler-void.test.mjs
+@@ -79,7 +79,7 @@ test("the Ruler page says which games use it (Race live from Week 1; the others
+   for (const g of ["Producer Race", "Who Signs Block X", "Producer Bracket", "Fantasy Producers", "Last Node Standing", "Combo Card"]) assert.ok(text.includes(g), g);
+   assert.match(text, /6-hour races: live from Week 1 \(Mon 16 Nov\)/);
+   assert.match(text, /From Week 2 \(Mon 23 Nov\)\. Week 1 is a practice week for the Ruler\./);
+-  assert.match(text, /From its first week, Week 3 \(Mon 30 Nov\)\./);
++  assert.match(text, /From its first week, Week 2 \(from Tue 24 Nov\)\./);
+   assert.match(text, /From its first week \(Mon 7 Dec\)\./);
+   assert.doesNotMatch(text, /Planned:|next kit version/);
+   assert.match(text, /luck against its own size/);
+diff --git a/tools/site-nav.mjs b/tools/site-nav.mjs
+index 664165a..5eeacf3 100644
+--- a/tools/site-nav.mjs
++++ b/tools/site-nav.mjs
+@@ -35,6 +35,7 @@ const I = {
+   golf: '<path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path>',
+   fantasy: '<circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle>',
+   combo: '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path>',
++  lastnode: '<path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path>',
+   ruler: '<path d="M3 15.5l12.5-12.5 5.5 5.5L8.5 21z"></path><path d="M7.5 11l2.5 2.5M10.5 8l2 2M13.5 5l2.5 2.5"></path>',
+   trust: '<path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path>',
+   stake: '<ellipse cx="12" cy="6" rx="7" ry="2.5"></ellipse><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"></path><path d="M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"></path><path d="M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"></path>',
+@@ -48,7 +49,7 @@ const I = {
+ export const TABS = [["Games", "games.html", "games"], ["Stake", "stake.html", "stake"], ["Leaders", "#leaderboard", "leaders"]];
+ // The More sheet, in groups (each group a heading, then its links).
+ export const MORE_GROUPS = [
+-  ["Play", [["Daily Questions", "#play", "play"], ["Producer Race", "race.html", "race"], ["Who Signs Block X", "blockx.html", "blockx"], ["Producer Bracket", "bracket.html", "bracket"], ["Block Golf", "golf.html", "golf"], ["Fantasy Producers", "fantasy.html", "fantasy"], ["Combo Card · Preview", "combo.html", "combo"], ["Results", "#results", "results"], ["Rules", "#how", "rules"]]],
++  ["Play", [["Daily Questions", "#play", "play"], ["Producer Race", "race.html", "race"], ["Who Signs Block X", "blockx.html", "blockx"], ["Producer Bracket", "bracket.html", "bracket"], ["Block Golf", "golf.html", "golf"], ["Fantasy Producers", "fantasy.html", "fantasy"], ["Last Node Standing", "lastnode.html", "lastnode"], ["Combo Card · Preview", "combo.html", "combo"], ["Results", "#results", "results"], ["Rules", "#how", "rules"]]],
+   ["Tools", [["Get VHP", "get.html", "get"], ["Get an @name", "names.html", "name"], ["Swap VHP → KOIN", "swap.html", "swap"], ["Burn KOIN", "burn.html", "burn"], ["Mana levels", "mana.html", "mana"], ["Producer lookup", "node.html", "lookup"], ["Run a node", "run-node.html", "server"], ["Network pulse", "pulse.html", "pulse"]]],
+   ["Learn", [["New to Koinos?", "start.html", "welcome"], ["Ecosystem", "ecosystem.html", "eco"], ["New here? Quick tour", "#welcome", "welcome"], ["Ruler", "ruler.html", "ruler"]]],
+   ["About", [["Install app", "install.html", "install"], ["Trust", "trust.html", "trust"], ["Fairness", "fairness.html", "trust"], ["Terms &amp; risks", "terms.html", "terms"]]],
+@@ -57,7 +58,7 @@ export const MORE = MORE_GROUPS.flatMap(([, links]) => links);
+ // The top menu: a link, or a dropdown { label, items }. Add a new live game to the Games dropdown when it ships.
+ const TOOLS_ITEMS = [["Get VHP", "get.html"], ["Get an @name", "names.html"], ["Swap VHP → KOIN", "swap.html"], ["Burn KOIN", "burn.html"], ["Mana levels", "mana.html"], ["Producer lookup", "node.html"], ["Run a node", "run-node.html"], ["Network pulse", "pulse.html"]];
+ export const TOP = [
+-  { label: "Games", items: [["All games", "games.html"], ["Daily Questions", "#play"], ["Producer Race", "race.html"], ["Who Signs Block X", "blockx.html"], ["Producer Bracket", "bracket.html"], ["Block Golf", "golf.html"], ["Fantasy Producers", "fantasy.html"], ["Combo Card · Preview", "combo.html"]] },
++  { label: "Games", items: [["All games", "games.html"], ["Daily Questions", "#play"], ["Producer Race", "race.html"], ["Who Signs Block X", "blockx.html"], ["Producer Bracket", "bracket.html"], ["Block Golf", "golf.html"], ["Fantasy Producers", "fantasy.html"], ["Last Node Standing", "lastnode.html"], ["Combo Card · Preview", "combo.html"]] },
+   { label: "Leaderboards", link: "#leaderboard" },
+   { label: "Stake", link: "stake.html" },
+   { label: "More", items: [["Results", "#results"], ["Rules", "#how"], ["Ruler", "ruler.html"], ["New to Koinos?", "start.html"], ["Ecosystem", "ecosystem.html"], ...TOOLS_ITEMS] },
+diff --git a/tools/site-seo.mjs b/tools/site-seo.mjs
+index 7bb8aa1..581bc43 100644
+--- a/tools/site-seo.mjs
++++ b/tools/site-seo.mjs
+@@ -33,6 +33,8 @@ export const PAGES = [
+     desc: "Draft five Koinos block producers under a salary cap, pick a captain who scores double, and score on how reliably they sign their blocks. Weekly league and Weekly Rival.", image: "og-knode.png", priority: "0.6" },
+   { file: "blockx.html", path: "blockx.html", title: "Who Signs Block X · Pick the Koinos producer of the next big blocks", short: "Who Signs Block X",
+     desc: "A target about every hour (every 1,200 Koinos blocks). Pick the producer you think signs it; smaller producers score more. Free, with weekly VHP prizes.", image: "og-knode.png", priority: "0.6" },
++  { file: "lastnode.html", path: "lastnode.html", title: "Last Node Standing · Ride the last Koinos node standing", short: "Last Node Standing",
++    desc: "Pick a Koinos block producer to last the day. Every hour the unluckiest node is knocked out; jump to your backup once. Free play first, staked from Mon 30 Nov.", image: "og-knode.png", priority: "0.5" },
+   { file: "combo.html", path: "combo.html", title: "Combo Card · Build a parlay of Koinos producer calls", short: "Combo Card",
+     desc: "Build a card of 2 to 10 calls on Koinos producers: race wins, top-3 finishes, top half and who signs a block. Every leg must hit; harder legs pay more.", image: "og-knode.png", priority: "0.5" },
+   { file: "pulse.html", path: "pulse.html", title: "Koinos network pulse · Blocks, transactions and producers, live", short: "Koinos network pulse",
+diff --git a/web/blockx.html b/web/blockx.html
+index e209013..aa9a95e 100644
+--- a/web/blockx.html
++++ b/web/blockx.html
+@@ -136,6 +136,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -272,6 +273,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/bracket.html b/web/bracket.html
+index 6dc2622..b93c32d 100644
+--- a/web/bracket.html
++++ b/web/bracket.html
+@@ -227,6 +227,7 @@
+             <a href="bracket.html" aria-current="page">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -340,6 +341,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/burn.html b/web/burn.html
+index 7a7da07..afdfe19 100644
+--- a/web/burn.html
++++ b/web/burn.html
+@@ -72,6 +72,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -138,6 +139,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/combo.html b/web/combo.html
+index 9c52ef0..95fdf1b 100644
+--- a/web/combo.html
++++ b/web/combo.html
+@@ -246,6 +246,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html" aria-current="page">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -370,6 +371,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/ecosystem.html b/web/ecosystem.html
+index b6fa06e..3ac5f3d 100644
+--- a/web/ecosystem.html
++++ b/web/ecosystem.html
+@@ -55,6 +55,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -135,6 +136,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/fairness.html b/web/fairness.html
+index a684858..6945bed 100644
+--- a/web/fairness.html
++++ b/web/fairness.html
+@@ -55,6 +55,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -133,6 +134,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/fantasy.html b/web/fantasy.html
+index 5dd8d4f..3dc9228 100644
+--- a/web/fantasy.html
++++ b/web/fantasy.html
+@@ -52,6 +52,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html" aria-current="page">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -268,6 +269,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/games.html b/web/games.html
+index 1eb4360..a53bdc6 100644
+--- a/web/games.html
++++ b/web/games.html
+@@ -89,6 +89,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -158,6 +159,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/games.json b/web/games.json
+index 603c33b..e8b57bd 100644
+--- a/web/games.json
++++ b/web/games.json
+@@ -33,6 +33,13 @@
+         "unranked": "The Staked board is for wallets with at least 1 VHP staked in the Producer Bracket that week.",
+         "free": { "show": 6, "prize": "1st and 2nd at the end of the week win 2 and 1 VHP (from Week 2, the week of Mon 23 Nov; at least 1 point)." },
+         "columns": [{ "key": "pts", "label": "Points" }, { "key": "correct", "label": "Right" }] } },
++    { "id": "lastnode", "name": "Last Node Standing", "kinds": ["free", "staked"], "status": "live", "href": "lastnode.html",
++      "line": "Pick a node. Every hour the unluckiest node is knocked out; jump once if yours goes. Ride the last node standing. Free play first; staked from Mon 30 Nov.",
++      "board": { "data": "games-data/lastnode/board.json",
++        "unranked": "The Staked board is for wallets with at least 1 VHP staked in Last Node Standing that week.",
++        "free": { "show": 6, "minDays": 3, "prize": "The Free play board pays no VHP prize for now. Players staked in Last Node Standing share its weekly bucket." },
++        "columns": [{ "key": "pts", "label": "Points" }, { "key": "rides", "label": "Rides" },
++                    { "key": "jumps", "label": "Jumps", "wide": true }, { "key": "events", "label": "Events", "wide": true }] } },
+     { "id": "combo", "name": "Combo Card", "kinds": ["free", "staked"], "status": "preview", "href": "combo.html", "opens": "Opens Mon 7 Dec",
+       "line": "Build a card of 2 to 10 calls from the races and Block X. Every leg must hit; harder legs pay more. Preview: build and share cards now; sending opens Mon 7 Dec." }
+   ]
+diff --git a/web/get.html b/web/get.html
+index a156ec8..41f88d2 100644
+--- a/web/get.html
++++ b/web/get.html
+@@ -82,6 +82,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -212,6 +213,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/golf.html b/web/golf.html
+index 09373fc..995e1ce 100644
+--- a/web/golf.html
++++ b/web/golf.html
+@@ -54,6 +54,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html" aria-current="page">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -184,6 +185,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/index.html b/web/index.html
+index 22e69e4..cd4cff4 100644
+--- a/web/index.html
++++ b/web/index.html
+@@ -60,6 +60,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -124,6 +125,7 @@
+           <a class="also-card gtile" href="bracket.html"><span aria-hidden="true">🏆</span><div><b>Producer Bracket</b><p>Pick every matchup in a weekly knockout.</p></div></a>
+           <a class="also-card gtile" href="golf.html"><span aria-hidden="true">⛳</span><div><b>Block Golf</b><p>Your places in the other games set your score. Practice in Week 1 (from Mon 16 Nov).</p></div></a>
+           <a class="also-card gtile" href="fantasy.html"><span aria-hidden="true">📋</span><div><b>Fantasy Producers</b><p>Draft 5 producers under a salary cap.</p></div></a>
++          <a class="also-card gtile" href="lastnode.html"><span aria-hidden="true">🏁</span><div><b>Last Node Standing</b><p>Every hour the unluckiest node is knocked out. Ride the last one standing.</p></div></a>
+           <a class="also-card gtile" href="combo.html"><span aria-hidden="true">🎟️</span><div><b>Combo Card</b><p><span class="tile-tag">Preview</span> Build a card of 2 to 10 calls. Every leg must hit. Opens Mon 7 Dec.</p></div></a>
+           <div class="also-card gtile soon" aria-disabled="true"><span aria-hidden="true">🛡️</span><div><b>Survivor</b><p>One producer a day, two lives.</p></div></div>
+           <a class="also-more" href="games.html">See every game and your standing →</a>
+@@ -425,6 +427,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="#results" data-view="results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="#how" data-view="how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/install.html b/web/install.html
+index 5551187..ba0503a 100644
+--- a/web/install.html
++++ b/web/install.html
+@@ -53,6 +53,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -143,6 +144,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/mana.html b/web/mana.html
+index 6801db2..d3b7bac 100644
+--- a/web/mana.html
++++ b/web/mana.html
+@@ -106,6 +106,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -228,6 +229,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/names.html b/web/names.html
+index fe413a8..3fa78a4 100644
+--- a/web/names.html
++++ b/web/names.html
+@@ -87,6 +87,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -161,6 +162,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/node.html b/web/node.html
+index 4cd44e9..26e3f5c 100644
+--- a/web/node.html
++++ b/web/node.html
+@@ -109,6 +109,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -251,6 +252,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/pulse.html b/web/pulse.html
+index c4dff81..a65608b 100644
+--- a/web/pulse.html
++++ b/web/pulse.html
+@@ -86,6 +86,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -180,6 +181,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/race.html b/web/race.html
+index 80c2ed9..e2dae38 100644
+--- a/web/race.html
++++ b/web/race.html
+@@ -314,6 +314,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -468,6 +469,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/ruler.html b/web/ruler.html
+index 8f3b830..d8f6b92 100644
+--- a/web/ruler.html
++++ b/web/ruler.html
+@@ -55,6 +55,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -101,7 +102,7 @@
+             <tr><td><a href="blockx.html">Who Signs Block X</a></td><td>Sets how much a right pick is worth.</td><td>From Week 2 (Mon 23 Nov). Week 1 is a practice week for the Ruler.</td></tr>
+             <tr><td><a href="bracket.html">Producer Bracket</a></td><td>Decides each matchup by how each producer did against its own size.</td><td>From Week 2 (Mon 23 Nov). Week 1 is a practice week for the Ruler.</td></tr>
+             <tr><td><a href="fantasy.html">Fantasy Producers</a></td><td>Scores each producer's day against its own size.</td><td>From Week 2 (Mon 23 Nov), its first real week.</td></tr>
+-            <tr><td>Last Node Standing</td><td>Decides who is knocked out each hour.</td><td>From its first week, Week 3 (Mon 30 Nov).</td></tr>
++            <tr><td><a href="lastnode.html">Last Node Standing</a></td><td>Decides who is knocked out each hour.</td><td>From its first week, Week 2 (from Tue 24 Nov).</td></tr>
+             <tr><td><a href="combo.html">Combo Card</a></td><td>Decides its race legs (Win, Show, Top half).</td><td>From its first week (Mon 7 Dec).</td></tr>
+           </tbody>
+         </table>
+@@ -195,7 +196,18 @@
+         </dl>
+         <p class="muted"><a href="index.html#how/fantasy">Fantasy Producers rules</a></p>
+       </article>
+-      <p class="muted">Last Node Standing, Combo Card and Survivor are added here when each one opens.</p>
++      <article class="panel" id="lastnode">
++        <h3>Last Node Standing</h3>
++        <dl class="rg-list">
++          <dt>What the game asks you</dt><dd>pick the producer you think will last longest in the day's event, plus a backup if you like. Your backup takes over once, the first time your pick is knocked out, if it is still standing.</dd>
++          <dt>What it reads from the Ruler</dt><dd>one card fixed the day before, which decides who is in the event (up to 23 producers); then one card for every hour of the event, each fixed from the blocks just before that hour and scored over that hour's own blocks.</dd>
++          <dt>How that becomes your score</dt><dd>each hour, a producer whose size moved too far from its card, or that isn't in that hour's field, is knocked out. Of the rest, the one with the worst Ruler score that hour (its luck against its own size) is knocked out. You score a point for every producer knocked out while yours is still in. If yours is the last one standing, you get a bonus (+5, or +3 after your backup took over).</dd>
++          <dt>Why it's fair</dt><dd>same Ruler as every game; size-neutral, so the biggest producer doesn't simply last longest; each hour's card is fixed before that hour; checked again before results are published.</dd>
++          <dt>If the Ruler can't measure an hour</dt><dd>the event waits up to 48 hours. If an hour still can't be measured, that day's event is void: nobody scores. The event is also void, and nobody scores, if every producer still standing is knocked out in the same hour. Nobody's result is guessed.</dd>
++        </dl>
++        <p class="muted"><a href="lastnode.html">Last Node Standing page and rules</a></p>
++      </article>
++      <p class="muted">Combo Card and Survivor are added here when each one opens.</p>
+     </section>
+ 
+     <section class="start-sec">
+@@ -233,6 +245,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/run-node.html b/web/run-node.html
+index 2617440..752f2fb 100644
+--- a/web/run-node.html
++++ b/web/run-node.html
+@@ -54,6 +54,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -1076,6 +1077,7 @@ git rev-parse HEAD</code></pre>
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/sitemap.xml b/web/sitemap.xml
+index 6790e92..3080e93 100644
+--- a/web/sitemap.xml
++++ b/web/sitemap.xml
+@@ -12,6 +12,7 @@
+   <url><loc>https://knodegames.com/race.html</loc><lastmod>2026-11-18</lastmod><priority>0.7</priority></url>
+   <url><loc>https://knodegames.com/fantasy.html</loc><lastmod>2026-11-18</lastmod><priority>0.6</priority></url>
+   <url><loc>https://knodegames.com/blockx.html</loc><lastmod>2026-11-18</lastmod><priority>0.6</priority></url>
++  <url><loc>https://knodegames.com/lastnode.html</loc><lastmod>2026-11-20</lastmod><priority>0.5</priority></url>
+   <url><loc>https://knodegames.com/combo.html</loc><lastmod>2026-11-18</lastmod><priority>0.5</priority></url>
+   <url><loc>https://knodegames.com/pulse.html</loc><lastmod>2026-11-18</lastmod><priority>0.6</priority></url>
+   <url><loc>https://knodegames.com/mana.html</loc><lastmod>2026-11-18</lastmod><priority>0.6</priority></url>
+diff --git a/web/stake.html b/web/stake.html
+index 14e93d5..f88b840 100644
+--- a/web/stake.html
++++ b/web/stake.html
+@@ -136,6 +136,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -209,6 +210,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/start.html b/web/start.html
+index 55fc0c3..dedc14e 100644
+--- a/web/start.html
++++ b/web/start.html
+@@ -53,6 +53,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -216,6 +217,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/swap.html b/web/swap.html
+index 3d735b4..4d2cb36 100644
+--- a/web/swap.html
++++ b/web/swap.html
+@@ -55,6 +55,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -170,6 +171,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/terms.html b/web/terms.html
+index 5c8eb13..0c09e49 100644
+--- a/web/terms.html
++++ b/web/terms.html
+@@ -55,6 +55,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -169,6 +170,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+diff --git a/web/trust.html b/web/trust.html
+index 25dd3d3..2de11de 100644
+--- a/web/trust.html
++++ b/web/trust.html
+@@ -55,6 +55,7 @@
+             <a href="bracket.html">Producer Bracket</a>
+             <a href="golf.html">Block Golf</a>
+             <a href="fantasy.html">Fantasy Producers</a>
++            <a href="lastnode.html">Last Node Standing</a>
+             <a href="combo.html">Combo Card · Preview</a>
+           </div>
+         </details>
+@@ -159,6 +160,7 @@
+       <a href="bracket.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h5v4H4zM4 15h5v4H4zM15 10h5v4h-5z"></path><path d="M9 7h3v10H9M12 12h3"></path></svg><span>Producer Bracket</span></a>
+       <a href="golf.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 21V4l9 4-9 4"></path><path d="M4 21h8"></path></svg><span>Block Golf</span></a>
+       <a href="fantasy.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="10" r="2"></circle><circle cx="19" cy="10" r="2"></circle><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span>Fantasy Producers</span></a>
++      <a href="lastnode.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4"></path><path d="M6 5h11l-2.5 4 2.5 4H6"></path></svg><span>Last Node Standing</span></a>
+       <a href="combo.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path><path d="M14 5v14"></path></svg><span>Combo Card · Preview</span></a>
+       <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+       <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>

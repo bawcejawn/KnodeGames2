@@ -431,7 +431,7 @@ export function watchWeek(events: DayFile[], cut = L.CUT): { a: string; q: numbe
     // The VHP ruler (field nodes without kh): credited against expected blocks from each hour card, over the hours the
     // node raced (up to and including the hour it went out). The old method: blocks against the handicap.
     const onRuler = df.field.nodes.length > 0 && df.field.nodes[0].kh === undefined;
-    const outAt = new Map<string, number>(onRuler ? L.rulerCutsFrom(df.field, df.hours).cuts.map((c: any) => [c.a, c.at]) : []);
+    const outAt = new Map<string, number>(onRuler ? L.rulerCutsFrom(df.field, df.hours, df.week).cuts.map((c: any) => [c.a, c.at]) : []);
     for (const n of df.field.nodes) {
       const s = by.get(n.a) ?? { got: 0, exp: 0, wins: 0, events: 0, chi: 0, m: 0, ev: [] };
       let g = 0, e = 0;
@@ -552,7 +552,7 @@ export async function run(o: Opts) {
   const OUT = o.out ?? E.LASTNODE_OUT ?? "games-data/lastnode";
   const RULER = o.ruler ?? !o.practice;
   /** The event's result: the ruler's cuts (mainnet) or the old handicap cuts (testnet practice). */
-  const cutsOf = (field: any, hours: Hour[]) => (RULER ? L.rulerCutsFrom(field, hours) : L.cutsFrom(field, hours));
+  const cutsOf = (field: any, hours: Hour[], week?: number) => (RULER ? L.rulerCutsFrom(field, hours, week) : L.cutsFrom(field, hours));
   let ledger: any = o.rulerLedger;
   const rulerData = () => {
     if (ledger !== undefined) return ledger;
@@ -676,7 +676,7 @@ export async function run(o: Opts) {
   for (const df of days.values()) {
     if (df.start > today.start + L.PERIOD || df.void) continue;
     if (df.start < today.start - 3 * L.DAY) {                     // older events are settled; one never finished is void
-      if (!cutsOf(df.field || { nodes: [] }, df.hours).done && now.time - df.start > LOOKBACK_MS && df.start >= firstStart) { df.void = df.field ? "not recorded within 3 days" : "never recorded"; touched.add(df.day); }
+      if (!cutsOf(df.field || { nodes: [] }, df.hours, df.week).done && now.time - df.start > LOOKBACK_MS && df.start >= firstStart) { df.void = df.field ? "not recorded within 3 days" : "never recorded"; touched.add(df.day); }
       continue;
     }
     const ev = L.eventOf(df.day);
@@ -720,7 +720,7 @@ export async function run(o: Opts) {
         if (!df.field) continue;
       }
       // ── 2–3. hours and picks ──
-      let res = cutsOf(df.field, df.hours);
+      let res = cutsOf(df.field, df.hours, df.week);
       while (!res.done && hoursRead < MAX_HOURS_PER_RUN) {
         const i = df.hours.length, t0 = df.start + i * L.CUT, t1 = t0 + L.CUT;
         if (now.libTime < t1) break;
@@ -759,7 +759,7 @@ export async function run(o: Opts) {
           rday(df.day).hours.push({ round, window: win, card: got.card });
           for (const [k, v] of Object.entries(got2)) df.picks[k] = v;
           hoursRead++; touched.add(df.day);
-          res = cutsOf(df.field, df.hours);
+          res = cutsOf(df.field, df.hours, df.week);
           console.log(`${df.day} hour ${i}: blocks ${w.from}-${w.to}, out ${res.cuts.filter((c: any) => c.at === i + 1).map((c: any) => `${c.a} (${c.why})`).join(", ") || "none"}, ${res.standing.length} standing`);
           continue;
         }
@@ -801,13 +801,13 @@ export async function run(o: Opts) {
         console.log(`${df.day} hour ${i}: blocks ${w.from}-${w.to}, cut ${cut?.a}, ${res.standing.length} standing, checked on ${checked} node(s)`);
       }
     } catch (e) { problems.push(`${df.day}: ${(e as Error).message} (tried again next run)`); }
-    if (df.field && !df.void && !cutsOf(df.field, df.hours).done && now.time - df.start > LOOKBACK_MS) { df.void = "not recorded within 3 days"; touched.add(df.day); }
+    if (df.field && !df.void && !cutsOf(df.field, df.hours, df.week).done && now.time - df.start > LOOKBACK_MS) { df.void = "not recorded within 3 days"; touched.add(df.day); }
   }
 
   // ── 4. results and players ──
   for (const df of days.values()) {
     if (!df.field || df.void) { df.cuts = []; df.standing = []; df.winner = null; df.players = []; continue; }
-    const res = cutsOf(df.field, df.hours);
+    const res = cutsOf(df.field, df.hours, df.week);
     // The ruler: every node still standing out in the same hour leaves no winner: the event is void (no one scores; nothing is returned).
     if (res.done && res.winner === null) { df.void = "every node still standing went out in the same hour"; touched.add(df.day); df.cuts = []; df.standing = []; df.winner = null; df.players = []; continue; }
     df.cuts = res.cuts; df.standing = res.standing; df.winner = res.winner; df.done = res.done;
