@@ -3,7 +3,7 @@
   "orphans": [],
   "lastCompound": 41415033,
   "warnings": [],
-  "lastProduced": 41426052,
+  "lastProduced": 41428882,
   "producedByDay": {
     "1430": 36,
     "1431": 60,
@@ -13,16 +13,16 @@
     "1435": 53,
     "1436": 53,
     "1437": 53,
-    "1438": 23
+    "1438": 28
   },
-  "producerScannedTo": 41427830,
+  "producerScannedTo": 41428956,
   "settings": "{\"min_stake\":\"100000000\",\"min_stake_next\":\"0\",\"min_stake_next_week\":\"0\",\"max_sponsor_rc\":\"0\",\"min_sponsor_rc\":\"0\",\"paused\":false}",
-  "sealedAt": 41427828,
+  "sealedAt": 41428953,
   "desk": {
     "settings": "{\"fee_bps\":1000,\"min_swap\":\"100000000\",\"max_swap\":\"0\",\"paused\":false,\"timelock\":\"172800000\"}",
-    "koin": "36606672932",
+    "koin": "37457844716",
     "koinOut": "825796065935",
-    "at": 1795768726970
+    "at": 1795772330280
   },
   "deskProducerKey": "AzCYCDLDa49PPVHKk60xQbOErS6XY1TcEA8bkSo8Sk6E",
   "notified": [
@@ -31,24 +31,24 @@
   ],
   "vhpLists": {
     "a1dca6c62b750898eb147d4f8eeb0ee35f9a98fcdd14f0c06f4b2c1c08a8fc00": {
-      "n": 76,
-      "last": 41427888
+      "n": 77,
+      "last": 41429013
     },
     "3f9ce05670aadbaeeded237077c0909cf70e412ba52d44f8d05683fec1027655": {
-      "n": 76,
-      "last": 41427888
+      "n": 77,
+      "last": 41429013
     },
     "d2e3e051caedc6220660429156d3f17c4d31f9edcb47ce2609caed6eac459981": {
-      "n": 35,
-      "last": 41427888
+      "n": 36,
+      "last": 41429013
     },
     "f44ac92213e0fa1a9ea6c3a147ebff9c2a8830ed91ca4279f126f15750f0f8e8": {
-      "n": 8,
-      "last": 41427888
+      "n": 9,
+      "last": 41429013
     },
     "4c1396621a7b7a2419b6ab6efaad781103e397290b891297e1ec5e1ebb13c489": {
-      "n": 8,
-      "last": 41427888
+      "n": 9,
+      "last": 41429013
     }
   },
   "manaByDay": {
@@ -161,5 +161,5 @@
     1795761528255,
     1795761551225
   ],
-  "seal": "133fd1bd68f8198a5bbfe694594fe8c4c868a128c72ccd0aa875fa0689a52303"
+  "seal": "e3e32bf6b031e484469dcec37f433b8f124d974e7f8dfef64e50f73e9d0fe3c7"
 }
