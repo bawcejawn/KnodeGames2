@@ -453,6 +453,66 @@
     h("li", {}, "In Kondor choose ", h("b", {}, "Import account"), " (private key), paste the key, and name the account."),
     h("li", {}, "Keep a little KOIN in that account: collecting a prize uses a little Mana."),
     h("li", {}, "Back here tap ", h("b", {}, "Connect wallet → Kondor"), " and pick that account. Your points and prize are there: tap Collect."));
+  // ── D-945: "Collect to another wallet" (guest wallets only). DRAFT, UNWIRED: the contract calls claim_to / claim_game_to do
+  //    not exist until v6.2 is live (Vault's reply to M-846 gives their entry points and arguments). Until CLAIM_TO and
+  //    CLAIM_GAME_TO are set below, `claimToOn()` is false and nothing here is reachable from a page.
+  const CLAIM_TO = null, CLAIM_GAME_TO = null;   // entry points, set from Vault's reply; both must be set to turn it on
+  const claimToOn = () => CLAIM_TO != null && CLAIM_GAME_TO != null;
+  const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  /** True for a Koinos address with a correct checksum: base58, 25 bytes, prefix 0, the last 4 bytes the first 4 of the
+   *  double sha256 of the first 21 (the same rule as koilib's isChecksumAddress). A wrong or mistyped address is false. */
+  async function isKoinosAddress(a) {
+    if (typeof a !== "string" || !/^1[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(a)) return false;
+    let n = 0n; for (const c of a) n = n * 58n + BigInt(B58.indexOf(c));
+    let bytes = []; while (n > 0n) { bytes.unshift(Number(n & 255n)); n >>= 8n; }
+    for (const c of a) { if (c !== "1") break; bytes.unshift(0); }
+    if (bytes.length !== 25 || bytes[0] !== 0) return false;
+    const sha = async (u) => new Uint8Array(await crypto.subtle.digest("SHA-256", u));
+    const d = await sha(await sha(Uint8Array.from(bytes.slice(0, 21))));
+    return bytes.slice(21).every((b, i) => b === d[i]);
+  }
+  /** Addresses a prize must never be sent to: the vault, the desk, the picks and race games, the sponsor and the tokens. */
+  function knodeAddresses() {
+    const sp = W.sponsor || {};
+    return new Set([PINNED_SPONSOR, PINNED_GAME, "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR", sp.address, sp.race, sp.picks, sp.pob, sp.game,
+      ...(Array.isArray(sp.covers) ? sp.covers : []), ...(Array.isArray(sp.tokens) ? sp.tokens : []), ...(Array.isArray(sp.contracts) ? sp.contracts : [])].filter(Boolean));
+  }
+  /** Why a typed recipient is refused, or "" when it is fine. */
+  async function recipientProblem(a) {
+    if (!(await isKoinosAddress(a))) return "That isn't a valid Koinos address. Check it and try again.";
+    if (knodeAddresses().has(a)) return "That is a Knode Games address. A prize can't be sent there.";
+    return "";
+  }
+  /** The guest screen: back-up warning first, then one address field (typed or pasted by the player, never filled from a
+   *  link or the page), then the full address and amount with "This can't be undone" and one confirm tap. `ctx` =
+   *  { amount: "12.5 VHP", send: async (recipient) => … } from the page that knows the claim; it is the only way in. */
+  function guestCollectTo(ctx) {
+    if (!claimToOn() || W.kind !== "guest" || !ctx || !ctx.amount || typeof ctx.send !== "function") return false;
+    const input = h("input", { class: "kw-input", type: "text", autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Koinos address to collect to", placeholder: "Paste a Koinos address" });
+    const status = h("p", { class: "kw-status", role: "status" }, "");
+    const step2 = async () => {
+      const to = String(input.value || "").trim();
+      const bad = await recipientProblem(to);
+      if (bad) { status.textContent = bad; return; }
+      const sure = h("button", { class: "kw-btn", type: "button", onclick: async () => {
+        sure.disabled = true;
+        try { await ctx.send(to); close(); W.toast && W.toast("Collected to the address you chose.", 8000); }
+        catch (e) { sure.disabled = false; status.textContent = String((e && e.message) || e); }
+      } }, "Confirm: collect to this address");
+      open(h("h3", {}, "Collect to another wallet"),
+        h("p", {}, `Amount: ${ctx.amount}`),
+        h("p", {}, "Collect to this address:"), h("p", { class: "kw-addr" }, to),
+        h("p", { class: "kw-warn" }, "This can't be undone. Check every character: a wrong address loses the prize."),
+        h("div", { class: "kw-row" }, sure, h("button", { class: "kw-btn", type: "button", onclick: () => guestCollectTo(ctx) }, "Back")), status);
+    };
+    const go = h("button", { class: "kw-btn", type: "button", onclick: step2 }, "Continue");
+    open(h("h3", {}, "Collect to another wallet"),
+      h("p", { class: "kw-warn" }, "Back up your guest key first. " + GUEST_WARN),
+      h("div", { class: "kw-row" }, h("button", { class: "kw-btn", type: "button", onclick: () => backupGuest() }, "Back up guest key")),
+      h("p", {}, `Your prize: ${ctx.amount}. Type or paste the Koinos address to send it to (for example your KOIN Vault address). It is never filled in for you.`),
+      input, h("div", { class: "kw-row" }, go), status);
+    return true;
+  }
   function guestCant(ops) {
     const game = guestGame();
     const isClaim = ops.some((o) => o && o.call_contract && o.call_contract.contract_id === game && Number(o.call_contract.entry_point) === CLAIM);
@@ -931,6 +991,7 @@
 
   window.KWallet = {
     init, setGuestConfig, connect, disconnect, send, sendBatch, batchReady: batchReady, isPhone, manageGuest, guestInfo: () => { guestCant([]); }, switchTo, forget,
+    isKoinosAddress, recipientProblem, claimToOn, guestCollectTo,
     accounts: () => remembered(), subscribe: (f) => { listeners.add(f); return () => listeners.delete(f); },
     get address() { return W.address; }, get kind() { return W.kind; },
     /** R-BX-21: true when this page sends through the Mana sponsor (deployment.json "payer": "sponsor"). */
