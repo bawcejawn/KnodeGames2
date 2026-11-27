@@ -144,7 +144,8 @@ test("the two kinds are unmissable: Donate (cannot be withdrawn) and Support (wi
 test("the page warns: gifts only through the page's button, never by sending VHP to the vault address", () => {
   const t = visible(html).replace(/\s+/g, " ");
   assert.match(t, /only through the button on this page/i);
-  assert.match(t, /never send VHP straight to the vault address/i);
+  // Vault, M-864/M-866: VHP or KOIN; a direct transfer is counted as that week's block rewards (fee, then paid out).
+  assert.ok(t.includes("Never send VHP or KOIN straight to the vault address. Tokens sent that way are not recorded as a gift or as support: they are counted as that week's block rewards (the 5% fee is taken, the rest is paid out to players) and can't be given back."));
 });
 
 test("the page says the VHP never plays and wins nothing; its rewards pay free prizes first, then the stakers (Vault plan (c))", () => {
@@ -165,9 +166,9 @@ test("the Donate box says, in the owner's exact words, that a donation is the pl
 
 test("the Support box says only the Seed Sponsor can withdraw it, any amount, any time, never the owner (M-820)", () => {
   const keep = visible(html.slice(html.indexOf('class="card ss-kind keep"'), html.indexOf("</section>", html.indexOf('class="card ss-kind keep"')))).replace(/\s+/g, " ");
-  assert.match(keep, /Only you can withdraw your support: any amount, any time\./);
   // Repo Lens 3 #R3-45: the promise is the vault's rule (owner M-820; built in vault v6.2).
-  assert.match(keep, /Under the vault's rules, no other wallet can move it, not even the platform owner's\./);
+  // Vault, M-864/M-866: up to what you put in; the 48-hour notice of any rule change (the vault's upgrade timelock).
+  assert.ok(keep.includes("Only you can withdraw your support: any amount up to what you put in, any time. Under the vault's rules, no other wallet can move it, not even the platform owner's. Any change to the vault's rules is announced at least 48 hours before it takes effect."));
 });
 
 test("the list says amounts are always public on the chain, whatever the tick (Vault plan, point 2)", () => {
