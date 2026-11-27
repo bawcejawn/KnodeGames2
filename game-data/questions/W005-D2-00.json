@@ -816,7 +816,9 @@
             }
           }
         }
-      }
+      },
+      "chainOutcome": 1000,
+      "chainDataHash": "0x7ccac8d807bedf50f909d4b42d7b2fe2699396ff39e7dbb68f8c92c2d4c31cec"
     },
     {
       "id": "W005-D2-00-2",
@@ -1992,7 +1994,9 @@
             }
           }
         }
-      }
+      },
+      "chainOutcome": 1000,
+      "chainDataHash": "0x6d90ac9f39a22f22656f13ecd5dff27a73881585b00d24a4db85f98cc665b58d"
     }
   ],
   "daySeal": "10359874fa63b86eab7c782c59bebc93d4d3af1d0284436ac0fb89fa8e8f6328"
