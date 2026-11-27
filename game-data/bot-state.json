@@ -3,7 +3,7 @@
   "orphans": [],
   "lastCompound": 41415033,
   "warnings": [],
-  "lastProduced": 41423742,
+  "lastProduced": 41424742,
   "producedByDay": {
     "1430": 36,
     "1431": 60,
@@ -13,16 +13,16 @@
     "1435": 53,
     "1436": 53,
     "1437": 53,
-    "1438": 19
+    "1438": 21
   },
-  "producerScannedTo": 41423998,
+  "producerScannedTo": 41425525,
   "settings": "{\"min_stake\":\"100000000\",\"min_stake_next\":\"0\",\"min_stake_next_week\":\"0\",\"max_sponsor_rc\":\"0\",\"min_sponsor_rc\":\"0\",\"paused\":false}",
-  "sealedAt": 41423993,
+  "sealedAt": 41425506,
   "desk": {
     "settings": "{\"fee_bps\":1000,\"min_swap\":\"100000000\",\"max_swap\":\"0\",\"paused\":false,\"timelock\":\"172800000\"}",
-    "koin": "34053179593",
+    "koin": "34904339236",
     "koinOut": "825796065935",
-    "at": 1795757048480
+    "at": 1795761570640
   },
   "deskProducerKey": "AzCYCDLDa49PPVHKk60xQbOErS6XY1TcEA8bkSo8Sk6E",
   "notified": [
@@ -31,16 +31,16 @@
   ],
   "vhpLists": {
     "a1dca6c62b750898eb147d4f8eeb0ee35f9a98fcdd14f0c06f4b2c1c08a8fc00": {
-      "n": 73,
-      "last": 41424053
+      "n": 74,
+      "last": 41425566
     },
     "3f9ce05670aadbaeeded237077c0909cf70e412ba52d44f8d05683fec1027655": {
-      "n": 73,
-      "last": 41424053
+      "n": 74,
+      "last": 41425566
     },
     "d2e3e051caedc6220660429156d3f17c4d31f9edcb47ce2609caed6eac459981": {
-      "n": 32,
-      "last": 41424053
+      "n": 33,
+      "last": 41425566
     },
     "97b13ab74921afa56c4a907cd0162ba268d646a530a51850d49788b363991541": {
       "n": 5,
@@ -51,12 +51,12 @@
       "last": 41424053
     },
     "f44ac92213e0fa1a9ea6c3a147ebff9c2a8830ed91ca4279f126f15750f0f8e8": {
-      "n": 5,
-      "last": 41424053
+      "n": 6,
+      "last": 41425566
     },
     "4c1396621a7b7a2419b6ab6efaad781103e397290b891297e1ec5e1ebb13c489": {
-      "n": 5,
-      "last": 41424053
+      "n": 6,
+      "last": 41425566
     }
   },
   "manaByDay": {
@@ -88,7 +88,7 @@
     "2026-11-24": "784612725",
     "2026-11-25": "711912658",
     "2026-11-26": "791914537",
-    "2026-11-27": "217847650"
+    "2026-11-27": "298088459"
   },
   "games": "[[1,true,true,true,0,0,0],[2,true,true,true,1,3,0],[4,true,true,true,1,6,0],[6,false,true,true,1,5,5],[7,true,true,true,1,3,0],[9,true,true,true,1,5,0],[13,true,true,true,1,6,0]]",
   "vault": {
@@ -108,8 +108,6 @@
     }
   },
   "ownResolves": [
-    1795000914648,
-    1795017776611,
     1795030768267,
     1795030784407,
     1795030805179,
@@ -167,7 +165,9 @@
     1795716559878,
     1795716575935,
     1795731382714,
-    1795749035329
+    1795749035329,
+    1795761528255,
+    1795761551225
   ],
-  "seal": "2fe13aab45804671814139d53ce21ae7338f0b3930bd84421d4755ad291dfa08"
+  "seal": "7d16b71ba3193e00fc59c45f35cfb6c6ed5e352ff8265bbfc7f1e1a0543ab669"
 }
