@@ -175,3 +175,12 @@ test("every new word still follows the owner's rules (no banned words, no wallet
   assert.deepEqual(text.split("\n").filter((l) => banned.test(l)), []);
   for (const f of ["web/seed-sponsor.js", "web/seed-sponsor-math.js", "web/seed-sponsor-chain.js", "web/seed-sponsor.html"]) assert.doesNotMatch(read(f), /\b1[1-9A-HJ-NP-Za-km-z]{25,34}\b/, f);
 });
+
+test("Vault review B-1: the switch gates Donate and Support only; Withdraw needs just the vault (and support above 0)", () => {
+  const js = read("web/seed-sponsor.js");
+  const mine = js.slice(js.indexOf("async function paintMine"), js.indexOf("function withdraw"));
+  assert.doesNotMatch(mine, /ready\(\)|liveOn/, "your record and Withdraw never look at the switch");
+  assert.match(mine, /chainReady\(\)/);
+  const send = js.slice(js.indexOf("async function sendPending"), js.indexOf("// ── your record"));
+  assert.match(send, /p\.action === "withdraw" \? chainReady\(\) : ready\(\)/, "a withdrawal is sent whatever the switch says");
+});

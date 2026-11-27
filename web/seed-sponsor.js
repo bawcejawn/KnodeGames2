@@ -1,6 +1,7 @@
-/* Seed Sponsor page. It reads the seed and the Seed Sponsor list from the vault. The Donate, Support and Withdraw buttons
-   open only when BOTH are true: the owner's switch window.KG.seedSponsor.live (js/lib/config.js) is on, and the vault
-   answers the Seed Sponsor calls (vault v6.2). Until then the page only shows the Seed.
+/* Seed Sponsor page. It reads the seed and the Seed Sponsor list from the vault. The Donate and Support buttons open only
+   when BOTH are true: the owner's switch window.KG.seedSponsor.live (js/lib/config.js) is on, and the vault answers the
+   Seed Sponsor calls (vault v6.2). Withdraw never depends on the switch (Vault review B-1, rule 1: withdraw any time):
+   your record and its Withdraw show whenever the vault answers and your support is above 0.
    Rules and words: seed-sponsor-math.js. The calls and transactions: seed-sponsor-chain.js. Sending: KWallet.send, always
    with the Seed Sponsor's own Mana (noSponsor: the Knode Games Mana service never pays for Seed Sponsor). Everything is set as
    textContent; no wallet address is ever shown. */
@@ -109,7 +110,7 @@
 
   async function sendPending() {
     const p = st.pending, w = Wallet();
-    if (!p || !ready()) return;
+    if (!p || !(p.action === "withdraw" ? chainReady() : ready())) return;
     const why = whyNot();
     if (why) { $("ss-confirm-err").textContent = why; return; }
     const go = $("ss-confirm-go");
@@ -131,8 +132,9 @@
 
   // ── your record: withdraw, and your choices ──
   async function paintMine() {
+    // Not behind the owner's switch: only the vault (v6.2) and a real wallet are needed (Vault review B-1).
     const box = $("ss-mine"), w = Wallet();
-    if (!ready() || !w || !w.address || w.kind === "guest") { box.hidden = true; return; }
+    if (!chainReady() || !w || !w.address || w.kind === "guest") { box.hidden = true; return; }
     try {
       const r = await C.readMine(st.vault, w.address);
       st.mine = r;

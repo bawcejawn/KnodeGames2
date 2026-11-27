@@ -121,7 +121,9 @@ test("the owner's switch is off: even a v6.2 vault shows the list but keeps both
     await page.waitForFunction(() => document.getElementById("ss-supporters").textContent.includes("Helper"));
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll(".ss-go")].map((b) => b.disabled)), [true, true]);
     assert.equal(await page.textContent("#ss-total"), "22,550 VHP");          // seed 21,050 + support 1,500
-    assert.equal(await page.isVisible("#ss-mine"), false);
+    // Vault review B-1: Withdraw never depends on the switch. Support above 0 → your record and Withdraw show.
+    await page.waitForSelector("#ss-mine:not([hidden])");
+    assert.equal(await page.isVisible("#ss-withdraw-box"), true);
     const list = await page.textContent(".ss-list");
     assert.match(list, /Big Giver/);
     assert.doesNotMatch(list, /2,000 VHP/, "Big Giver didn't tick Show my amount");
@@ -185,5 +187,29 @@ test("your record: withdraw part of your support, with its own confirm screen; m
     await page.waitForFunction(() => window.KWallet.sent.length === 1);
     const eps = await page.evaluate(() => window.KWallet.sent[0].ops.map((o) => o.call_contract.entry_point >>> 0));
     assert.deepEqual(eps, [EP("support_withdraw")].map(Number));
+  } finally { await browser.close(); }
+});
+
+test("Vault review B-1: with the switch OFF, a sponsor with support can still withdraw it (rule 1: withdraw any time)", async () => {
+  const { browser, page } = await open(390, { v62: true, wallet: true });
+  try {
+    await page.waitForSelector("#ss-mine:not([hidden])");
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll(".ss-go")].map((b) => b.disabled)), [true, true], "Donate and Support stay off");
+    assert.equal(await page.textContent("#ss-mine-support"), "1,500 VHP");
+    await page.fill("#ss-w-amount", "1500");
+    await page.click("#ss-w-go");
+    assert.equal(await page.textContent("#ss-confirm-h"), "Withdraw 1,500 VHP of your support");
+    await page.click("#ss-confirm-go");
+    await page.waitForFunction(() => window.KWallet.sent.length === 1);
+    const sent = await page.evaluate(() => window.KWallet.sent.map((x) => ({ n: x.ops.length, opts: x.opts, ep: x.ops[0].call_contract.entry_point >>> 0 })));
+    assert.deepEqual(sent, [{ n: 1, opts: { noSponsor: true }, ep: EP("support_withdraw") }]);
+  } finally { await browser.close(); }
+});
+
+test("Vault review B-1: a vault that is still v6.1 shows no record and no Withdraw (nothing to withdraw there)", async () => {
+  const { browser, page } = await open(390, { wallet: true });
+  try {
+    await page.waitForTimeout(500);
+    assert.equal(await page.isVisible("#ss-mine"), false);
   } finally { await browser.close(); }
 });
