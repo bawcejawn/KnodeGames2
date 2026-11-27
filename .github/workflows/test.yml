@@ -55,6 +55,6 @@ jobs:
           done
           cd ../.. && npm ci --no-audit --no-fund --ignore-scripts
           # A skipped test means a build or fixture was not found: in CI that is a failure, not a pass.
-          node --import tsx --test contracts/vault/scripts/storage-compat.test.ts contracts/vault/scripts/storage-compat-v6.test.ts contracts/vault/scripts/storage-compat-v61.test.ts 2>&1 | tee compat.log
+          node --import tsx --test contracts/vault/scripts/storage-compat.test.ts contracts/vault/scripts/storage-compat-v6.test.ts contracts/vault/scripts/storage-compat-v61.test.ts contracts/vault/scripts/storage-compat-v62.test.ts 2>&1 | tee compat.log
           grep -q '^# skipped 0$' compat.log || { echo '::error::a storage-compat test was skipped'; exit 1; }
       - run: npm run check
