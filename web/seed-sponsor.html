@@ -67,6 +67,23 @@
     .ss-amt { color: var(--muted); white-space: nowrap; }
     .ss-empty { color: var(--muted); }
     .ss-soon { font-size: 13px; color: var(--muted); }
+    .ss-status { min-height: 1.3em; font-weight: 600; }
+    .ss-status.bad, .ss-err { color: var(--rose); }
+    .ss-err { min-height: 1.2em; margin: 6px 0; }
+    .ss-field { display: block; margin: 10px 0; font-weight: 600; }
+    .ss-field input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; font: inherit; font-weight: 400; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--paper); color: inherit; }
+    .ss-check { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; }
+    .ss-check input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+    .ss-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .ss-btn { flex: 1 1 120px; font: inherit; font-weight: 700; padding: 12px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--paper); color: inherit; cursor: pointer; }
+    .ss-btn.ss-main { background: var(--ink, #14161F); color: var(--paper, #fff); border-color: transparent; }
+    .ss-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .ss-go:not(:disabled) { color: inherit; cursor: pointer; background: var(--surface); }
+    .ss-confirm { border: 3px solid var(--rose); }
+    .ss-confirm.keep { border-color: var(--mint); }
+    .ss-big { font-size: clamp(24px, 7vw, 32px) !important; line-height: 1.2; }
+    .ss-confirm ul { padding-left: 20px; font-size: 17px; }
+    .ss-confirm li { margin: 8px 0; }
   </style>
 
   <link rel="stylesheet" href="page-box.css">
@@ -159,7 +176,44 @@
         <button type="button" class="ss-go" disabled aria-disabled="true">Support · coming soon</button>
       </section>
     </div>
-    <p class="ss-soon">The Donate and Support buttons open once the vault can keep a record for each Seed Sponsor. Until then this page only shows the Seed.</p>
+    <p class="ss-soon" id="ss-soon">The Donate and Support buttons open once the vault can keep a record for each Seed Sponsor. Until then this page only shows the Seed.</p>
+    <p class="ss-status" id="ss-status" role="status" aria-live="polite"></p>
+
+    <section class="card ss-step" id="ss-form" hidden aria-labelledby="ss-form-h">
+      <h2 id="ss-form-h">Donate</h2>
+      <label class="ss-field">Amount, in whole VHP (at least <b data-ss-min>1,000 VHP</b>)
+        <input id="ss-amount" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="1000"></label>
+      <label class="ss-field">Nickname (3 to 20 letters, digits, spaces, - or _)
+        <input id="ss-nick" maxlength="20" autocomplete="off" spellcheck="false"></label>
+      <label class="ss-check"><input type="checkbox" id="ss-hide-me"> Don't show me on this page</label>
+      <label class="ss-check"><input type="checkbox" id="ss-show-amt"> Show my amount on this page (amounts are always public on the chain)</label>
+      <p class="ss-err" id="ss-form-err" role="alert"></p>
+      <div class="ss-row"><button type="button" class="ss-btn" id="ss-form-back">Back</button><button type="button" class="ss-btn ss-main" id="ss-form-next">Continue</button></div>
+    </section>
+
+    <section class="card ss-step ss-confirm" id="ss-confirm" hidden aria-labelledby="ss-confirm-h">
+      <h2 id="ss-confirm-h" class="ss-big">You are DONATING</h2>
+      <ul id="ss-confirm-list"></ul>
+      <p class="ss-err" id="ss-confirm-err" role="alert"></p>
+      <div class="ss-row"><button type="button" class="ss-btn" id="ss-confirm-back">Back</button><button type="button" class="ss-btn ss-main" id="ss-confirm-go">Confirm</button></div>
+    </section>
+
+    <section class="card" id="ss-mine" hidden aria-labelledby="ss-mine-h">
+      <h2 id="ss-mine-h">Your Seed Sponsor record</h2>
+      <p>Support in the Seed now: <b id="ss-mine-support">0 VHP</b>. Donated in total: <b id="ss-mine-donated">0 VHP</b>.</p>
+      <div id="ss-withdraw-box">
+        <label class="ss-field">Withdraw support, any amount (whole VHP)
+          <input id="ss-w-amount" inputmode="numeric" autocomplete="off" spellcheck="false"></label>
+        <div class="ss-row"><button type="button" class="ss-btn" id="ss-w-all">All of it</button><button type="button" class="ss-btn ss-main" id="ss-w-go">Withdraw</button></div>
+      </div>
+      <h3>Your choices</h3>
+      <label class="ss-field">Nickname
+        <input id="ss-p-nick" maxlength="20" autocomplete="off" spellcheck="false"></label>
+      <label class="ss-check"><input type="checkbox" id="ss-p-hide"> Don't show me on this page</label>
+      <label class="ss-check"><input type="checkbox" id="ss-p-show"> Show my amount on this page (amounts are always public on the chain)</label>
+      <p class="ss-err" id="ss-mine-err" role="alert"></p>
+      <div class="ss-row"><button type="button" class="ss-btn ss-main" id="ss-p-save">Save my choices</button></div>
+    </section>
 
     <section class="card ss-warn" aria-labelledby="ss-warn-h">
       <h2 id="ss-warn-h">Important: use the button, nothing else</h2>
@@ -247,7 +301,9 @@
   <script src="header-wallet.js"></script>
   <script src="nav.js"></script>
   <script src="js/lib/config.js"></script>
+  <script src="names.js"></script>
   <script src="seed-sponsor-math.js"></script>
+  <script src="seed-sponsor-chain.js"></script>
   <script src="seed-sponsor.js"></script>
   <script src="vendor/posthog-1.438.13.js"></script>
   <script src="analytics.js"></script>

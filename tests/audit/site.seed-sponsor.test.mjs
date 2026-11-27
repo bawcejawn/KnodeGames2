@@ -129,8 +129,9 @@ test("no wallet address on the page or in its scripts (the vault's address comes
 
 test("always 'Seed Sponsor', never a bare 'Sponsor' (that is the Mana sponsor)", () => {
   // A word "sponsor" on its own (not part of a name like min_sponsor_vhp or seedSponsor) must follow "Seed". The one
-  // exception is the owner's own label for a hidden support name, "Anonymous Sponsor" (owner, 25 Nov, 8:11 PM ET).
-  const bare = [...(html + "\n" + pageJs + "\n" + mathJs).matchAll(/(?<!seed[\s-])(?<!Anonymous )\bsponsors?\b/gi)].map((m) => m.index);
+  // exception is the owner's own label for a hidden support name, "Anonymous Sponsor" (owner, 25 Nov, 8:11 PM ET), and a
+  // field name after a dot (row.sponsor, the vault's record).
+  const bare = [...(html + "\n" + pageJs + "\n" + mathJs).matchAll(/(?<!seed[\s-])(?<!Anonymous )(?<!\.)\bsponsors?\b/gi)].map((m) => m.index);
   assert.deepEqual(bare, []);
   assert.match(html, /<h1[^>]*>Seed Sponsors?<\/h1>/);
 });
@@ -177,8 +178,10 @@ test("the page reads the vault's own minimum by its field name once the upgrade 
 });
 
 // ── read-only until the vault upgrade ──
-test("this version only reads: no signing, no sending, the buttons say coming soon and are disabled", () => {
-  for (const s of [pageJs, mathJs]) assert.doesNotMatch(s, /\b(signer|getSigner|signTransaction|sendTransaction|kondor|wallet\.(send|sign)|\.transfer\(|deposit_to|seed_deposit|withdraw_from)\b/);
+test("the rules and the calls never sign or send; the page sends only through KWallet.send; the buttons ship off", () => {
+  const chainJs = read("web/seed-sponsor-chain.js");
+  for (const src of [mathJs, chainJs]) assert.doesNotMatch(src, /\b(signer|getSigner|signTransaction|sendTransaction|kondor|KWallet|\.transfer\()\b/);
+  assert.doesNotMatch(pageJs, /\b(signer|getSigner|signTransaction|sendTransaction|kondor|\.transfer\()\b/);
   const buttons = [...html.matchAll(/<button\b[^>]*class="[^"]*ss-go[^"]*"[^>]*>[\s\S]*?<\/button>/g)].map((m) => m[0]);
   assert.equal(buttons.length, 2);
   for (const b of buttons) { assert.match(b, /\bdisabled\b/); assert.match(b, /coming soon/i); }
@@ -195,5 +198,5 @@ test("phone first: viewport tag, no fixed widths above 320 px, and the two boxes
 
 test("the page and its scripts are listed for the site (search tags and the assembled site)", () => {
   assert.match(read("tools/site-seo.mjs"), /file: "seed-sponsor\.html"/);
-  assert.match(html, /<script src="js\/lib\/config\.js"><\/script>\s*<script src="seed-sponsor-math\.js"><\/script>\s*<script src="seed-sponsor\.js"><\/script>/);
+  assert.match(html, /<script src="js\/lib\/config\.js"><\/script>\s*<script src="names\.js"><\/script>\s*<script src="seed-sponsor-math\.js"><\/script>\s*<script src="seed-sponsor-chain\.js"><\/script>\s*<script src="seed-sponsor\.js"><\/script>/);
 });

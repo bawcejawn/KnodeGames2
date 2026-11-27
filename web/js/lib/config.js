@@ -13,7 +13,11 @@
   // Seed Sponsor page (seed-sponsor.html). The owner's one setting: the smallest deposit or donation, in whole VHP.
   // Every deposit and every donation must be at least this much, top-ups included. Change the number here only; the
   // page and its tests read it from here. Once the vault keeps its own minimum, the vault's value is used instead.
+  // `live`: the owner's switch for the Donate, Support and Withdraw buttons. Leave it false until vault v6.2 is uploaded,
+  // the dry run is done and counsel has read the page text (M-821). Even when true, the buttons open only if the vault
+  // answers the Seed Sponsor calls.
   window.KG.seedSponsor = window.KG.seedSponsor || {
     minVhp: 1000,
+    live: false,
   };
 })();

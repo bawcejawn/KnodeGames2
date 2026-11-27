@@ -35,10 +35,12 @@
     return { ok: true, units };
   }
 
-  /** A nickname: 3 to 20 letters, digits, spaces, - or _. Spaces are trimmed and squeezed. */
-  function checkNickname(text) {
+  /** A nickname: 3 to 20 letters, digits, spaces, - or _ (the vault checks the same). Spaces are trimmed and squeezed.
+   *  `reserved` (KNames.rules.reserved, from names.js) refuses names that look like Knode Games or Koinos (AB-062). */
+  function checkNickname(text, reserved) {
     const name = String(text ?? "").trim().replace(/ {2,}/g, " ");
     if (!/^[A-Za-z0-9 _-]{3,20}$/.test(name)) return { ok: false, reason: "Use 3 to 20 letters, digits, spaces, - or _." };
+    if (typeof reserved === "function" && reserved(name)) return { ok: false, reason: "That name is reserved. Please choose another." };
     return { ok: true, name };
   }
 
@@ -58,14 +60,15 @@
   /** The public list. Each record: { kind: "donation" | "support", units, nickname, showAmount, hidden }.
    *  Opted out (no nickname) → not shown. Support at 0 → not shown. Hidden by the owner → "Anonymous Donor" / "Anonymous Sponsor".
    *  The amount only when the Seed Sponsor ticked "Show my amount". Biggest first. Nothing else from a record is used. */
-  function listRows(records) {
+  function listRows(records, reserved) {
     const donors = [], supporters = [];
     for (const r of records || []) {
       const units = big(r && r.units);
       if (!units || units <= 0n) continue;
       const nick = checkNickname(r.nickname);
       if (!nick.ok && !r.hidden) continue;
-      const name = r.hidden || ADDRESS_LIKE.test(nick.name) ? HIDDEN[r.kind] : nick.name;
+      const looksOfficial = nick.ok && typeof reserved === "function" && reserved(nick.name);
+      const name = r.hidden || looksOfficial || ADDRESS_LIKE.test(nick.name) ? HIDDEN[r.kind] : nick.name;
       const row = { name, amount: r.showAmount ? fmtVhp(units) : null, units };
       if (r.kind === "donation") donors.push(row);
       else if (r.kind === "support") supporters.push(row);
@@ -75,5 +78,44 @@
     return { donors: out(donors), supporters: out(supporters) };
   }
 
-  window.KSeedSponsor = { UNIT, DEFAULT_MIN_VHP, HIDDEN, minVhp, checkAmount, checkNickname, fmtVhp, seedTotal, listRows };
+  /** The vault's records (list_sponsors rows) as list entries: one wallet can be a donor and a supporter. The address
+   *  is dropped here and never reaches the page. */
+  function fromChain(rows) {
+    const out = [];
+    for (const row of rows || []) {
+      const r = (row && row.sponsor) || {};
+      const base = { nickname: r.nickname || "", showAmount: !!r.show_amount, hidden: !!r.hidden };
+      if (big(r.donated) > 0n) out.push({ kind: "donation", units: String(r.donated), ...base });
+      if (big(r.support) > 0n) out.push({ kind: "support", units: String(r.support), ...base });
+    }
+    return out;
+  }
+
+  // The owner's and Vault's exact words for the confirm screens (M-820, M-821).
+  const DONATION_WORDS = "A donation becomes part of the Knode Games seed, owned by the platform. It can be used for the platform, including moving it out of the vault, and you can't take it back.";
+  const SUPPORT_ONLY_YOU = "Only you can withdraw your support: any amount, any time.";
+  const REWARD_WORDS = "Your VHP produces blocks for the vault. Its rewards pay the weekly free prizes first, and the rest is shared by the players who stake. You receive none of them.";
+
+  /** The confirm screen: a big title naming the kind, the plain words, and the button's words. */
+  function confirmText(kind, units, nickname, showAmount) {
+    const amt = fmtVhp(units);
+    const shown = nickname ? `You will be shown as “${nickname}”${showAmount ? ", with the amount" : ", without the amount"}.` : "You are not shown on this page.";
+    if (kind === "donate") {
+      return { title: `You are DONATING ${amt}`, lines: [DONATION_WORDS, REWARD_WORDS, shown, "Nobody plays with this VHP, and you cannot win prizes with it."], button: `Donate ${amt}. I can't take it back` };
+    }
+    if (kind === "support") {
+      return { title: `You are adding SUPPORT: ${amt}`, lines: [SUPPORT_ONLY_YOU, REWARD_WORDS, shown, "Nobody plays with this VHP, and you cannot win prizes with it."], button: `Add ${amt} of support` };
+    }
+    if (kind === "withdraw") {
+      return { title: `Withdraw ${amt} of your support`, lines: ["The VHP goes back to the wallet that added it."], button: `Withdraw ${amt}` };
+    }
+    throw new Error(`unknown kind ${kind}`);
+  }
+
+  /** The owner's switch for the buttons (js/lib/config.js). Only a real `true` turns it on. */
+  function liveOn(kg) {
+    return !!(kg && kg.seedSponsor && kg.seedSponsor.live === true);
+  }
+
+  window.KSeedSponsor = { UNIT, DEFAULT_MIN_VHP, HIDDEN, minVhp, checkAmount, checkNickname, fmtVhp, seedTotal, listRows, fromChain, confirmText, liveOn, DONATION_WORDS, SUPPORT_ONLY_YOU, REWARD_WORDS };
 })();
