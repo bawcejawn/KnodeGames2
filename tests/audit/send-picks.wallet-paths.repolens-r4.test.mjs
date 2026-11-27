@@ -38,7 +38,7 @@ test("1. a change (ownMana) signed with someone else as payer is not sent", asyn
   assert.equal(ok.env.sent, 1, "the player as payer: sent");
 });
 
-test("2. the KOIN Vault request carries only the session, the operations and mana 'auto' (real sendVault, vaultApi, creds)", async () => {
+test("2. the KOIN Vault request carries only the session, the operations and mana 'auto' or 'wallet' (real sendVault, vaultApi, creds)", async () => {
   const creds = w.match(/  const creds = \(\) => \(\{[^\n]*\n/)[0];
   let body = null;
   const make = new Function("env", `const W = env.W, VAULT = "https://vault.example", STATUS_CALLS = new Set(["request-status"]);
@@ -46,13 +46,22 @@ test("2. the KOIN Vault request carries only the session, the operations and man
     const dropVault = () => {}, connectVault = async () => null, h = () => null, open = () => {}, sleep = async () => {};
     ${creds}
     ${fnSrc("vaultApi")}
+    const VAULT_OWN_MANA = 10000000000n;
+    ${fnSrc("vaultManaMode")}
     ${fnSrc("sendVault")}
     return sendVault;`);
-  const env = { W: { address: "1Player", session: { sessionId: "s1", secret: "x" } } };
+  // M-843: "wallet" only when the wallet holds KOIN Vault's 100 Mana ceiling (base units 1e8), otherwise "auto"; a failed read is "auto".
+  const env = { W: { address: "1Player", session: { sessionId: "s1", secret: "x" }, provider: { getAccountRc: async () => "9999999999" } } };
   await assert.rejects(make(env)("change", [op], { noSponsor: true }));
   body = env.body;
   assert.deepEqual(Object.keys(body).sort(), ["mana", "operations", "secret", "sessionId"]);
-  assert.equal(body.mana, "auto");
+  assert.equal(body.mana, "auto", "99.99999999 Mana: below the ceiling");
+  env.W.provider = { getAccountRc: async () => "10000000000" };
+  await assert.rejects(make(env)("change", [op], { noSponsor: true }));
+  assert.equal(env.body.mana, "wallet", "exactly 100 Mana");
+  env.W.provider = { getAccountRc: async () => { throw new Error("rpc down"); } };
+  await assert.rejects(make(env)("change", [op], { noSponsor: true }));
+  assert.equal(env.body.mana, "auto", "a failed read never blocks");
   assert.doesNotMatch(JSON.stringify(body), /payer|sponsor|1ByDDSBUzy5zkRceELc54Jh8i41yNRoKt8/i);
   // And no line anywhere in the wallet builds a KOIN Vault request with a payer or the sponsor.
   for (const line of w.split("\n").filter((l) => /vaultApi\("request"/.test(l))) assert.doesNotMatch(line, /payer|sponsor/i);
