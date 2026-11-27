@@ -554,7 +554,71 @@
           "seal": "a8702df8a71c4b489847bb015bbe1e3ae6f797f2f4682db892b565b7232d5302"
         }
       ],
-      "vhpSeal": "bb4426180e1701e4eb870ff7a9b7a5b84afaacd664b2db93dbf7e0c610535cd0"
+      "vhpSeal": "bb4426180e1701e4eb870ff7a9b7a5b84afaacd664b2db93dbf7e0c610535cd0",
+      "result": {
+        "void": true,
+        "reason": "1MoCBDJJmNVTuz2WnS7jmVaTNQEAPQKqvr went offline during the window; 1MoCBDJJmNVTuz2WnS7jmVaTNQEAPQKqvr's VHP changed by more than 10% during the window",
+        "value": "41",
+        "dataHash": "e8e4c1e67053bbaefd79504f27549fcf9c8638b07088325a43cb601139dfd397",
+        "resolvedAt": "2026-11-27T14:23:09.220Z",
+        "blocksHash": "aa357270e54438eec74a217085300bbc530344bdd5f96217db1e8af48dbac2c0",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41375910,
+          "decidedHeight": 41433290,
+          "readings": [
+            41392312,
+            41393043,
+            41394086,
+            41395223,
+            41396168,
+            41397505,
+            41398693,
+            41399888,
+            41401035,
+            41402164,
+            41403356,
+            41403595,
+            41404065,
+            41405107,
+            41406253,
+            41407380,
+            41408513,
+            41409731,
+            41410912,
+            41412077,
+            41413269,
+            41413730,
+            41415027,
+            41415745,
+            41416835,
+            41417644,
+            41419113,
+            41420264,
+            41421403,
+            41422576,
+            41423502,
+            41424053,
+            41425566,
+            41426733,
+            41427888,
+            41429013,
+            41430189,
+            41431352,
+            41431580,
+            41433083
+          ],
+          "readingsInWindow": 41,
+          "values": {
+            "1MoCBDJJmNVTuz2WnS7jmVaTNQEAPQKqvr": {
+              "release": "2466016897067",
+              "end": "0",
+              "change": "−100.00%",
+              "height": 41433083
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D3-3",
