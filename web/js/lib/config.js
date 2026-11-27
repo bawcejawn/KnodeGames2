@@ -10,4 +10,10 @@
     ref: "game-data",
     prefix: "game-data/",
   };
+  // Seed Sponsor page (seed-sponsor.html). The owner's one setting: the smallest deposit or donation, in whole VHP.
+  // Every deposit and every donation must be at least this much, top-ups included. Change the number here only; the
+  // page and its tests read it from here. Once the vault keeps its own minimum, the vault's value is used instead.
+  window.KG.seedSponsor = window.KG.seedSponsor || {
+    minVhp: 1000,
+  };
 })();

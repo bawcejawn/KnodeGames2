@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Only these sources may run scripts, load data or be framed. 'unsafe-eval' is needed by koilib (its protobuf
+       encoder builds functions at run time); CDN scripts are pinned by their integrity hash. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://raw.githubusercontent.com/bawcejawn/KnodeGames2/game-data/ https://koinos.armana.io https://api.koinosblocks.com https://api.koinos.io https://koinvault.app https://us.i.posthog.com https://data.knodegames.com/ https://live.knodegames.com/live.json; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seed Sponsor · Support the Knode Games seed</title>
+  <!-- seo:start (written by tools/site-seo.mjs; edit there) -->
+  <meta name="description" content="Support Knode Games by adding VHP to the platform's Seed: donate it for good, or support and withdraw any time. Nicknames only.">
+  <link rel="canonical" href="https://knodegames.com/seed-sponsor.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Knode Games">
+  <meta property="og:title" content="Knode Games Seed Sponsor">
+  <meta property="og:description" content="Support Knode Games by adding VHP to the platform's Seed: donate it for good, or support and withdraw any time. Nicknames only.">
+  <meta property="og:url" content="https://knodegames.com/seed-sponsor.html">
+  <meta property="og:image" content="https://knodegames.com/media/og-knode.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Knode Games Seed Sponsor">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Knode Games Seed Sponsor">
+  <meta name="twitter:description" content="Support Knode Games by adding VHP to the platform's Seed: donate it for good, or support and withdraw any time. Nicknames only.">
+  <meta name="twitter:image" content="https://knodegames.com/media/og-knode.png">
+  <!-- seo:end -->
+  <link rel="icon" href="media/icon.svg?v=2" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
+  <link rel="icon" href="media/icon-192.png?v=2" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="media/icon-180.png?v=2">
+  <meta name="theme-color" content="#14161F">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .ss { max-width: 760px; margin: 0 auto; padding: 28px 16px 60px; }
+    .ss h1 { font-family: var(--display); font-size: clamp(28px, 6vw, 38px); margin: 0 0 6px; }
+    .ss h2 { font-family: var(--display); font-size: 20px; margin: 0 0 8px; }
+    .ss .lede { color: var(--muted); margin: 0 0 20px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .ss-seed { text-align: center; }
+    .ss-seed .k { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .ss-seed .v { font-family: var(--num, var(--display)); font-size: clamp(30px, 9vw, 44px); font-weight: 800; margin: 4px 0; overflow-wrap: anywhere; }
+    .ss-asof { font-size: 13px; color: var(--muted); margin: 0; min-height: 1.3em; }
+    .ss-asof.bad { color: var(--rose); }
+    .ss-kinds { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (min-width: 640px) { .ss-kinds { grid-template-columns: 1fr 1fr; } }
+    .ss-kind { margin: 0; border-width: 2px; display: flex; flex-direction: column; }
+    .ss-kind.give { border-color: var(--sun); }
+    .ss-kind.keep { border-color: var(--mint); }
+    .ss-kind h2 { font-size: 22px; }
+    .ss-plain { font-weight: 600; margin: 0 0 10px; }
+    .ss-kind ul { margin: 0 0 14px; padding-left: 20px; }
+    .ss-kind li { margin: 4px 0; }
+    .ss-tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
+    .give .ss-tag { background: var(--sun); color: #14161F; }
+    .keep .ss-tag { background: var(--mint-soft); color: var(--mint); }
+    .ss-go { margin-top: auto; width: 100%; font: inherit; font-weight: 700; padding: 12px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--paper); color: var(--muted); cursor: not-allowed; }
+    .ss-warn { border: 2px solid var(--rose); }
+    .ss-warn h2 { color: var(--rose); }
+    .ss-list h3 { font-size: 15px; margin: 14px 0 6px; }
+    .ss-list ul { list-style: none; margin: 0; padding: 0; }
+    .ss-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+    .ss-list li:last-child { border-bottom: 0; }
+    .ss-amt { color: var(--muted); white-space: nowrap; }
+    .ss-empty { color: var(--muted); }
+    .ss-soon { font-size: 13px; color: var(--muted); }
+  </style>
+
+  <link rel="stylesheet" href="page-box.css">
+  <link rel="stylesheet" href="hub-ui.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="./" aria-label="Knode Games home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="brand-name">Knode Games</span>
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        <details class="dd">
+          <summary>Games</summary>
+          <div class="dd-menu">
+            <a href="games.html">All games</a>
+            <a href="index.html#play"><span class="mi gi acc-violet" aria-hidden="true">🎯</span>Daily Questions</a>
+            <a href="race.html"><span class="mi gi acc-blue" aria-hidden="true">🏇</span>Producer Race</a>
+            <a href="blockx.html"><span class="mi gi acc-mint" aria-hidden="true">🧱</span>Who Signs Block X</a>
+            <a href="bracket.html"><span class="mi gi acc-sun" aria-hidden="true">🏆</span>Producer Bracket</a>
+            <a href="golf.html"><span class="mi gi acc-hot" aria-hidden="true">⛳</span>Block Golf</a>
+            <a href="fantasy.html"><span class="mi gi acc-blue" aria-hidden="true">📋</span>Fantasy Producers</a>
+            <a href="lastnode.html"><span class="mi gi acc-violet" aria-hidden="true">🏁</span>Last Node Standing</a>
+            <a href="survivor.html"><span class="mi gi acc-blue" aria-hidden="true">🛡️</span>Survivor</a>
+            <a href="vs.html"><span class="mi gi acc-mint" aria-hidden="true">🆚</span>Knode Games VS</a>
+            <a href="overunder.html"><span class="mi gi acc-sun" aria-hidden="true">↕️</span>More or Fewer</a>
+            <a href="combo.html"><span class="mi gi acc-hot" aria-hidden="true">🎟️</span>Combo Card · Preview</a>
+          </div>
+        </details>
+        <a href="index.html#leaderboard">Leaderboards</a>
+        <a href="stake.html">Stake</a>
+        <details class="dd">
+          <summary>More</summary>
+          <div class="dd-menu">
+            <a href="index.html#results">Results</a>
+            <a href="index.html#how">Rules</a>
+            <a href="ruler.html">Ruler</a>
+            <a href="start.html">New to Koinos?</a>
+            <a href="ecosystem.html">Ecosystem</a>
+            <a href="get.html">Get VHP</a>
+            <a href="names.html">Get an @name</a>
+            <a href="swap.html">Swap VHP → KOIN</a>
+            <a href="burn.html">Burn KOIN</a>
+            <a href="mana.html">Mana levels</a>
+            <a href="node.html">Producer lookup</a>
+            <a href="run-node.html">Run a node</a>
+            <a href="pulse.html">Network pulse</a>
+          </div>
+        </details>
+      </nav>
+      <a class="btn btn-play-free" href="race.html#pick-zone">Play free</a>
+      <a class="btn btn-wallet" href="./#play">Play Knode Games</a>
+    </div>
+  </header>
+  <main class="ss">
+    <aside class="page-box" data-game="tool"><p>Add VHP to the platform's Seed: donate it for good, or support and withdraw any time. Nicknames only.</p></aside>
+    <h1>Seed Sponsor</h1>
+    <p class="lede">Support Knode Games by adding VHP to the platform's Seed. There are two ways to do it, and they are very different. Please read both before you choose.</p>
+
+    <section class="card ss-seed" aria-live="polite">
+      <div class="k">VHP in the Seed now</div>
+      <div class="v" id="ss-total">…</div>
+      <p class="ss-asof" id="ss-asof">Reading the chain…</p>
+    </section>
+
+    <div class="ss-kinds">
+      <section class="card ss-kind give" aria-labelledby="ss-give-h">
+        <span class="ss-tag">A gift</span>
+        <h2 id="ss-give-h">Donate (cannot be withdrawn)</h2>
+        <p class="ss-plain">A donation becomes part of the Knode Games seed, owned by the platform. It can be used for the platform, including moving it out of the vault, and you can't take it back.</p>
+        <ul>
+          <li><b>You can never take it back.</b> Nothing comes back to you.</li>
+          <li>Your nickname can stay on this page for good. Or you can choose not to be shown.</li>
+          <li>The smallest donation is <b data-ss-min>1,000 VHP</b>.</li>
+        </ul>
+        <button type="button" class="ss-go" disabled aria-disabled="true">Donate · coming soon</button>
+      </section>
+
+      <section class="card ss-kind keep" aria-labelledby="ss-keep-h">
+        <span class="ss-tag">Still yours</span>
+        <h2 id="ss-keep-h">Support (withdraw any time)</h2>
+        <p class="ss-plain">Only you can withdraw your support: any amount up to what you put in, any time. Under the vault's rules, no other wallet can move it, not even the platform owner's. Any change to the vault's rules is announced at least 48 hours before it takes effect.</p>
+        <ul>
+          <li>Your VHP sits in the Seed for as long as you want.</li>
+          <li><b>Withdraw any time</b>, all of it or part of it.</li>
+          <li>Your nickname shows only while your VHP is in the Seed. Or you can choose not to be shown.</li>
+          <li>Each deposit, top-ups included, is at least <b data-ss-min>1,000 VHP</b>.</li>
+        </ul>
+        <button type="button" class="ss-go" disabled aria-disabled="true">Support · coming soon</button>
+      </section>
+    </div>
+    <p class="ss-soon">The Donate and Support buttons open once the vault can keep a record for each Seed Sponsor. Until then this page only shows the Seed.</p>
+
+    <section class="card ss-warn" aria-labelledby="ss-warn-h">
+      <h2 id="ss-warn-h">Important: use the button, nothing else</h2>
+      <p>Give VHP to the Seed only through the button on this page. <b>Never send VHP or KOIN straight to the vault address.</b> Tokens sent that way are not recorded as a gift or as support: they are counted as that week's block rewards (the 5% fee is taken, the rest is paid out to players) and can't be given back.</p>
+    </section>
+
+    <section class="card" aria-labelledby="ss-how-h">
+      <h2 id="ss-how-h">What your VHP does in the Seed</h2>
+      <p>Your VHP is never staked in a game. Nobody plays with it, and you cannot win prizes with it.</p>
+      <p>Your VHP produces blocks for the vault. Its rewards, after a 5% fee, pay the weekly free prizes first; the rest is shared by the players who stake. You get none of them.</p>
+      <p>Only the vault holds the VHP. A Support deposit can always be withdrawn by the wallet that made it, and by no one else. A donation belongs to the platform's seed.</p>
+    </section>
+
+    <section class="card ss-list" aria-labelledby="ss-list-h">
+      <h2 id="ss-list-h">Seed Sponsors</h2>
+      <p class="ss-soon">Nicknames only. A Seed Sponsor can choose to show the amount on this page, or not to be shown at all. Amounts are always public on the chain.</p>
+      <h3>Donations</h3>
+      <ul id="ss-donors"><li class="ss-empty">No donations yet.</li></ul>
+      <h3>Support</h3>
+      <ul id="ss-supporters"><li class="ss-empty">No support deposits yet.</li></ul>
+    </section>
+  </main>
+
+
+  <nav class="tabbar" aria-label="Main">
+    <a href="games.html"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"></rect></svg>Games</a>
+    <a href="stake.html"><svg aria-hidden="true" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5"></ellipse><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"></path><path d="M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"></path><path d="M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"></path></svg>Stake</a>
+    <a href="index.html#leaderboard"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 20V10M12 20V4M18 20v-7"></path></svg>Leaders</a>
+    <button type="button" class="tb-more" aria-expanded="false" aria-controls="more-sheet"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>More</button>
+  </nav>
+  <div class="more-sheet" id="more-sheet" hidden>
+    <nav class="more-panel" aria-label="More pages">
+      <p class="ms-h">Play</p>
+      <a href="index.html#play"><span class="mi gi acc-violet" aria-hidden="true">🎯</span><span>Daily Questions</span></a>
+      <a href="race.html"><span class="mi gi acc-blue" aria-hidden="true">🏇</span><span>Producer Race</span></a>
+      <a href="blockx.html"><span class="mi gi acc-mint" aria-hidden="true">🧱</span><span>Who Signs Block X</span></a>
+      <a href="bracket.html"><span class="mi gi acc-sun" aria-hidden="true">🏆</span><span>Producer Bracket</span></a>
+      <a href="golf.html"><span class="mi gi acc-hot" aria-hidden="true">⛳</span><span>Block Golf</span></a>
+      <a href="fantasy.html"><span class="mi gi acc-blue" aria-hidden="true">📋</span><span>Fantasy Producers</span></a>
+      <a href="lastnode.html"><span class="mi gi acc-violet" aria-hidden="true">🏁</span><span>Last Node Standing</span></a>
+      <a href="survivor.html"><span class="mi gi acc-blue" aria-hidden="true">🛡️</span><span>Survivor</span></a>
+      <a href="vs.html"><span class="mi gi acc-mint" aria-hidden="true">🆚</span><span>Knode Games VS</span></a>
+      <a href="overunder.html"><span class="mi gi acc-sun" aria-hidden="true">↕️</span><span>More or Fewer</span></a>
+      <a href="combo.html"><span class="mi gi acc-hot" aria-hidden="true">🎟️</span><span>Combo Card · Preview</span></a>
+      <a href="index.html#results"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg><span>Results</span></a>
+      <a href="index.html#how"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M9 9h6M9 13h6"></path></svg><span>Rules</span></a>
+      <p class="ms-h">Tools</p>
+      <a href="get.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Get VHP</span></a>
+      <a href="names.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"></circle><path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12a8.5 8.5 0 1 0-3.3 6.7"></path></svg><span>Get an @name</span></a>
+      <a href="swap.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 4L3 8l4 4"></path><path d="M3 8h14"></path><path d="M17 20l4-4-4-4"></path><path d="M21 16H7"></path></svg><span>Swap VHP → KOIN</span></a>
+      <a href="burn.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21c-4 0-6.5-2.6-6.5-6 0-3.5 3-5.5 3.5-9 2 1.5 3 3 3 5 1-1 1.5-2 1.5-3.5 2.5 2 4.5 4.6 4.5 7.5 0 3.4-2.5 6-6 6z"></path></svg><span>Burn KOIN</span></a>
+      <a href="mana.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"></path></svg><span>Mana levels</span></a>
+      <a href="node.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span>Producer lookup</span></a>
+      <a href="run-node.html"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="6.5" rx="1.5"></rect><rect x="4" y="13.5" width="16" height="6.5" rx="1.5"></rect><path d="M8 7.25h.01M8 16.75h.01"></path></svg><span>Run a node</span></a>
+      <a href="pulse.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"></path></svg><span>Network pulse</span></a>
+      <p class="ms-h">Learn</p>
+      <a href="start.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.8"></path><path d="M12 17.2v.1"></path></svg><span>New to Koinos?</span></a>
+      <a href="ecosystem.html"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="6" r="2"></circle><circle cx="5" cy="18" r="2"></circle><circle cx="19" cy="18" r="2"></circle><path d="M9.8 10.4L6.5 7.4M14.2 10.4l3.3-3M9.8 13.6l-3.3 3M14.2 13.6l3.3 3"></path></svg><span>Ecosystem</span></a>
+      <a href="index.html#welcome"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.8"></path><path d="M12 17.2v.1"></path></svg><span>New here? Quick tour</span></a>
+      <a href="ruler.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 15.5l12.5-12.5 5.5 5.5L8.5 21z"></path><path d="M7.5 11l2.5 2.5M10.5 8l2 2M13.5 5l2.5 2.5"></path></svg><span>Ruler</span></a>
+      <p class="ms-h">About</p>
+      <a href="install.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v11"></path><path d="M7.5 10.5L12 15l4.5-4.5"></path><path d="M5 20h14"></path></svg><span>Install app</span></a>
+      <a href="trust.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path></svg><span>Trust</span></a>
+      <a href="fairness.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path></svg><span>Fairness</span></a>
+      <a href="terms.html"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"></path><path d="M10 12h5M10 16h5"></path></svg><span>Terms &amp; risks</span></a>
+    </nav>
+  </div>
+
+  <footer class="foot">
+    <div class="wrap">
+      <p class="foot-node"><b>Run your own node:</b> <a href="https://www.koinosai.com/" target="_blank" rel="noopener">Koinos AI, your own AI and node</a> · <a href="run-node.html">Step by step with PowerShell and Docker</a></p>
+      <div class="foot-row">
+        <span>Knode Games runs fully on Koinos. Source-available.</span>
+        <span class="foot-links"><a href="index.html#welcome">New here? Quick tour</a> · <a href="trust.html">Trust</a> · <a href="fairness.html">Fairness</a> · <a href="terms.html">Terms &amp; risks</a> · <a href="install.html">Install app</a> · <a href="https://github.com/bawcejawn/KnodeGames2" target="_blank" rel="noopener">Source code</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="data-source.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js" integrity="sha384-IAL9o3r4bQJvWhvszkorFINY2ct4LBA/LvyXE9NSOPCyYB25BsFV12JITA7Gxbk6" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js" integrity="sha384-WOeNFfSdOron0s4x9jdzLtA7Ic7RSqZCXZAaeQd6HRL6WezQp0KAtIF2XSa+11TL" crossorigin="anonymous"></script>
+  <script src="guest.js"></script>
+  <script src="wallet.js"></script>
+  <script src="header-wallet.js"></script>
+  <script src="nav.js"></script>
+  <script src="js/lib/config.js"></script>
+  <script src="seed-sponsor-math.js"></script>
+  <script src="seed-sponsor.js"></script>
+  <script src="vendor/posthog-1.438.13.js"></script>
+  <script src="analytics.js"></script>
+</body>
+</html>
