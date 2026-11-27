@@ -188,3 +188,17 @@ test("race.js: the element helper skips empty attributes, so the Send my picks b
   assert.match(src, /for \(const \[k, v\] of Object\.entries\(attrs\)\) \{ if \(v == null\) continue;/);
   assert.match(src, /disabled: sending \|\| undefined, onclick: sendDrafts/);
 });
+
+// M-843 item 2: a KOIN Vault send shows KOIN Vault's real error text, not the "free Mana may be used up" guess (which only
+// fits the Knode sponsor, and a KOIN Vault send never uses it).
+test("friendlyError (app.js, swap.js): a KOIN Vault wallet gets the real error text, before the Mana rewording", () => {
+  for (const f of ["web/app.js", "web/swap.js"]) {
+    const src = read(f);
+    const i = src.indexOf("function friendlyError(");
+    assert.ok(i > 0, f);
+    const body = src.slice(i, src.indexOf("\n  }\n", i));
+    const vault = body.indexOf('window.KWallet.kind === "vault") return msg.slice(0, 260)');
+    const mana = body.indexOf("not enough Mana.");
+    assert.ok(vault > 0 && mana > vault, `${f}: the KOIN Vault line comes first`);
+  }
+});

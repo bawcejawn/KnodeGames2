@@ -143,6 +143,9 @@
   function friendlyError(msg) {
     const m = msg.match(/"([^"]{6,160})"/);
     const text = m ? m[1] : msg;
+    // KOIN Vault's own refusal says what it needs and why (it is KOIN Vault's text, not ours): show it, never our guess about
+    // free Mana, which a KOIN Vault send does not use (the Knode sponsor is not part of that path).
+    if (window.KWallet && window.KWallet.kind === "vault") return msg.slice(0, 260);
     if (/insufficient\s*(rc|mana|resources?)|\bmana\b|\brc[_ ]?limit\b|out of rc/i.test(text)) return `not enough Mana. The free Mana may be used up for today; in KOIN Vault, hold a little KOIN; or wait for Mana to refill. (${text.slice(0, 90)})`;
     return text.slice(0, 180);
   }
