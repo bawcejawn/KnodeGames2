@@ -370,6 +370,62 @@
       "return": "kpred.claim_fee_vhp_result",
       "read_only": false,
       "description": "Claim the 5% fee in VHP (owner)."
+    },
+    "seed_donate": {
+      "entry_point": 3254372368,
+      "argument": "kpred.seed_donate_arguments",
+      "return": "kpred.seed_donate_result",
+      "read_only": false,
+      "description": "Seed Sponsor: donate VHP to the platform's seed. It becomes seed, owned by the platform, and can't be taken back. At least the minimum, whole VHP."
+    },
+    "support_deposit": {
+      "entry_point": 4266706849,
+      "argument": "kpred.support_deposit_arguments",
+      "return": "kpred.support_deposit_result",
+      "read_only": false,
+      "description": "Seed Sponsor: add support VHP to the seed. Only you can withdraw it, any amount, any time. At least the minimum, whole VHP."
+    },
+    "support_withdraw": {
+      "entry_point": 913550106,
+      "argument": "kpred.support_withdraw_arguments",
+      "return": "kpred.support_withdraw_result",
+      "read_only": false,
+      "description": "Seed Sponsor: withdraw your support. Any amount, at any time (also while paused and in the withdrawals-only build)."
+    },
+    "set_sponsor_profile": {
+      "entry_point": 3450521819,
+      "argument": "kpred.set_sponsor_profile_arguments",
+      "return": "kpred.set_sponsor_profile_result",
+      "read_only": false,
+      "description": "Seed Sponsor: change your nickname (empty = not shown) and whether the page shows your amount."
+    },
+    "set_sponsor_hidden": {
+      "entry_point": 1727013343,
+      "argument": "kpred.set_sponsor_hidden_arguments",
+      "return": "kpred.set_sponsor_hidden_result",
+      "read_only": false,
+      "description": "Seed Sponsor: hide or show a sponsor's nickname on the page (owner)."
+    },
+    "set_min_sponsor": {
+      "entry_point": 3786835995,
+      "argument": "kpred.set_min_sponsor_arguments",
+      "return": "kpred.set_min_sponsor_result",
+      "read_only": false,
+      "description": "Seed Sponsor: set the smallest donation or support deposit, in whole VHP units (owner). Applies to new deposits only."
+    },
+    "get_sponsor": {
+      "entry_point": 2853175953,
+      "argument": "kpred.get_sponsor_arguments",
+      "return": "kpred.get_sponsor_result",
+      "read_only": true,
+      "description": "Seed Sponsor: one wallet's record."
+    },
+    "list_sponsors": {
+      "entry_point": 3763903985,
+      "argument": "kpred.list_sponsors_arguments",
+      "return": "kpred.list_sponsors_result",
+      "read_only": true,
+      "description": "Seed Sponsor: page through all records (up to 50 per page, after address `start`)."
     }
   },
   "koilib_types": {
@@ -532,6 +588,13 @@
                 "options": {
                   "jstype": "JS_STRING"
                 }
+              },
+              "min_sponsor_vhp": {
+                "type": "uint64",
+                "id": 24,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
               }
             }
           },
@@ -677,6 +740,27 @@
               "acc_seed_lo": {
                 "type": "uint64",
                 "id": 21,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "support_vhp": {
+                "type": "uint64",
+                "id": 22,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "donated_vhp": {
+                "type": "uint64",
+                "id": 23,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "sponsor_count": {
+                "type": "uint64",
+                "id": 24,
                 "options": {
                   "jstype": "JS_STRING"
                 }
@@ -2893,6 +2977,267 @@
           },
           "claim_fee_vhp_result": {
             "fields": {}
+          },
+          "sponsor_object": {
+            "fields": {
+              "support": {
+                "type": "uint64",
+                "id": 1,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "donated": {
+                "type": "uint64",
+                "id": 2,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "nickname": {
+                "type": "string",
+                "id": 3
+              },
+              "show_amount": {
+                "type": "bool",
+                "id": 4
+              },
+              "hidden": {
+                "type": "bool",
+                "id": 5
+              },
+              "first_at": {
+                "type": "uint64",
+                "id": 6,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "last_at": {
+                "type": "uint64",
+                "id": 7,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              }
+            }
+          },
+          "seed_donate_arguments": {
+            "fields": {
+              "from": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "amount": {
+                "type": "uint64",
+                "id": 2,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "nickname": {
+                "type": "string",
+                "id": 3
+              },
+              "show_amount": {
+                "type": "bool",
+                "id": 4
+              }
+            }
+          },
+          "seed_donate_result": {
+            "fields": {}
+          },
+          "support_deposit_arguments": {
+            "fields": {
+              "from": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "amount": {
+                "type": "uint64",
+                "id": 2,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "nickname": {
+                "type": "string",
+                "id": 3
+              },
+              "show_amount": {
+                "type": "bool",
+                "id": 4
+              }
+            }
+          },
+          "support_deposit_result": {
+            "fields": {}
+          },
+          "support_withdraw_arguments": {
+            "fields": {
+              "to": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "amount": {
+                "type": "uint64",
+                "id": 2,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              }
+            }
+          },
+          "support_withdraw_result": {
+            "fields": {}
+          },
+          "set_sponsor_profile_arguments": {
+            "fields": {
+              "sponsor": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "nickname": {
+                "type": "string",
+                "id": 2
+              },
+              "show_amount": {
+                "type": "bool",
+                "id": 3
+              }
+            }
+          },
+          "set_sponsor_profile_result": {
+            "fields": {}
+          },
+          "set_sponsor_hidden_arguments": {
+            "fields": {
+              "sponsor": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "hidden": {
+                "type": "bool",
+                "id": 2
+              }
+            }
+          },
+          "set_sponsor_hidden_result": {
+            "fields": {}
+          },
+          "set_min_sponsor_arguments": {
+            "fields": {
+              "min_sponsor_vhp": {
+                "type": "uint64",
+                "id": 1,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              }
+            }
+          },
+          "set_min_sponsor_result": {
+            "fields": {}
+          },
+          "get_sponsor_arguments": {
+            "fields": {
+              "sponsor": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              }
+            }
+          },
+          "get_sponsor_result": {
+            "fields": {
+              "sponsor": {
+                "type": "sponsor_object",
+                "id": 1
+              }
+            }
+          },
+          "sponsor_row": {
+            "fields": {
+              "address": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "sponsor": {
+                "type": "sponsor_object",
+                "id": 2
+              }
+            }
+          },
+          "list_sponsors_arguments": {
+            "fields": {
+              "start": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "limit": {
+                "type": "uint32",
+                "id": 2
+              }
+            }
+          },
+          "list_sponsors_result": {
+            "fields": {
+              "rows": {
+                "rule": "repeated",
+                "type": "sponsor_row",
+                "id": 1
+              }
+            }
+          },
+          "seed_sponsor_event": {
+            "fields": {
+              "sponsor": {
+                "type": "bytes",
+                "id": 1,
+                "options": {
+                  "(koinos.btype)": "ADDRESS"
+                }
+              },
+              "kind": {
+                "type": "uint32",
+                "id": 2
+              },
+              "amount": {
+                "type": "uint64",
+                "id": 3,
+                "options": {
+                  "jstype": "JS_STRING"
+                }
+              },
+              "record": {
+                "type": "sponsor_object",
+                "id": 4
+              }
+            }
           }
         }
       },

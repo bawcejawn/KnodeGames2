@@ -32,6 +32,7 @@ message config_object {
   uint64 v6_rule_week_plus_one = 21 [jstype = JS_STRING];   // v6: first week (+1) closed by the KnodeGames vault split; 0 = not set yet
   uint32 game_count = 22;                                   // v6: games registered besides the question game (at most 12)
   uint64 q60_rule_week_plus_one = 23 [jstype = JS_STRING]; // v6.1: first week (+1) that may hold 60 questions (30 before it); 0 = not set yet
+  uint64 min_sponsor_vhp = 24 [jstype = JS_STRING];       // v6.2 Seed Sponsor: smallest donation or support deposit; 0 = 1,000 VHP
 }
 
 message totals_object {
@@ -58,6 +59,10 @@ message totals_object {
   uint64 stake_other = 19 [jstype = JS_STRING];       // v6: stake + pending in games other than the question game (part of total_stake)
   uint64 acc_seed_hi = 20 [jstype = JS_STRING];       // v6: seed VHP x time since the last close (128-bit): the seed's part of the rewards
   uint64 acc_seed_lo = 21 [jstype = JS_STRING];
+  // v6.2 Seed Sponsor (claude/vault/SEED-SPONSOR-PLAN-2026-11-25.md)
+  uint64 support_vhp = 22 [jstype = JS_STRING];       // Seed Sponsor support deposits: owed to their sponsors like stakes; produce as seed
+  uint64 donated_vhp = 23 [jstype = JS_STRING];       // memo: VHP donated in total (the VHP itself is part of seed_vhp)
+  uint64 sponsor_count = 24 [jstype = JS_STRING];     // wallets with a Seed Sponsor record
 }
 
 message player_object {
@@ -813,3 +818,115 @@ message claim_fee_vhp_arguments {
 }
 
 message claim_fee_vhp_result {}
+
+// ════════════════════════════ v6.2 Seed Sponsor ════════════════════════════
+// Plan: claude/vault/SEED-SPONSOR-PLAN-2026-11-25.md (owner M-816, M-820, M-821). Two kinds, one record per wallet:
+//   a DONATION becomes seed (seed_vhp): owned by the platform, never withdrawable by the donor; the seed owner can move it
+//              like any seed VHP (the 48 h seed timelock; owner M-820);
+//   a SUPPORT deposit is owed to its sponsor like a stake (in liabilities, never first-loss) and produces as seed (its
+//              rewards pay the free prizes first, the rest goes to the staked games); only the sponsor withdraws it, any
+//              amount, any time, also while paused and in the withdrawals-only build.
+// Nobody plays with either: neither is ever part of total_stake or any game's stake.
+
+message sponsor_object {
+  uint64 support = 1 [jstype = JS_STRING];            // VHP in now as support (withdrawable by this wallet only)
+  uint64 donated = 2 [jstype = JS_STRING];            // VHP donated in total (part of the seed; never withdrawable by the donor)
+  string nickname = 3;                                // 3-20 of A-Z a-z 0-9 space - _ ; empty = not shown on the page
+  bool show_amount = 4;                               // the sponsor's own tick (display only: amounts are public on the chain)
+  bool hidden = 5;                                    // owner-set: the page shows "Anonymous Donor" / "Anonymous Sponsor"
+  uint64 first_at = 6 [jstype = JS_STRING];           // block time (ms) of the record's first change
+  uint64 last_at = 7 [jstype = JS_STRING];            // block time (ms) of its latest change
+}
+
+// @description Seed Sponsor: donate VHP to the platform's seed. It becomes seed, owned by the platform, and can't be taken back. At least the minimum, whole VHP.
+// @read-only false
+message seed_donate_arguments {
+  bytes from = 1 [(koinos.btype) = ADDRESS];
+  uint64 amount = 2 [jstype = JS_STRING];
+  string nickname = 3;                                // empty = not shown
+  bool show_amount = 4;
+}
+
+message seed_donate_result {}
+
+// @description Seed Sponsor: add support VHP to the seed. Only you can withdraw it, any amount, any time. At least the minimum, whole VHP.
+// @read-only false
+message support_deposit_arguments {
+  bytes from = 1 [(koinos.btype) = ADDRESS];
+  uint64 amount = 2 [jstype = JS_STRING];
+  string nickname = 3;                                // empty = not shown
+  bool show_amount = 4;
+}
+
+message support_deposit_result {}
+
+// @description Seed Sponsor: withdraw your support. Any amount, at any time (also while paused and in the withdrawals-only build).
+// @read-only false
+message support_withdraw_arguments {
+  bytes to = 1 [(koinos.btype) = ADDRESS];
+  uint64 amount = 2 [jstype = JS_STRING];
+}
+
+message support_withdraw_result {}
+
+// @description Seed Sponsor: change your nickname (empty = not shown) and whether the page shows your amount.
+// @read-only false
+message set_sponsor_profile_arguments {
+  bytes sponsor = 1 [(koinos.btype) = ADDRESS];
+  string nickname = 2;
+  bool show_amount = 3;
+}
+
+message set_sponsor_profile_result {}
+
+// @description Seed Sponsor: hide or show a sponsor's nickname on the page (owner).
+// @read-only false
+message set_sponsor_hidden_arguments {
+  bytes sponsor = 1 [(koinos.btype) = ADDRESS];
+  bool hidden = 2;
+}
+
+message set_sponsor_hidden_result {}
+
+// @description Seed Sponsor: set the smallest donation or support deposit, in whole VHP units (owner). Applies to new deposits only.
+// @read-only false
+message set_min_sponsor_arguments {
+  uint64 min_sponsor_vhp = 1 [jstype = JS_STRING];
+}
+
+message set_min_sponsor_result {}
+
+// @description Seed Sponsor: one wallet's record.
+// @read-only true
+message get_sponsor_arguments {
+  bytes sponsor = 1 [(koinos.btype) = ADDRESS];
+}
+
+message get_sponsor_result {
+  sponsor_object sponsor = 1;
+}
+
+message sponsor_row {
+  bytes address = 1 [(koinos.btype) = ADDRESS];
+  sponsor_object sponsor = 2;
+}
+
+// @description Seed Sponsor: page through all records (up to 50 per page, after address `start`).
+// @read-only true
+message list_sponsors_arguments {
+  bytes start = 1 [(koinos.btype) = ADDRESS];
+  uint32 limit = 2;
+}
+
+message list_sponsors_result {
+  repeated sponsor_row rows = 1;
+}
+
+// Event "kpred.seed_sponsor" on every change. kind: 1 donate, 2 support deposit, 3 support withdraw, 4 profile,
+// 5 hidden by the owner, 6 minimum changed (sponsor empty, amount = the new minimum).
+message seed_sponsor_event {
+  bytes sponsor = 1 [(koinos.btype) = ADDRESS];
+  uint32 kind = 2;
+  uint64 amount = 3 [jstype = JS_STRING];
+  sponsor_object record = 4;
+}

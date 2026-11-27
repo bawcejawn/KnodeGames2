@@ -3,7 +3,8 @@
   "vault": {
     "address": "1Mpmf2ERhjYpX7CCiM11WERuM4j17uT1sr",
     "live": "11043e1fde1d8d7dbac75e9e5e788d058a7116b0dab6149fc09ecdc7b1c4258b",
-    "source": "11043e1fde1d8d7dbac75e9e5e788d058a7116b0dab6149fc09ecdc7b1c4258b"
+    "source": "ae8cac00a51b8e19d9801388f501bfe9eb5d55669502a2c34d0804a8e08a3f41",
+    "note": "vault/v6.2 integration branch: v6.1 (live) plus Seed Sponsor (docs/V6.2.md). The emergency build is re-pinned by Vault once every v6.2 part is in."
   },
   "desk": {
     "address": "1FKTpXBhhHEbu5vVchM8UsVbAvPArJsRmR",

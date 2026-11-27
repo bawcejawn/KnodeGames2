@@ -25,3 +25,11 @@ Questions) upgrade test.
 
 - sha256 of the fixture: `0f943f5fa5654f884f191873bcb73931318c1a7f3cddeddd85de9c6b096d20c6`
 - made with: `git worktree add ../v6 f3a7cb1 && cd ../v6/game && npm ci && npm run build:sim && cp build/sim/contract.wasm <repo>/contracts/vault/test-fixtures/kpred-v6-test-build.wasm`
+
+`kpred-v61-test-build.wasm` is the **test build** of the live vault, v6.1: the source of `vault/v6.2` at commit `446a136`
+(its `contracts/vault/assembly` is main's v6.1), whose release build has the live sha256
+`11043e1fde1d8d7dbac75e9e5e788d058a7116b0dab6149fc09ecdc7b1c4258b` (checked when the fixture was made, 26 Nov 2026).
+`scripts/storage-compat-v62.test.ts` uses it for the v6.1 → v6.2 (Seed Sponsor) upgrade test.
+
+- sha256 of the fixture: `6bab4a0907319d96b96ab29b5b2451bceba7fbf7352be051c9c89ef877f1c62b`
+- made with: `git checkout 446a136 -- contracts/vault/assembly && cd contracts/vault && npm run build:sim && cp build/sim/contract.wasm test-fixtures/kpred-v61-test-build.wasm`
