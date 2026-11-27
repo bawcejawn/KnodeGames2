@@ -188,3 +188,9 @@ test("race.js: the element helper skips empty attributes, so the Send my picks b
   assert.match(src, /for \(const \[k, v\] of Object\.entries\(attrs\)\) \{ if \(v == null\) continue;/);
   assert.match(src, /disabled: sending \|\| undefined, onclick: sendDrafts/);
 });
+
+// M-836 (Repo Lens 4 follow-up to #166): the Producer page's element helper must also skip empty attributes, or a
+// disabled/hidden attribute passed as undefined would be written as the text "undefined" and switch the control off.
+test("node-page.js: the element helper skips empty attributes", () => {
+  assert.match(read("web/node-page.js"), /for \(const \[k, v\] of Object\.entries\(attrs\)\) \{ if \(v == null\) continue; e\.setAttribute\(k, v\); \}/);
+});
