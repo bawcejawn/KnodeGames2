@@ -8,7 +8,7 @@ Read next, in this order:
 2. [docs/GO-LIVE.md](docs/GO-LIVE.md) — numbered cutover. Do not start it until the checklist below is done.
 3. [docs/KEYS.md](docs/KEYS.md) — how the five contracts' keys should be held. Do not send those transactions.
 
-Old code (read only): <https://github.com/bawcejawn/KnodeGames> at commit `7a93c92d`. This repo: <https://github.com/bawcejawn/KnodeGames2>. Live site today: <https://knodegames.com>, still served from the old repo.
+Old code (read only): <https://github.com/bawcejawn/KnodeGames> at commit `7a93c92d`. This repo: <https://github.com/bawcejawn/KnodeGames2>. Live site today: <https://knodegames.com>, served from this repo's `main` (cutover Sun 22 Nov 2026, D-239/D-240). The old repo no longer serves the site.
 
 ## Purpose
 
