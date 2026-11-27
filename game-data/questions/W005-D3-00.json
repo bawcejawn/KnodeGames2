@@ -900,7 +900,9 @@
             }
           }
         }
-      }
+      },
+      "chainOutcome": 1000,
+      "chainDataHash": "0xd6941ac229bfbbd577e8e37b068fc9ab9c298657a4c70ae600e02acc35d40af8"
     }
   ],
   "daySeal": "8ff2534917761d3e8a2bcdf66f955be6f3452a341665a5be84a1de6b6a9cfaec"
