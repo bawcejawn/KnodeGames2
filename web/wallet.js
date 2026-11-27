@@ -836,6 +836,14 @@
     } catch { return { ok: false, reason: "", failed: true }; }   // the check itself failed (trap, timeout): not a "no"
   }
 
+  /** KOIN Vault's own Mana ceiling for an app call is 100 Mana (its `rcLimitDapp`; read in its server.js). "wallet" asks it to
+   *  pay from the player's wallet, which it can only do with that much available; below that "auto" lets KOIN Vault pick its
+   *  own funding (a sponsor, when it has one for the call). A failed Mana read is "auto", never a block. */
+  const VAULT_OWN_MANA = 10000000000n;   // 100 Mana in base units (1 Mana = 1e8)
+  async function vaultManaMode() {
+    try { return BigInt(await W.provider.getAccountRc(W.address)) >= VAULT_OWN_MANA ? "wallet" : "auto"; } catch { return "auto"; }
+  }
+
   async function sendVault(label, ops, opts = {}) {
     if (!W.session) {
       // A remembered KOIN Vault account: ask KOIN Vault again, and only go on if it is the same account.
@@ -846,7 +854,8 @@
     }
     const operations = ops.map((o) => ({ call_contract: { contract_id: o.call_contract.contract_id, entry_point: Number(o.call_contract.entry_point), args: o.call_contract.args } }));
     let req;
-    try { req = await vaultApi("request", { body: { ...creds(), operations, mana: "auto" } }); }
+    const mana = await vaultManaMode();
+    try { req = await vaultApi("request", { body: { ...creds(), operations, mana } }); }
     catch (e) {
       if (e.status === 404 || e.status === 410) { dropVault(); throw new Error("KOIN Vault connection expired. Connect again, then retry."); }
       // Bracket fix-check 2 W-1: no HTTP status = the answer was lost (KOIN Vault may still have made the request); pages

@@ -142,7 +142,7 @@ test("D-278: the KOIN Vault path never asks the Knode sponsor, so a change sent 
   const v = fnSrc("sendVault");
   assert.doesNotMatch(v, /sponsorFor\(/, "sendVault never picks the Knode sponsor");
   assert.doesNotMatch(v, /1ByDDSBUzy5zkRceELc54Jh8i41yNRoKt8|W\.sponsor\b/, "no Knode sponsor address in the request");
-  assert.match(v, /operations, mana: "auto"/, "KOIN Vault decides its own funding");
+  assert.match(v, /operations, mana \}/, "KOIN Vault decides its own funding (mana is \"wallet\" or \"auto\", see vaultManaMode)");
   assert.match(v, /opts\.noSponsor \? h\("p", \{\}, "This is a change to a pick: Knode's Mana sponsor doesn't pay for it\."\)/);
   // The only callers of sponsorFor are the guest and Kondor paths (the guest refuses noSponsor before it).
   const callers = [...w.matchAll(/(?<!function )sponsorFor\(ops\)/g)].length;
@@ -270,4 +270,12 @@ test("Fantasy: both sends go through the card and read the pick on chain first",
   assert.equal((f.match(/sendOne\(/g) || []).length, 3, "defined once, used by saveTeam and sendRival");
   assert.match(f, /const cur = await readPick\(game, round\);/, "R4-2.1: the read before a send is strict");
   assert.doesNotMatch(f, /\bW\.send\(/);
+});
+
+test("M-843: a KOIN Vault send asks for \"wallet\" Mana only when the wallet holds its 100 Mana ceiling, otherwise \"auto\"", () => {
+  const f = fnSrc("vaultManaMode");
+  assert.match(w, /const VAULT_OWN_MANA = 10000000000n;/, "100 Mana in base units (1 Mana = 1e8)");
+  assert.match(f, />= VAULT_OWN_MANA \? "wallet" : "auto"/);
+  assert.match(f, /catch \{ return "auto"; \}/, "a failed Mana read never blocks a send");
+  assert.match(fnSrc("sendVault"), /const mana = await vaultManaMode\(\);/);
 });
