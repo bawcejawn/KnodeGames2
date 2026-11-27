@@ -856,7 +856,51 @@
           "seal": "18f5e031ecee1009873f58645b852b74c32f837640f155d4d84da4aa96201fae"
         }
       ],
-      "vhpSeal": "53c7ae0d6276641e03a11e2cbb1b2f790de4d87c6e02c19e9e88da9f30d90f8e"
+      "vhpSeal": "53c7ae0d6276641e03a11e2cbb1b2f790de4d87c6e02c19e9e88da9f30d90f8e",
+      "result": {
+        "void": true,
+        "reason": "1Bu4WYjq418r7HLu4uJ1Hru3aPwtqfzBVY went offline during the window",
+        "value": "0",
+        "dataHash": "d6941ac229bfbbd577e8e37b068fc9ab9c298657a4c70ae600e02acc35d40af8",
+        "resolvedAt": "2026-11-27T02:18:06.210Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41361817,
+          "decidedHeight": 41400796,
+          "readings": [
+            41378341,
+            41379506,
+            41380641,
+            41381794,
+            41382950,
+            41384172,
+            41385046,
+            41385930,
+            41387086,
+            41388262,
+            41389425,
+            41389681,
+            41391128,
+            41392312,
+            41393043,
+            41394086,
+            41395223,
+            41396168,
+            41397505,
+            41398693,
+            41399888
+          ],
+          "readingsInWindow": 41,
+          "values": {
+            "1Bu4WYjq418r7HLu4uJ1Hru3aPwtqfzBVY": {
+              "release": "1853752209622",
+              "end": "1851704913014",
+              "change": "−0.11%",
+              "height": 41399888
+            }
+          }
+        }
+      }
     }
   ],
   "daySeal": "8ff2534917761d3e8a2bcdf66f955be6f3452a341665a5be84a1de6b6a9cfaec"
