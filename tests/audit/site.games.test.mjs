@@ -180,3 +180,11 @@ test("the Leaderboards picker has Knode Games VS and More or Fewer, with their '
   assert.match(read("web/leaders.js"), /cfg\.soon \|\| "Couldn't load this leaderboard/);
   assert.match(read("web/leaders.js"), /soon: typeof b\.soon === "string" && b\.soon\.length <= 100 \? b\.soon : "",/);
 });
+
+// M-831: Race's "Send my N picks" button was born disabled: its element helper wrote disabled="undefined" for an empty
+// attribute. The helper must skip empty attributes (as Block X's does), and the only empty attribute is that one.
+test("race.js: the element helper skips empty attributes, so the Send my picks button is not disabled", () => {
+  const src = read("web/race.js");
+  assert.match(src, /for \(const \[k, v\] of Object\.entries\(attrs\)\) \{ if \(v == null\) continue;/);
+  assert.match(src, /disabled: sending \|\| undefined, onclick: sendDrafts/);
+});
