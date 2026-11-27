@@ -8,7 +8,7 @@ Read next, in this order:
 2. [docs/GO-LIVE.md](docs/GO-LIVE.md) — numbered cutover. Do not start it until the checklist below is done.
 3. [docs/KEYS.md](docs/KEYS.md) — how the five contracts' keys should be held. Do not send those transactions.
 
-Old code (read only): <https://github.com/bawcejawn/KnodeGames> at commit `7a93c92d`. This repo: <https://github.com/bawcejawn/KnodeGames2>. Live site today: <https://knodegames.com>, served from this repo's `main` (cutover Sun 22 Nov 2026, D-239/D-240). The old repo no longer serves the site.
+Old code (read only): <https://github.com/bawcejawn/KnodeGames> at commit `7a93c92d`. This repo: <https://github.com/bawcejawn/KnodeGames2>. Live site today: <https://knodegames.com>, served from this repo's `main` (cutover Fri 20 Nov 2026 (D-431; planned for Sun 22, D-239/D-240)). The old repo no longer serves the site.
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Knode Games is a set of prediction games on the Koinos blockchain. Players stake
 - Public fairness page: `web/fairness.html`.
 - Question files are not on `main`. `bot.yml` publish is aimed at branch `game-data`. That branch does not exist yet.
 - A future desk deploy refuses a treasury that is missing or equal to the owner. The live desk was not touched.
-- The hourly workflows have the old repository's timers (cutover, D-240; list in `docs/WORKFLOWS.md`), each behind its `*_ENABLED` switch. Only CI and the full test suite run on a pull request. The website is published from `main` (cutover Sun 22 Nov 2026).
+- The hourly workflows have the old repository's timers (cutover, D-240; list in `docs/WORKFLOWS.md`), each behind its `*_ENABLED` switch. Only CI and the full test suite run on a pull request. The website is published from `main` (cutover Fri 20 Nov 2026 (D-431; planned for Sun 22, D-239/D-240)).
 - `.ai/` is not in this repo. `/site/` redirects are gone. One-off fund scripts and finished v6 rehearsals are gone. See [docs/DROPPED.md](docs/DROPPED.md).
 - Contract builds: CI rebuilds all five (`npm run test:hashes`) against `contracts/hashes.json`. Vault, desk, race and sponsor match the live code. Picks `92d555d0…` is the live Picks v2 (recorded in `picks-data/deployment.json`); v1 was `700c296a…`.
 - `npm test` passes **51** tests: question scorer, early-view, desk treasury rule, workflow guard, no timers, VHP-swing wording, Inter font, static page checks. `npm run lint` passes. `npm audit --audit-level=high` is clean (moderate findings remain).
@@ -35,7 +35,7 @@ Knode Games is a set of prediction games on the Koinos blockchain. Players stake
 
 **Not started**
 
-- Data branch contents. Bot split. Games onto the kit. Page script split. The two new games. Any chain transaction. (The pages cutover is done: Sun 22 Nov 2026.)
+- Data branch contents. Bot split. Games onto the kit. Page script split. The two new games. Any chain transaction. (The pages cutover is done: Fri 20 Nov 2026 (D-431; planned for Sun 22, D-239/D-240).)
 
 ## Layout
 
