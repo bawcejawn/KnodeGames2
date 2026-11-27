@@ -187,7 +187,39 @@
           "seal": "0ed114626d58b06f3dc333dd2a05695264100838441fb5791f18039f00d572f2"
         }
       ],
-      "vhpSeal": "f116c47a4c68f63a4c1d8135ef6c54f074dbcadcb454ec13b6136eba91369e24"
+      "vhpSeal": "f116c47a4c68f63a4c1d8135ef6c54f074dbcadcb454ec13b6136eba91369e24",
+      "result": {
+        "void": false,
+        "option": 5,
+        "value": "744",
+        "dataHash": "8d22169efa679bd18749e72db4fa3b09e5a5f35fe0534f4bd1262fc3cff72536",
+        "resolvedAt": "2026-11-27T21:48:34.570Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41417852,
+          "decidedHeight": 41443268,
+          "readings": [
+            41434214,
+            41435140,
+            41436625,
+            41437807,
+            41438932,
+            41440153,
+            41441282,
+            41441483,
+            41443067
+          ],
+          "readingsInWindow": 9,
+          "values": {
+            "1G2QjRtNwEfqGwX7SMD8LNjWgJdWA7XtSU": {
+              "release": "87743576221803",
+              "end": "86986712733734",
+              "change": "−0.86%",
+              "height": 41443067
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D5-00-2",
@@ -528,7 +560,39 @@
           "seal": "4b2b2ad33d84581c945cfa8c537215bee1cb973797b20b5829772e6ff0d33c81"
         }
       ],
-      "vhpSeal": "bdd4cb900ddc38a8f72f3ff6f7d8b140448b73f1b81a4e77304a844757849e26"
+      "vhpSeal": "bdd4cb900ddc38a8f72f3ff6f7d8b140448b73f1b81a4e77304a844757849e26",
+      "result": {
+        "void": false,
+        "option": 6,
+        "value": "1,425",
+        "dataHash": "8d22169efa679bd18749e72db4fa3b09e5a5f35fe0534f4bd1262fc3cff72536",
+        "resolvedAt": "2026-11-27T21:48:34.570Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41417852,
+          "decidedHeight": 41443253,
+          "readings": [
+            41434214,
+            41435140,
+            41436625,
+            41437807,
+            41438932,
+            41440153,
+            41441282,
+            41441483,
+            41443067
+          ],
+          "readingsInWindow": 9,
+          "values": {
+            "15NZhQoewzsbVUcSVsZ8BEBEKgaBNPLLgZ": {
+              "release": "165091175326085",
+              "end": "163703591000572",
+              "change": "−0.84%",
+              "height": 41443067
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D5-00-4",
