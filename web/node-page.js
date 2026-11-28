@@ -30,7 +30,7 @@
 
   // ── helpers ──
   const $ = (id) => document.getElementById(id);
-  const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); for (const c of kids) if (c != null) e.append(c); return e; };
+  const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; e.setAttribute(k, v); } for (const c of kids) if (c != null) e.append(c); return e; };
   const fmt = (n, d = 0) => (Number.isFinite(n) ? Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
   const sig = (n) => (!Number.isFinite(n) ? "—" : n >= 100 ? fmt(n, 0) : n >= 10 ? fmt(n, 1) : fmt(n, 2));
   // Producer names (names.js): "Name · 1Abc12…wxyz", or the short address.

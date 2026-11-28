@@ -152,3 +152,9 @@
 [data-pick="open"] .g-st .chip { background: color-mix(in srgb, var(--acc) 14%, var(--surface)); color: color-mix(in srgb, var(--acc) 80%, var(--ink)); }
 [data-pick="done"] .g-st .chip { background: var(--mint-soft); color: color-mix(in srgb, var(--mint) 75%, var(--ink)); }
 [data-pick="closed"] .g-st .chip { background: var(--line); color: var(--muted); }
+
+/* Rules: the one shared "How rewards work for every game" section above the game tabs (same words for every game). */
+.rules-shared { margin: 0 0 28px; }
+.rules-shared h2 { margin-bottom: 6px; }
+.rules-shared .steps { margin-top: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.rules-link { margin: 6px 0 14px; }
