@@ -344,7 +344,39 @@
           "seal": "0846c7fc31cc43428cf9c70247d4b76b6ddd4c1a8e1dde56f3e154f67087609d"
         }
       ],
-      "vhpSeal": "b0cb48cac48c84eda050c885e623fc2c08a7745c60ade0c63b54b498519af97b"
+      "vhpSeal": "b0cb48cac48c84eda050c885e623fc2c08a7745c60ade0c63b54b498519af97b",
+      "result": {
+        "void": false,
+        "option": 2,
+        "value": "706",
+        "dataHash": "ad3be989295bb5101ea7acc8448f5817aceb3d912987a5e9e988f8311c037175",
+        "resolvedAt": "2026-11-28T09:46:45.750Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41431799,
+          "decidedHeight": 41457191,
+          "readings": [
+            41448284,
+            41449466,
+            41450646,
+            41451646,
+            41453001,
+            41454127,
+            41454627,
+            41455876,
+            41457051
+          ],
+          "readingsInWindow": 9,
+          "values": {
+            "1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd": {
+              "release": "84079882665725",
+              "end": "83367214120859",
+              "change": "−0.85%",
+              "height": 41457051
+            }
+          }
+        }
+      }
     },
     {
       "id": "W005-D5-3",
@@ -685,7 +717,39 @@
           "seal": "029ee87caa99fb9613fb44d0fb5e2f1ca3afd7d7140146c08fcb8a97263b7575"
         }
       ],
-      "vhpSeal": "423a2a91e0ac4d117f1af5ab89500fb0e33f0e3c73030d063a6d10e2804291e5"
+      "vhpSeal": "423a2a91e0ac4d117f1af5ab89500fb0e33f0e3c73030d063a6d10e2804291e5",
+      "result": {
+        "void": false,
+        "option": 5,
+        "value": "1,716",
+        "dataHash": "ad3be989295bb5101ea7acc8448f5817aceb3d912987a5e9e988f8311c037175",
+        "resolvedAt": "2026-11-28T09:46:45.750Z",
+        "vhpCheck": {
+          "limit": 0.1,
+          "releaseHeight": 41431799,
+          "decidedHeight": 41457200,
+          "readings": [
+            41448284,
+            41449466,
+            41450646,
+            41451646,
+            41453001,
+            41454127,
+            41454627,
+            41455876,
+            41457051
+          ],
+          "readingsInWindow": 9,
+          "values": {
+            "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": {
+              "release": "214850230408796",
+              "end": "213045624245024",
+              "change": "−0.84%",
+              "height": 41457051
+            }
+          }
+        }
+      }
     }
   ],
   "daySeal": "a63af4d79548377d3e8764fbe45b186a35409c76f56e62e37af81d864fe18988"
