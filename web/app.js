@@ -637,7 +637,7 @@
       note: P.Gerr ? "couldn't read it just now; this page tries again every minute"
         : noResults ? "no results for this week: its share rolls over to next week"
         : !G.closed ? `waiting for the weekly close, ${now < closeAt ? `about ${dayTime(closeAt)}` : "within about an hour"}`
-        : !G.sealed ? `Daily Questions' share; results posted by ${dayTime(due)}`
+        : !G.sealed ? `this game's share; results posted by ${dayTime(due)}`
           : !G.finalized ? `results posted; final ${finalAt ? dayTime(finalAt) : "24 hours after posting"}`
           : G.rolled_over ? "final: no staked winners, so the stakers' share rolls over; free prizes: collect on the Stake page"
           : "final: collect on the Stake page",
@@ -1811,7 +1811,7 @@
       const at = (r) => `${localHour(r.hour)} (answers close ${localHour((r.hour + 12) % 24)})`;
       return `Your time: new questions Monday to Saturday at ${now.map(at).join(" and ")}.` +
         later.map((r) => ` From ${day(r.from)} also at ${at(r)}.`).join("") +
-        (sharedWeek(S.week) ? " Each week's results are posted by Thursday and final 24 hours later." : ` Winners are final Tuesdays at ${localHour(12)}.`);
+        (sharedWeek(S.week) ? " Each week's results are posted by Thursday and are final 24 hours after they're posted." : ` Winners are final Tuesdays at ${localHour(12)}.`);
     })();
     renderAll();
     loadAds();
