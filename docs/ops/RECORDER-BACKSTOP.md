@@ -26,7 +26,7 @@ This Worker checks whether the ruler's data job, the two recorders and the race'
 **1. Make the GitHub token**
 1. Go to github.com → your picture → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
 2. **Name:** `kg-dispatch-2`. **Expiration:** 90 days. Put a calendar reminder 1 week before it expires.
-3. **Repository access:** "Only select repositories" → `bawcejawn/KnodeGames2` (since cutover, Sun 22 Nov 2026, the Worker is `kg-dispatch-2`. The old repository's `kg-dispatch` stays in Cloudflare with its triggers off, for rollback only.)
+3. **Repository access:** "Only select repositories" → `bawcejawn/KnodeGames2` (since cutover, Fri 20 Nov 2026 (D-431), the Worker is `kg-dispatch-2`. The old repository's `kg-dispatch` stays in Cloudflare with its triggers off, for rollback only.)
 4. **Permissions:** **Actions: Read and write**. Leave everything else at "No access". GitHub adds Metadata: Read by itself.
 5. **Generate**, then copy the token. You'll paste it once, in step 2.4, and nowhere else.
 
@@ -37,7 +37,7 @@ This Worker checks whether the ruler's data job, the two recorders and the race'
 4. Go to **Settings** → **Variables and Secrets** → **Add**. Type: **Secret**. Name: `GH_DISPATCH_TOKEN`. Value: the token from step 1. Then **Deploy**.
 5. Don't add triggers yet. They come in step 2b, after the old Worker's are off.
 
-**2b. Swap the triggers (at cutover, Sun 22 Nov 2026, in this order)**
+**2b. Swap the triggers (at cutover, Fri 20 Nov 2026 (D-431), in this order)**
 Only one Worker may have triggers on at a time. If both had them on, each would check GitHub on its own and could start a job the other just started. The workflows' concurrency groups keep those runs from overlapping, but the runs would still be wasted. So turn the old Worker's triggers off first. The account is on Workers Paid (up to 250 triggers), so the old 5-trigger limit no longer applies, but the one-Worker rule does.
 1. Cloudflare → **Compute (Workers)** → **kg-dispatch** (the old one) → **Settings** → **Trigger Events** (called "Cron Triggers" in some views). Remove all four: `22 * * * *`, `41 * * * *`, `51 * * * *`, `7,37 * * * *`. Save. Don't delete the Worker or its code: it stays for rollback.
 2. Check: **kg-dispatch** → **Settings** → **Trigger Events** shows none.
