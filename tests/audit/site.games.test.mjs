@@ -199,6 +199,7 @@ test("Rules: one shared payout section for every game, Vault's exact Card 3 text
   const q = home.slice(home.indexOf('id="rp-game"'), home.indexOf('id="rp-race"'));
   assert.match(q, /48 questions|8 a day, 48 a week/); assert.match(q, /48 is the top score/); assert.match(q, /href="#rewards-all"/);
   assert.match(q, /Rewards from weeks before 16 November are collected on this page/);
+  assert.ok(q.includes("To share this game's weekly rewards, answer at least 2 questions that week (a voided question doesn't count)."), "Vault's 2-question sentence, word for word");
   for (const bad of [/\b(earn|earnings|returns?|APY|guaranteed|bet|odds)\b/i]) assert.doesNotMatch(card3, bad);
 });
 
