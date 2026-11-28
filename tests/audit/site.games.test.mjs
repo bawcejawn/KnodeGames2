@@ -211,6 +211,28 @@ test("race.js: the element helper skips empty attributes, so the Send my picks b
   assert.match(src, /disabled: sending \|\| undefined, onclick: sendDrafts/);
 });
 
+// M-843 item 2: a KOIN Vault send shows KOIN Vault's real error text, not the "free Mana may be used up" guess (which only
+// fits the Knode sponsor, and a KOIN Vault send never uses it).
+test("friendlyError (app.js, swap.js): a KOIN Vault wallet gets the real error text, before the Mana rewording", () => {
+  for (const f of ["web/app.js", "web/swap.js"]) {
+    const src = read(f);
+    const i = src.indexOf("function friendlyError(");
+    assert.ok(i > 0, f);
+    const body = src.slice(i, src.indexOf("\n  }\n", i));
+    const vault = body.indexOf('window.KWallet.kind === "vault") return `KOIN Vault says: ${text.slice(0, 240)}`;');
+    const mana = body.indexOf("not enough Mana.");
+    assert.ok(vault > 0 && mana > vault, `${f}: the KOIN Vault line comes first`);
+    // The shown text is the cleaned text (the quoted part when there is one) behind the "KOIN Vault says: " prefix.
+    const fn = new Function("window", body.replace("function friendlyError(", "return function friendlyError(") + "\n}");
+    const fe = fn({ KWallet: { kind: "vault" } });
+    assert.equal(fe('x "needs 100 available mana for its maximum limit" y'), "KOIN Vault says: needs 100 available mana for its maximum limit");
+    assert.equal(fe("plain text"), "KOIN Vault says: plain text");
+    assert.ok(fe("a".repeat(500)).length <= "KOIN Vault says: ".length + 240);
+    const other = fn({ KWallet: { kind: "kondor" } });
+    assert.ok(!other("plain text").startsWith("KOIN Vault says"));
+  }
+});
+
 // M-836 (Repo Lens 4 follow-up to #166): the Producer page's element helper must also skip empty attributes, or a
 // disabled/hidden attribute passed as undefined would be written as the text "undefined" and switch the control off.
 test("node-page.js: the element helper skips empty attributes", () => {
