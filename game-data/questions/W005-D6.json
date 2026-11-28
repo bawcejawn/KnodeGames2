@@ -1,0 +1,414 @@
+{
+  "date": "W005-D6",
+  "week": 5,
+  "day": 6,
+  "tier": "Hard",
+  "released": "2026-11-28T12:02:59.844Z",
+  "questions": [
+    {
+      "id": "W005-D6-1",
+      "date": "W005-D6",
+      "week": 5,
+      "day": 6,
+      "tier": "Hard",
+      "template": "H3",
+      "releaseHeight": 41459743,
+      "lockHeight": 41475246,
+      "lockTime": 1795910400000,
+      "title": "Core producer eighths",
+      "text": "How many blocks will producer 1GGxRhLN7Ek54xycG5XaZBE4bCgwV2xtvk sign between block 41,475,247 and block 41,485,246 (about 8 hours)?",
+      "subjects": [
+        "1GGxRhLN7Ek54xycG5XaZBE4bCgwV2xtvk"
+      ],
+      "unit": "count",
+      "windowStart": 41475247,
+      "windowEnd": 41485246,
+      "thresholds": [
+        832,
+        855,
+        870,
+        887,
+        902,
+        919,
+        945
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "832 or fewer",
+          "min": null,
+          "max": 832
+        },
+        {
+          "index": 1,
+          "label": "833 to 855",
+          "min": 833,
+          "max": 855
+        },
+        {
+          "index": 2,
+          "label": "856 to 870",
+          "min": 856,
+          "max": 870
+        },
+        {
+          "index": 3,
+          "label": "871 to 887",
+          "min": 871,
+          "max": 887
+        },
+        {
+          "index": 4,
+          "label": "888 to 902",
+          "min": 888,
+          "max": 902
+        },
+        {
+          "index": 5,
+          "label": "903 to 919",
+          "min": 903,
+          "max": 919
+        },
+        {
+          "index": 6,
+          "label": "920 to 945",
+          "min": 920,
+          "max": 945
+        },
+        {
+          "index": 7,
+          "label": "946 or more",
+          "min": 946,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.12129380053908356,
+        0.12488769092542677,
+        0.12578616352201258,
+        0.12578616352201258,
+        0.12848158131176998,
+        0.12219227313566937,
+        0.12668463611859837,
+        0.12488769092542677
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "1GGxRhLN7Ek54xycG5XaZBE4bCgwV2xtvk": 0.08994791666666667
+        },
+        "forecast": {
+          "1GGxRhLN7Ek54xycG5XaZBE4bCgwV2xtvk": 0.08930555555555555
+        },
+        "window": 10000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "1GGxRhLN7Ek54xycG5XaZBE4bCgwV2xtvk": "112332827772327"
+        },
+        "vhpHeight": 41459863,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "1c3a8a8c665b684ecb38fd38b82b9d2791c84e43c811be1a9c87e0fb74022717",
+      "chainId": 202
+    },
+    {
+      "id": "W005-D6-2",
+      "date": "W005-D6",
+      "week": 5,
+      "day": 6,
+      "tier": "Hard",
+      "template": "H1",
+      "releaseHeight": 41459743,
+      "lockHeight": 41475246,
+      "lockTime": 1795910400000,
+      "title": "Core producer sextiles",
+      "text": "How many blocks will producer 1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd sign between block 41,475,247 and block 41,480,246 (about 4 hours)?",
+      "subjects": [
+        "1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd"
+      ],
+      "unit": "count",
+      "windowStart": 41475247,
+      "windowEnd": 41480246,
+      "thresholds": [
+        319,
+        334,
+        346,
+        356,
+        370
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "319 or fewer",
+          "min": null,
+          "max": 319
+        },
+        {
+          "index": 1,
+          "label": "320 to 334",
+          "min": 320,
+          "max": 334
+        },
+        {
+          "index": 2,
+          "label": "335 to 346",
+          "min": 335,
+          "max": 346
+        },
+        {
+          "index": 3,
+          "label": "347 to 356",
+          "min": 347,
+          "max": 356
+        },
+        {
+          "index": 4,
+          "label": "357 to 370",
+          "min": 357,
+          "max": 370
+        },
+        {
+          "index": 5,
+          "label": "371 or more",
+          "min": 371,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.16419213973799127,
+        0.16506550218340613,
+        0.1781659388646288,
+        0.1572052401746725,
+        0.17554585152838428,
+        0.15982532751091702
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd": 0.07045138888888888
+        },
+        "forecast": {
+          "1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd": 0.06902777777777777
+        },
+        "window": 5000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "1DAHmrQJMAbn4FmMMrew78wPUizjVdbBrd": "83287751540691"
+        },
+        "vhpHeight": 41459863,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "d48184ce5551f89645c69bdac9ce9c0e35e061c4013f7131b6cfbb56ff52d967",
+      "chainId": 203
+    },
+    {
+      "id": "W005-D6-3",
+      "date": "W005-D6",
+      "week": 5,
+      "day": 6,
+      "tier": "Hard",
+      "template": "H3",
+      "releaseHeight": 41459743,
+      "lockHeight": 41475246,
+      "lockTime": 1795910400000,
+      "title": "Core producer eighths",
+      "text": "How many blocks will producer 14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu sign between block 41,475,247 and block 41,485,246 (about 8 hours)?",
+      "subjects": [
+        "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu"
+      ],
+      "unit": "count",
+      "windowStart": 41475247,
+      "windowEnd": 41485246,
+      "thresholds": [
+        856,
+        879,
+        894,
+        911,
+        926,
+        944,
+        970
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "856 or fewer",
+          "min": null,
+          "max": 856
+        },
+        {
+          "index": 1,
+          "label": "857 to 879",
+          "min": 857,
+          "max": 879
+        },
+        {
+          "index": 2,
+          "label": "880 to 894",
+          "min": 880,
+          "max": 894
+        },
+        {
+          "index": 3,
+          "label": "895 to 911",
+          "min": 895,
+          "max": 911
+        },
+        {
+          "index": 4,
+          "label": "912 to 926",
+          "min": 912,
+          "max": 926
+        },
+        {
+          "index": 5,
+          "label": "927 to 944",
+          "min": 927,
+          "max": 944
+        },
+        {
+          "index": 6,
+          "label": "945 to 970",
+          "min": 945,
+          "max": 970
+        },
+        {
+          "index": 7,
+          "label": "971 or more",
+          "min": 971,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.12578616352201258,
+        0.12219227313566937,
+        0.12398921832884097,
+        0.12578616352201258,
+        0.12398921832884097,
+        0.13117699910152741,
+        0.12309074573225516,
+        0.12398921832884097
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu": 0.09520833333333334
+        },
+        "forecast": {
+          "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu": 0.09180555555555556
+        },
+        "window": 10000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "14f34kUNZugf2DK4hPJGy4AkmBM7Y4pvVu": "115535653492526"
+        },
+        "vhpHeight": 41459863,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "ea473ae265323835de2d62b08d81eeef7d994b186cd329c0f770a20b42755118",
+      "chainId": 204
+    },
+    {
+      "id": "W005-D6-4",
+      "date": "W005-D6",
+      "week": 5,
+      "day": 6,
+      "tier": "Hard",
+      "template": "H1",
+      "releaseHeight": 41459743,
+      "lockHeight": 41475246,
+      "lockTime": 1795910400000,
+      "title": "Core producer sextiles",
+      "text": "How many blocks will producer 1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW sign between block 41,475,247 and block 41,480,246 (about 4 hours)?",
+      "subjects": [
+        "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW"
+      ],
+      "unit": "count",
+      "windowStart": 41475247,
+      "windowEnd": 41480246,
+      "thresholds": [
+        825,
+        848,
+        865,
+        880,
+        900
+      ],
+      "options": [
+        {
+          "index": 0,
+          "label": "825 or fewer",
+          "min": null,
+          "max": 825
+        },
+        {
+          "index": 1,
+          "label": "826 to 848",
+          "min": 826,
+          "max": 848
+        },
+        {
+          "index": 2,
+          "label": "849 to 865",
+          "min": 849,
+          "max": 865
+        },
+        {
+          "index": 3,
+          "label": "866 to 880",
+          "min": 866,
+          "max": 880
+        },
+        {
+          "index": 4,
+          "label": "881 to 900",
+          "min": 881,
+          "max": 900
+        },
+        {
+          "index": 5,
+          "label": "901 or more",
+          "min": 901,
+          "max": null
+        }
+      ],
+      "predicted": [
+        0.16506550218340613,
+        0.17117903930131004,
+        0.16768558951965065,
+        0.15982532751091702,
+        0.16593886462882096,
+        0.1703056768558952
+      ],
+      "model": {
+        "version": "v5",
+        "rates": {
+          "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": 0.17256944444444444
+        },
+        "forecast": {
+          "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": 0.17291666666666666
+        },
+        "window": 5000,
+        "voidAlpha": 0.001,
+        "minVoidBlocks": 600,
+        "vhp": {
+          "1MbsVfNw6yzQqA8499d8KQj8qdLyRs8CzW": "212851063866308"
+        },
+        "vhpHeight": 41459863,
+        "voidVhpSwing": 0.1,
+        "decidedChance": 1e-9
+      },
+      "hashRule": 2,
+      "paramsHash": "ff6fad93cd9835f88292b7db96c6b50e47d0ecfd56cb762af950103245fefa63",
+      "chainId": 205
+    }
+  ],
+  "daySeal": "a6be12096ce4e7501f32fb8769de4610cf282b4c88b3bb618be5e04bfcd534c9"
+}
