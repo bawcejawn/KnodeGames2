@@ -1,0 +1,65 @@
+diff --git a/ops/testnet/blockx-testnet.html b/ops/testnet/blockx-testnet.html
+index 2184263..87945b3 100644
+--- a/ops/testnet/blockx-testnet.html
++++ b/ops/testnet/blockx-testnet.html
+@@ -4,7 +4,7 @@
+   <meta charset="utf-8">
+   <!-- TESTNET page. Only the Koinos Foundation testnet node and this game's testnet data branch may be reached; it never
+        loads the mainnet wallet scripts. 'unsafe-eval' is needed by koilib; CDN scripts are pinned by their integrity hash. -->
+-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://testnet.koinosfoundation.org https://raw.githubusercontent.com/bawcejawn/KnodeGames/testnet-data/; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
++  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/koilib@9.4.1/dist/koinos.min.js https://cdn.jsdelivr.net/npm/kondor-js@1.3.0/dist/kondor.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://testnet.koinosfoundation.org https://raw.githubusercontent.com/bawcejawn/KnodeGames2/testnet-data/; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <meta name="robots" content="noindex, nofollow">
+   <meta name="kg-network" content="testnet">
+diff --git a/ops/testnet/config/blockx.json b/ops/testnet/config/blockx.json
+index dc7db3c..7238db2 100644
+--- a/ops/testnet/config/blockx.json
++++ b/ops/testnet/config/blockx.json
+@@ -9,7 +9,7 @@
+   "picks": "12xNetHpajRi8Xrv4ub8MbMWWjC2q7VrX5",
+   "picksSha256": "39cc5e003c234b0e0b054376bdb53245e97157202ae971a11bc5cc490f7aa7ab",
+   "prizesFromWeek": 0,
+-  "data": "https://raw.githubusercontent.com/bawcejawn/KnodeGames/testnet-data/",
++  "data": "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/testnet-data/",
+   "faucet": "https://t.me/KoinosTestnetFaucetBot",
+   "games": [
+     {
+diff --git a/tests/audit/blockx-recorder.test.mjs b/tests/audit/blockx-recorder.test.mjs
+index d68b37b..efbedac 100644
+--- a/tests/audit/blockx-recorder.test.mjs
++++ b/tests/audit/blockx-recorder.test.mjs
+@@ -202,7 +202,7 @@ test("testnet: testnet/blockx.json is a valid config the Picks contract would ac
+   assert.notEqual(c.chainId, "EiBZK_GGVP0H_fXVAM3j6EAuz3-B-l3ejxRSewi7qIBfSA==");
+   assert.ok(c.games.some((g) => g.id === 2 && g.round === 2400 && g.lead === 100 && g.ahead === 28900), "game 2 with the real mainnet settings");
+   for (const g of c.games) { const G = X.forGame(g); assert.equal(G.openRounds(48_000_000).length, 12, `game ${g.id}: 12 targets open`); assert.ok(g.id < 128); }
+-  assert.match(c.data, /^https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames\/testnet-data\/$/, "its own data branch, never games-data");
++  assert.match(c.data, /^https:\/\/raw\.githubusercontent\.com\/bawcejawn\/KnodeGames2\/testnet-data\/$/, "its own data branch, never games-data");
+ });
+ 
+ // ── the testnet workflow (.github/workflows/games-testnet.yml): its publish check takes the recorder's real output ──
+diff --git a/tests/audit/site.blockx.test.mjs b/tests/audit/site.blockx.test.mjs
+index ef4e926..04d8fe6 100644
+--- a/tests/audit/site.blockx.test.mjs
++++ b/tests/audit/site.blockx.test.mjs
+@@ -174,7 +174,7 @@ test("blockx-testnet.html: testnet only — its node and data branch, no mainnet
+   const h = read("ops/testnet/blockx-testnet.html");
+   const csp = h.match(/http-equiv="Content-Security-Policy" content="([^"]*)"/)[1];
+   const conn = csp.match(/connect-src ([^;]*)/)[1].trim().split(/\s+/);
+-  assert.deepEqual(conn, ["'self'", "https://testnet.koinosfoundation.org", "https://raw.githubusercontent.com/bawcejawn/KnodeGames/testnet-data/"]);
++  assert.deepEqual(conn, ["'self'", "https://testnet.koinosfoundation.org", "https://raw.githubusercontent.com/bawcejawn/KnodeGames2/testnet-data/"]);
+   assert.match(h, /<meta name="kg-network" content="testnet">/);
+   assert.match(h, /<meta name="robots" content="noindex, nofollow">/);
+   assert.match(h, /TESTNET · test KOIN only/);
+diff --git a/tools/vhp-ruler-race-check.mjs b/tools/vhp-ruler-race-check.mjs
+index 84dfb36..cd3b183 100644
+--- a/tools/vhp-ruler-race-check.mjs
++++ b/tools/vhp-ruler-race-check.mjs
+@@ -3,7 +3,7 @@
+ // logs through the gh CLI (GET requests only). It writes nothing, sends nothing, and no game reads its result.
+ //
+ //   node tools/vhp-ruler-race-check.mjs <race-data folder> [--week 4] [--vhp-data <folder>] [--since 2026-11-16T00:00:00Z]
+-//        [--gh bawcejawn/KnodeGames] [--now <ISO time>]
++//        [--gh bawcejawn/KnodeGames2] [--now <ISO time>]
+ //
+ // It checks:
+ //  1. Every run of race.yml since --since finished green (a run still going is listed, not counted).

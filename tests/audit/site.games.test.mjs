@@ -201,3 +201,17 @@ test("Rules: one shared payout section for every game, Vault's exact Card 3 text
   assert.match(q, /Rewards from weeks before 16 November are collected on this page/);
   for (const bad of [/\b(earn|earnings|returns?|APY|guaranteed|bet|odds)\b/i]) assert.doesNotMatch(card3, bad);
 });
+
+// M-831: Race's "Send my N picks" button was born disabled: its element helper wrote disabled="undefined" for an empty
+// attribute. The helper must skip empty attributes (as Block X's does), and the only empty attribute is that one.
+test("race.js: the element helper skips empty attributes, so the Send my picks button is not disabled", () => {
+  const src = read("web/race.js");
+  assert.match(src, /for \(const \[k, v\] of Object\.entries\(attrs\)\) \{ if \(v == null\) continue;/);
+  assert.match(src, /disabled: sending \|\| undefined, onclick: sendDrafts/);
+});
+
+// M-836 (Repo Lens 4 follow-up to #166): the Producer page's element helper must also skip empty attributes, or a
+// disabled/hidden attribute passed as undefined would be written as the text "undefined" and switch the control off.
+test("node-page.js: the element helper skips empty attributes", () => {
+  assert.match(read("web/node-page.js"), /for \(const \[k, v\] of Object\.entries\(attrs\)\) \{ if \(v == null\) continue; e\.setAttribute\(k, v\); \}/);
+});

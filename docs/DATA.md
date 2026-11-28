@@ -27,7 +27,7 @@ The `game-data` in the middle is the branch. The second `game-data` is the folde
 
 The defaults are also written in `web/js/lib/config.js`.
 
-Until you create the branch and copy today's files onto it, a site built from this repository will not list questions. The live site is still the old repository. Do not switch DNS before [GO-LIVE.md](GO-LIVE.md) step 4.
+The data branches (including game-data) were copied at cutover, Fri 20 Nov 2026 (D-431). The live site is served from this repository's main.
 
 ## How the bot publishes them
 
