@@ -197,8 +197,16 @@ test("friendlyError (app.js, swap.js): a KOIN Vault wallet gets the real error t
     const i = src.indexOf("function friendlyError(");
     assert.ok(i > 0, f);
     const body = src.slice(i, src.indexOf("\n  }\n", i));
-    const vault = body.indexOf('window.KWallet.kind === "vault") return msg.slice(0, 260)');
+    const vault = body.indexOf('window.KWallet.kind === "vault") return `KOIN Vault says: ${text.slice(0, 240)}`;');
     const mana = body.indexOf("not enough Mana.");
     assert.ok(vault > 0 && mana > vault, `${f}: the KOIN Vault line comes first`);
+    // The shown text is the cleaned text (the quoted part when there is one) behind the "KOIN Vault says: " prefix.
+    const fn = new Function("window", body.replace("function friendlyError(", "return function friendlyError(") + "\n}");
+    const fe = fn({ KWallet: { kind: "vault" } });
+    assert.equal(fe('x "needs 100 available mana for its maximum limit" y'), "KOIN Vault says: needs 100 available mana for its maximum limit");
+    assert.equal(fe("plain text"), "KOIN Vault says: plain text");
+    assert.ok(fe("a".repeat(500)).length <= "KOIN Vault says: ".length + 240);
+    const other = fn({ KWallet: { kind: "kondor" } });
+    assert.ok(!other("plain text").startsWith("KOIN Vault says"));
   }
 });
